@@ -1,7 +1,7 @@
 {
   "benchmark": {
     "name": "FinSpect Universal Quarterly Filing Benchmark",
-    "version": "0.1",
+    "version": "0.2",
     "scope": [
       "US_SEC_10Q",
       "US_SEC_10K",
@@ -9,644 +9,556 @@
       "INDIA_SEBI_ANNUAL_RESULTS"
     ],
     "purpose": "Evaluate whether an LLM can identify, interpret, validate and calculate financial information from quarterly and annual company filings.",
-    "design_principle": "Questions are company-agnostic. Company-specific concepts, periods, values and evidence are resolved from the filing."
+    "design_principle": "Questions are company-agnostic. Company-specific concepts, periods, values and evidence are resolved from the filing.",
+    "test_taxonomy": {
+      "primary_test": "The main FinSpect capability being tested by the question.",
+      "secondary_tests": "Supporting capabilities required to answer the question correctly.",
+      "track_definitions": {
+        "core_calculation": "Primarily tests extraction, normalization and deterministic numerical calculation.",
+        "advanced_filing_calculation": "Tests difficult filing semantics, cross-section reasoning, or specialized disclosures before calculation.",
+        "evidence_disclosure": "Primarily tests evidence retrieval, section resolution and evidence-backed qualitative interpretation."
+      }
+    }
   },
-
   "layers": [
-
     {
       "layer_id": "L1",
       "name": "Business Performance",
       "questions": [
-
         {
           "id": "Q01",
           "category": "revenue_growth",
           "type": "quantitative",
           "scope": "universal",
-
-          "question_template":
-            "How did total revenue change between the current reporting period and the comparable prior-year period, and what was the percentage growth?",
-
+          "question_template": "How did total revenue change between the current reporting period and the comparable prior-year period, and what was the percentage growth?",
           "required_concepts": [
             "total_revenue"
           ],
-
           "required_periods": [
             "current_period",
             "comparable_prior_period"
           ],
-
-          "calculation_type": "growth_rate",
-
-          "formula":
-            "(current_revenue - prior_revenue) / prior_revenue * 100",
-
           "output": {
             "type": "percentage"
           },
-
-          "primary_tests": [
-            "extraction",
+          "primary_test": "period_aware_growth_calculation",
+          "secondary_tests": [
+            "concept_extraction",
             "period_resolution",
             "unit_validation",
             "arithmetic_execution"
-          ]
+          ],
+          "track": "core_calculation",
+          "calculation": {
+            "type": "growth_rate",
+            "formula": "(current_revenue - prior_revenue) / prior_revenue * 100"
+          }
         },
-
         {
           "id": "Q02",
           "category": "segment_growth",
           "type": "quantitative",
           "scope": "conditional",
-
-          "question_template":
-            "Which disclosed business segment contributed the largest amount to the company's year-over-year revenue increase, and what percentage of the total revenue increase did it represent?",
-
+          "question_template": "Which disclosed business segment contributed the largest amount to the company's year-over-year revenue increase, and what percentage of the total revenue increase did it represent?",
           "required_concepts": [
             "total_revenue",
             "segment_revenue"
           ],
-
           "required_disclosure": [
             "reportable_segments"
           ],
-
-          "calculation_type": "growth_contribution",
-
-          "formula":
-            "(segment_current - segment_prior) / (total_current - total_prior) * 100",
-
           "output": {
             "type": "percentage"
           },
-
-          "primary_tests": [
+          "primary_test": "segment_growth_contribution",
+          "secondary_tests": [
             "semantic_parsing",
             "segment_identification",
             "period_resolution",
             "evidence_retrieval",
             "arithmetic_execution"
-          ]
+          ],
+          "track": "core_calculation",
+          "calculation": {
+            "type": "growth_contribution",
+            "formula": "(segment_current - segment_prior) / (total_current - total_prior) * 100",
+            "selection_rule": "Calculate each disclosed segment's year-over-year revenue change and select the segment with the largest increase before calculating its contribution."
+          }
         },
-
         {
           "id": "Q03",
           "category": "profitability",
           "type": "quantitative",
           "scope": "universal",
-
-          "question_template":
-            "How did operating income change relative to revenue between the current and comparable prior-year periods, and what happened to the operating margin?",
-
+          "question_template": "How did operating income change relative to revenue between the current and comparable prior-year periods, and what happened to the operating margin?",
           "required_concepts": [
             "revenue",
             "operating_income"
           ],
-
-          "calculation_type": "margin_change",
-
-          "formulas": {
-            "current_margin":
-              "current_operating_income / current_revenue * 100",
-
-            "prior_margin":
-              "prior_operating_income / prior_revenue * 100",
-
-            "margin_change":
-              "current_margin - prior_margin"
-          },
-
           "output": {
             "type": "percentage_points"
           },
-
-          "primary_tests": [
+          "primary_test": "margin_change_calculation",
+          "secondary_tests": [
             "cross_statement_reasoning",
             "period_resolution",
             "semantic_parsing",
             "arithmetic_execution"
-          ]
+          ],
+          "track": "core_calculation",
+          "calculation": {
+            "type": "margin_change",
+            "formulas": {
+              "current_margin": "current_operating_income / current_revenue * 100",
+              "prior_margin": "prior_operating_income / prior_revenue * 100",
+              "margin_change": "current_margin - prior_margin"
+            }
+          }
         },
-
         {
           "id": "Q04",
           "category": "expense_structure",
           "type": "quantitative",
           "scope": "universal",
-
-          "question_template":
-            "What percentage of the year-over-year increase in operating expenses was attributable to the largest disclosed operating-expense category?",
-
+          "question_template": "What percentage of the year-over-year increase in operating expenses was attributable to the largest disclosed operating-expense category?",
           "required_concepts": [
             "operating_expenses",
             "expense_category"
           ],
-
           "required_disclosure": [
             "operating_expense_breakdown"
           ],
-
-          "calculation_type": "expense_growth_contribution",
-
-          "formula":
-            "(category_current - category_prior) / (total_opex_current - total_opex_prior) * 100",
-
           "output": {
             "type": "percentage"
           },
-
-          "primary_tests": [
+          "primary_test": "expense_growth_contribution",
+          "secondary_tests": [
             "semantic_parsing",
             "expense_classification",
             "evidence_retrieval",
             "arithmetic_execution"
-          ]
+          ],
+          "track": "core_calculation",
+          "calculation": {
+            "type": "expense_growth_contribution",
+            "formula": "(category_current - category_prior) / (total_opex_current - total_opex_prior) * 100"
+          }
         },
-
         {
           "id": "Q05",
           "category": "earnings_bridge",
           "type": "cross_statement",
           "scope": "universal",
-
-          "question_template":
-            "How much of the change in operating income between the two comparable periods was reflected in the change in net income?",
-
+          "question_template": "How much of the change in operating income between the two comparable periods was reflected in the change in net income?",
           "required_concepts": [
             "operating_income",
             "net_income"
           ],
-
-          "calculation_type": "change_relationship",
-
-          "formula":
-            "(net_income_current - net_income_prior) / (operating_income_current - operating_income_prior) * 100",
-
           "output": {
             "type": "percentage"
           },
-
-          "primary_tests": [
+          "primary_test": "cross_statement_change_relationship",
+          "secondary_tests": [
             "cross_statement_reasoning",
             "period_resolution",
             "arithmetic_execution"
-          ]
+          ],
+          "track": "core_calculation",
+          "calculation": {
+            "type": "change_relationship",
+            "formula": "(net_income_current - net_income_prior) / (operating_income_current - operating_income_prior) * 100"
+          }
         }
       ]
     },
-
     {
       "layer_id": "L2",
       "name": "Financial Position",
       "questions": [
-
         {
           "id": "Q06",
           "category": "shareholders_equity",
           "type": "cross_statement",
           "scope": "universal",
-
-          "question_template":
-            "How did shareholders' equity change between the beginning and end of the reporting period, and what were the principal disclosed components of that change?",
-
+          "question_template": "How did shareholders' equity change between the beginning and end of the reporting period, and what were the principal disclosed components of that change?",
           "required_concepts": [
             "shareholders_equity"
           ],
-
           "preferred_evidence": [
             "balance_sheet",
             "statement_of_changes_in_equity"
           ],
-
-          "calculation_type": "balance_change",
-
-          "formula":
-            "ending_equity - beginning_equity",
-
           "output": {
             "type": "currency"
           },
-
-          "primary_tests": [
+          "primary_test": "equity_rollforward_change",
+          "secondary_tests": [
             "cross_statement_reasoning",
             "evidence_retrieval",
             "period_resolution"
-          ]
+          ],
+          "track": "advanced_filing_calculation",
+          "calculation": {
+            "type": "balance_change",
+            "formula": "ending_equity - beginning_equity"
+          }
         },
-
         {
           "id": "Q07",
           "category": "liquidity",
           "type": "quantitative",
           "scope": "universal",
-
-          "question_template":
-            "How did cash, cash equivalents and short-term investments or marketable securities change during the reporting period, and what percentage of the change in total assets did this represent?",
-
+          "question_template": "How did cash, cash equivalents and short-term investments or marketable securities change during the reporting period, and what percentage of the change in total assets did this represent?",
           "required_concepts": [
             "cash_and_cash_equivalents",
             "short_term_investments_or_marketable_securities",
             "total_assets"
           ],
-
-          "calculation_type": "liquidity_asset_contribution",
-
-          "formula":
-            "(liquid_assets_end - liquid_assets_begin) / (total_assets_end - total_assets_begin) * 100",
-
           "output": {
             "type": "percentage"
           },
-
-          "primary_tests": [
+          "primary_test": "liquid_asset_contribution",
+          "secondary_tests": [
             "concept_mapping",
             "unit_validation",
             "period_resolution",
             "arithmetic_execution"
-          ]
+          ],
+          "track": "core_calculation",
+          "calculation": {
+            "type": "liquidity_asset_contribution",
+            "formula": "(liquid_assets_end - liquid_assets_begin) / (total_assets_end - total_assets_begin) * 100"
+          }
         },
-
         {
           "id": "Q08",
           "category": "receivables",
           "type": "working_capital",
           "scope": "universal",
-
-          "question_template":
-            "How did accounts receivable growth compare with revenue growth over the comparable reporting periods?",
-
+          "question_template": "How did accounts receivable growth compare with revenue growth over the comparable reporting periods?",
           "required_concepts": [
             "accounts_receivable",
             "revenue"
           ],
-
-          "calculation_type": "growth_comparison",
-
-          "formulas": {
-            "receivables_growth":
-              "(ar_current - ar_prior) / ar_prior * 100",
-
-            "revenue_growth":
-              "(revenue_current - revenue_prior) / revenue_prior * 100",
-
-            "difference":
-              "receivables_growth - revenue_growth"
-          },
-
           "output": {
             "type": "percentage_points"
           },
-
-          "primary_tests": [
+          "primary_test": "stock_vs_flow_growth_comparison",
+          "secondary_tests": [
             "cross_statement_reasoning",
             "stock_vs_flow_semantics",
             "period_resolution"
-          ]
+          ],
+          "track": "core_calculation",
+          "calculation": {
+            "type": "growth_comparison",
+            "formulas": {
+              "receivables_growth": "(ar_current - ar_prior) / ar_prior * 100",
+              "revenue_growth": "(revenue_current - revenue_prior) / revenue_prior * 100",
+              "difference": "receivables_growth - revenue_growth"
+            }
+          }
         },
-
         {
           "id": "Q09",
           "category": "inventory",
           "type": "working_capital",
           "scope": "conditional",
-
-          "question_template":
-            "How did inventory change relative to revenue over the comparable periods, and what inventory-related factors does management disclose as affecting the change?",
-
+          "question_template": "How did inventory change relative to revenue over the comparable periods, and what inventory-related factors does management disclose as affecting the change?",
           "required_concepts": [
             "inventory",
             "revenue"
           ],
-
           "required_disclosure": [
             "inventory",
             "management_discussion"
           ],
-
-          "calculation_type": "inventory_revenue_growth_comparison",
-
-          "primary_tests": [
+          "primary_test": "quantitative_qualitative_inventory_analysis",
+          "secondary_tests": [
             "cross_section_reasoning",
             "semantic_parsing",
             "period_resolution",
             "evidence_retrieval"
-          ]
+          ],
+          "track": "advanced_filing_calculation",
+          "calculation": {
+            "type": "inventory_revenue_growth_comparison"
+          }
         }
       ]
     },
-
     {
       "layer_id": "L3",
       "name": "Shareholders and Capital Allocation",
       "questions": [
-
         {
           "id": "Q10",
           "category": "share_repurchase",
           "type": "quantitative",
           "scope": "conditional",
-
-          "question_template":
-            "What amount did the company spend on share repurchases during the reporting period, what percentage of operating cash flow did this represent, and how did the amount compare with the comparable prior-year period?",
-
+          "question_template": "What amount did the company spend on share repurchases during the reporting period, what percentage of operating cash flow did this represent, and how did the amount compare with the comparable prior-year period?",
           "required_concepts": [
             "share_repurchase_cash",
             "operating_cash_flow"
           ],
-
-          "calculation_type": "capital_allocation_ratio",
-
-          "formula":
-            "share_repurchase_cash / operating_cash_flow * 100",
-
           "output": {
             "type": "percentage"
           },
-
-          "primary_tests": [
+          "primary_test": "capital_allocation_ratio",
+          "secondary_tests": [
             "cross_section_reasoning",
             "capital_allocation_semantics",
             "evidence_retrieval"
+          ],
+          "track": "advanced_filing_calculation",
+          "calculation": {
+            "type": "capital_allocation_ratio",
+            "formula": "share_repurchase_cash / operating_cash_flow * 100"
+          },
+          "expected_outputs": [
+            "share_repurchase_amount",
+            "share_repurchase_as_percentage_of_operating_cash_flow",
+            "prior_year_comparison"
           ]
         },
-
         {
           "id": "Q11",
           "category": "share_dilution",
           "type": "quantitative",
           "scope": "conditional",
-
-          "question_template":
-            "What percentage of basic weighted-average shares was represented by the dilutive effect of outstanding equity awards?",
-
+          "question_template": "What percentage of basic weighted-average shares was represented by the dilutive effect of outstanding equity awards?",
           "required_concepts": [
             "basic_weighted_average_shares",
             "dilutive_effect"
           ],
-
-          "calculation_type": "dilution_ratio",
-
-          "formula":
-            "dilutive_effect / basic_weighted_average_shares * 100",
-
           "output": {
             "type": "percentage"
           },
-
-          "primary_tests": [
+          "primary_test": "share_dilution_calculation",
+          "secondary_tests": [
             "share_semantics",
             "unit_validation",
             "period_resolution"
-          ]
+          ],
+          "track": "core_calculation",
+          "calculation": {
+            "type": "dilution_ratio",
+            "formula": "dilutive_effect / basic_weighted_average_shares * 100",
+            "derived_input": "dilutive_effect = diluted_weighted_average_shares - basic_weighted_average_shares"
+          }
         },
-
         {
           "id": "Q12",
           "category": "equity_allocation",
           "type": "cross_statement",
           "scope": "conditional",
-
-          "question_template":
-            "What were the principal changes in shareholders' equity during the reporting period, and what percentage of the ending equity balance did the largest component represent?",
-
+          "question_template": "What were the principal changes in shareholders' equity during the reporting period, and what percentage of the ending equity balance did the largest component represent?",
           "required_concepts": [
             "shareholders_equity",
             "equity_components"
           ],
-
           "preferred_evidence": [
             "balance_sheet",
             "statement_of_changes_in_equity",
             "notes"
           ],
-
-          "calculation_type": "equity_component_contribution",
-
-          "primary_tests": [
+          "primary_test": "equity_component_contribution",
+          "secondary_tests": [
             "semantic_parsing",
             "cross_statement_reasoning",
             "evidence_retrieval"
-          ]
+          ],
+          "track": "advanced_filing_calculation",
+          "calculation": {
+            "type": "equity_component_contribution"
+          }
         }
       ]
     },
-
     {
       "layer_id": "L4",
       "name": "Cash Flow and Commitments",
       "questions": [
-
         {
           "id": "Q13",
           "category": "cash_conversion",
           "type": "cross_statement",
           "scope": "universal",
-
-          "question_template":
-            "What percentage of net income was converted into operating cash flow during the reporting period, and how did this compare with the comparable prior-year period?",
-
+          "question_template": "What percentage of net income was converted into operating cash flow during the reporting period, and how did this compare with the comparable prior-year period?",
           "required_concepts": [
             "net_income",
             "operating_cash_flow"
           ],
-
-          "calculation_type": "cash_conversion",
-
-          "formula":
-            "operating_cash_flow / net_income * 100",
-
           "output": {
             "type": "percentage"
           },
-
-          "primary_tests": [
+          "primary_test": "cash_conversion_calculation",
+          "secondary_tests": [
             "cross_statement_reasoning",
             "period_resolution",
             "arithmetic_execution"
-          ]
+          ],
+          "track": "core_calculation",
+          "calculation": {
+            "type": "cash_conversion",
+            "formula": "operating_cash_flow / net_income * 100"
+          }
         },
-
         {
           "id": "Q14",
           "category": "capital_allocation",
           "type": "cross_statement",
           "scope": "conditional",
-
-          "question_template":
-            "What proportion of operating cash flow was allocated to shareholder returns and capital expenditure during the reporting period?",
-
+          "question_template": "What proportion of operating cash flow was allocated to shareholder returns and capital expenditure during the reporting period?",
           "required_concepts": [
             "operating_cash_flow",
             "share_repurchase",
             "dividends",
             "capital_expenditure"
           ],
-
-          "calculation_type": "cash_allocation",
-
-          "formula":
-            "(share_repurchase + dividends + capital_expenditure) / operating_cash_flow * 100",
-
           "output": {
             "type": "percentage"
           },
-
-          "primary_tests": [
+          "primary_test": "cash_allocation_calculation",
+          "secondary_tests": [
             "cross_statement_reasoning",
             "cash_flow_semantics",
             "unit_validation"
-          ]
+          ],
+          "track": "core_calculation",
+          "calculation": {
+            "type": "cash_allocation",
+            "formula": "(share_repurchase + dividends + capital_expenditure) / operating_cash_flow * 100",
+            "normalization_rule": "Treat disclosed cash outflows as positive economic amounts before calculating allocation percentage."
+          }
         },
-
         {
           "id": "Q15",
           "category": "future_commitments",
           "type": "footnote_derived",
           "scope": "conditional",
-
-          "question_template":
-            "What are the company's disclosed future contractual or purchase commitments, what proportion is due within the next fiscal year, and how does that near-term obligation compare with available liquid resources?",
-
+          "question_template": "What are the company's disclosed future contractual or purchase commitments, what proportion is due within the next fiscal year, and how does that near-term obligation compare with available liquid resources?",
           "required_concepts": [
             "future_commitments",
             "near_term_commitments",
             "cash_and_cash_equivalents",
             "marketable_securities_or_short_term_investments"
           ],
-
           "required_disclosure": [
             "commitments",
             "liquidity"
           ],
-
-          "calculation_type": "commitment_liquidity_ratio",
-
-          "primary_tests": [
+          "primary_test": "commitment_liquidity_analysis",
+          "secondary_tests": [
             "footnote_retrieval",
             "period_resolution",
             "unit_validation",
             "cross_section_reasoning"
-          ]
+          ],
+          "track": "advanced_filing_calculation",
+          "calculation": {
+            "type": "commitment_liquidity_ratio"
+          }
         }
       ]
     },
-
     {
       "layer_id": "L5",
       "name": "Risk and Important Disclosures",
       "questions": [
-
         {
           "id": "Q16",
           "category": "regulatory_risk",
           "type": "qualitative",
           "scope": "conditional",
-
-          "question_template":
-            "What material regulatory, export-control, trade or government-policy risks does the filing identify, and which disclosed business activities, products, markets or geographic exposures could be affected?",
-
+          "question_template": "What material regulatory, export-control, trade or government-policy risks does the filing identify, and which disclosed business activities, products, markets or geographic exposures could be affected?",
           "required_sections": [
             "risk_factors",
             "MD&A",
             "business",
             "legal_or_regulatory_disclosures"
           ],
-
           "output": {
             "type": "evidence_backed_structured_summary"
           },
-
-          "primary_tests": [
+          "primary_test": "regulatory_risk_evidence_retrieval",
+          "secondary_tests": [
             "semantic_parsing",
             "evidence_retrieval",
             "section_resolution"
-          ]
+          ],
+          "track": "evidence_disclosure"
         },
-
         {
           "id": "Q17",
           "category": "geographic_exposure",
           "type": "semantic_quantitative",
           "scope": "conditional",
-
-          "question_template":
-            "What proportion of revenue or assets was associated with the largest disclosed geographic exposure, and what limitations or distinctions does the company provide regarding the geographic classification?",
-
+          "question_template": "What proportion of revenue or assets was associated with the largest disclosed geographic exposure, and what limitations or distinctions does the company provide regarding the geographic classification?",
           "required_concepts": [
             "geographic_revenue_or_assets"
           ],
-
           "required_disclosure": [
             "geographic_information"
           ],
-
-          "primary_tests": [
+          "primary_test": "geographic_exposure_analysis",
+          "secondary_tests": [
             "geographic_semantics",
             "evidence_retrieval",
             "unit_validation"
-          ]
+          ],
+          "track": "advanced_filing_calculation"
         },
-
         {
           "id": "Q18",
           "category": "market_risk",
           "type": "sensitivity",
           "scope": "conditional",
-
-          "question_template":
-            "What quantitative market-risk sensitivity does the company disclose, and what would the disclosed sensitivity represent relative to the relevant financial measure for the reporting period?",
-
+          "question_template": "What quantitative market-risk sensitivity does the company disclose, and what would the disclosed sensitivity represent relative to the relevant financial measure for the reporting period?",
           "required_sections": [
             "quantitative_and_qualitative_market_risk",
             "market_risk",
             "risk_disclosures"
           ],
-
-          "calculation_type": "sensitivity_ratio",
-
-          "primary_tests": [
+          "primary_test": "market_risk_sensitivity_interpretation",
+          "secondary_tests": [
             "semantic_parsing",
             "sensitivity_interpretation",
             "cross_section_reasoning"
-          ]
+          ],
+          "track": "advanced_filing_calculation",
+          "calculation": {
+            "type": "sensitivity_ratio"
+          }
         },
-
         {
           "id": "Q19",
           "category": "litigation_and_contingencies",
           "type": "qualitative",
           "scope": "conditional",
-
-          "question_template":
-            "What material legal proceedings, contingencies or claims does the company disclose, what financial exposure is disclosed where available, and what uncertainty does the company state about potential losses?",
-
+          "question_template": "What material legal proceedings, contingencies or claims does the company disclose, what financial exposure is disclosed where available, and what uncertainty does the company state about potential losses?",
           "required_sections": [
             "legal_proceedings",
             "contingencies",
             "notes"
           ],
-
           "output": {
             "type": "evidence_backed_structured_summary"
           },
-
-          "primary_tests": [
+          "primary_test": "litigation_uncertainty_extraction",
+          "secondary_tests": [
             "evidence_retrieval",
             "semantic_parsing",
             "uncertainty_extraction"
-          ]
+          ],
+          "track": "evidence_disclosure"
         },
-
         {
           "id": "Q20",
           "category": "material_disclosures",
           "type": "qualitative_cross_section",
           "scope": "conditional",
-
-          "question_template":
-            "Identify material changes or disclosures in the filing that could affect interpretation of the company's reported financial results, and provide the supporting evidence and quantitative exposure where disclosed.",
-
+          "question_template": "Identify material changes or disclosures in the filing that could affect interpretation of the company's reported financial results, and provide the supporting evidence and quantitative exposure where disclosed.",
           "required_sections": [
             "MD&A",
             "risk_factors",
@@ -654,16 +566,16 @@
             "legal_proceedings",
             "market_risk"
           ],
-
           "output": {
             "type": "evidence_backed_structured_summary"
           },
-
-          "primary_tests": [
+          "primary_test": "cross_section_material_disclosure_synthesis",
+          "secondary_tests": [
             "cross_section_reasoning",
             "semantic_parsing",
             "evidence_retrieval"
-          ]
+          ],
+          "track": "evidence_disclosure"
         }
       ]
     }
