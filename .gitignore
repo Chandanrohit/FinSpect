@@ -1,0 +1,44 @@
+@
+# Python
+__pycache__/
+*.py[cod]
+*.pyd
+.python-version
+
+# Virtual environments
+.venv/
+venv/
+env/
+
+# Testing and coverage
+.pytest_cache/
+.coverage
+htmlcov/
+
+# Environment variables and secrets
+.env
+.env.*
+!.env.example
+
+# IDE and operating system files
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+
+# Local caches and downloaded data
+data/cache/
+cache/
+*.sqlite3
+
+# Build artifacts
+build/
+dist/
+*.egg-info/
+
+# Optional local model artifacts
+models/
+"@ | Set-Content -Path .gitignore -Encoding utf8
