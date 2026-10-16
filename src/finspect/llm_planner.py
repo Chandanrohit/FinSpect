@@ -59,6 +59,7 @@ class OllamaQueryPlanner:
         payload: dict[str, Any] = {
             "model": self.model,
             "stream": False,
+            "keep_alive": os.getenv("OLLAMA_KEEP_ALIVE", "4m"),
             "think": False,
             "format": QueryPlan.model_json_schema(),
             "messages": [
