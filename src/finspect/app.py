@@ -13,7 +13,7 @@ from typing import Any
 
 import streamlit as st
 
-from orchestrator import run_query
+from finspect.orchestrator import run_query
 
 
 st.set_page_config(
@@ -66,8 +66,24 @@ def display_result(result: Any) -> None:
         st.warning("The pipeline returned no answer.")
     elif isinstance(answer, str):
         st.markdown(answer)
+    elif isinstance(answer,dict) and isinstance(
+        answer.get("text"), str
+    ):
+    # This part deals with clean output of answer user will get rather than internal object.
+       st.markdown(answer["text"])
+       if answer.get("limitations"):
+        st.warning("Limitations")
+        for limitation in answer["limitation"]:
+            st.write(f"-{limitation}")
+       if answer.get("evidence"):
+           st.subheader("Evidence")
+           st.dataframe(
+               answer["evidence"],
+               use_container_width=True,
+               hide_index=True,
+           )
     else:
-        # Answer is a structured object in the current pipeline.
+    
         st.json(to_json_safe(answer))
 
     with st.expander("Inspect query plan, evidence, and pipeline details"):
