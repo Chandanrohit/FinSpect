@@ -37,8 +37,7 @@ class XBRLService:
         cik = self.normalize_cik(cik)
 
         url = (
-            f"{self.client.DATA_BASE_URL}/"
-            f"/api/xbrl/companyfacts/"
+            f"{self.client.DATA_BASE_URL}/api/xbrl/companyfacts/"
             f"CIK{cik}.json"
         )
 
@@ -62,11 +61,8 @@ class XBRLService:
         cik = self.normalize_cik(cik)
 
         url = (
-            f"{self.client.DATA_BASE_URL}/"
-            f"/api/xbrl/companyconcept/"
-            f"CIK{cik}/"
-            f"{taxonomy}/"
-            f"{concept}.json"
+            f"{self.client.DATA_BASE_URL}/api/xbrl/companyconcept/"
+            f"CIK{cik}/{taxonomy}/{concept}.json"
         )
 
         return self.client.get_json(url)

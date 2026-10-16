@@ -17,10 +17,10 @@ class EdgarClient:
     This class is responsible only for:
     - making HTTP requests
     - SEC headers
-    - timeouts
-    - basic rate limiting
+    - timeouts (Ususally ERROR 403 and 404)
+    - basic rate limiting and it is mentioned that per 10 request/sec is offered by SEC API
     - HTTP error handling
-    - returning JSON/text
+    - returning JSON/text (For forther quadrant readable)
 
     It does NOT decide which financial data is relevant.
     """
@@ -31,7 +31,7 @@ class EdgarClient:
     def __init__(
         self,
         user_agent: str,
-        timeout: float = 30.0,
+        timeout: float = 60.0,
         min_request_interval: float = 0.1,
     ) -> None:
         if not user_agent.strip():
