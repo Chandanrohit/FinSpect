@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import os
+from functools import lru_cache
 from dataclasses import dataclass
 from decimal import Decimal
 from typing import Any, Callable, Protocol
@@ -15,7 +17,10 @@ from finspect.calculator import revenue_growth
 from finspect.edgar.client import EdgarClient
 from finspect.edgar.facts import FinancialFactRetriever
 from finspect.query_planner import QueryPlan
-
+from finspect.edgar.xbrl import XBRLService
+from finspect.llm_planner import planner_from_environment
+from finspect.plan_normalizer import normalize_query_plan
+from finspect.period_resolver import (resolve_annual_period as resolve_sec_annual_period)
 
 class Planner(Protocol):
     def plan(self, question: str) -> QueryPlan:
@@ -253,60 +258,71 @@ class FinSpectOrchestrator:
             f"{primary_document}"
         )
 
-# Entry point of Streamlit
-
-# Add these imports if they are not already present.
-import os
-from functools import lru_cache
-
+# Entry point of Streamlit/application
 
 @lru_cache(maxsize=1)
 def get_orchestrator() -> FinSpectOrchestrator:
-    """Build the application pipeline once per Streamlit process."""
+    """Create one configured SEC service stack per application process."""
 
-    from finspect.llm_planner import planner_from_environment
-    from finspect.plan_normalizer import normalize_query_plan
+    user_agent = os.getenv("SEC_USER_AGENT", "").strip()
+    if not user_agent:
+        raise RuntimeError(
+            "SEC_USER_AGENT is not configured. Set it to a descriptive "
+            "FinSpect application name and a contact email."
+        )
 
+    # One HTTP client is shared by the SEC-backed services.
+    client = EdgarClient(user_agent=user_agent)
+    xbrl_service = XBRLService(client)
+    fact_retriever = FinancialFactRetriever(xbrl_service=xbrl_service)
 
-    def resolve_annual_period(cik: str, fiscal_year: int) -> AnnualPeriod:
-        """
-        Resolve fiscal-year dates using SEC company facts.
-        Do not assume that a fiscal year ends on December 31.
-        """
-        from finspect.period_resolver import resolve_annual_period as resolve
-
-        period = resolve(cik, fiscal_year)
+    def resolve_period(cik: str, fiscal_year: int) -> AnnualPeriod:
+        period = resolve_sec_annual_period(
+            cik,
+            fiscal_year,
+            xbrl_service=xbrl_service,
+        )
         return AnnualPeriod(
-            fiscal_year=fiscal_year,
+            fiscal_year=period.fiscal_year,
             start_date=period.start_date,
             end_date=period.end_date,
-            form="10-K",
+            form=period.form,
         )
 
     return FinSpectOrchestrator(
         planner=planner_from_environment(),
         normalizer=normalize_query_plan,
-        period_resolver=resolve_annual_period,
-        fact_retriever=FinancialFactRetriever,
+        period_resolver=resolve_period,
+        fact_retriever=fact_retriever,
     )
 
 
-def run_query(question: str) -> dict:
-    """Stable entry point for Streamlit."""
-    result = get_orchestrator().run(question)
+def run_query(question: str) -> dict[str, Any]:
+    """Stable dictionary interface for the Streamlit UI."""
 
+    result = get_orchestrator().run(question)
     answer = result.answer
 
-    # Answer is a Pydantic model in the current answer-builder design.
-    if hasattr(answer, "model_dump"):
-        answer_data = answer.model_dump(mode="json")
-    elif hasattr(answer, "__dict__"):
-        answer_data = dict(answer.__dict__)
-    else:
-        answer_data = {"text": str(answer)}
-
     return {
-        "answer": answer_data,
+        "answer": {
+            "text": answer.text,
+            "formula_id": answer.formula_id,
+            "result_value": answer.result_value,
+            "result_unit": answer.result_unit,
+            "evidence": [
+                {
+                    "label": item.label,
+                    "value": str(item.value),
+                    "unit": item.unit,
+                    "period": item.period,
+                    "filing_date": item.filing_date,
+                    "accession_number": item.accession_number,
+                    "source_url": item.source_url,
+                }
+                for item in answer.evidence
+            ],
+            "limitations": list(answer.limitations),
+        },
         "plan": (
             result.plan.model_dump(mode="json")
             if result.plan is not None
