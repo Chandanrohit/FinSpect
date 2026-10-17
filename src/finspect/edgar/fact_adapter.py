@@ -67,7 +67,6 @@ def sec_fact_to_financial_fact(
         raise ValueError(
             f"SEC fact is missing required fields: {', '.join(missing)}"
         )
-
     try:
         value = Decimal(str(raw["value"]))
     except (InvalidOperation, ValueError) as exc:
@@ -87,6 +86,14 @@ def sec_fact_to_financial_fact(
     else:
         period_kind = PeriodKind.DURATION
         duration_days = (end - start_date).days
+
+    if filing_date < end:
+        # Filing dates before the reporting period end are not valid
+        # for an ordinary completed annual filing fact.
+        raise ValueError(
+            "SEC filing date cannot precede the reporting period end."
+        )
+
 
 # Recognize a normal annual reporting period.
 # The period resolver already anchors these facts to annual filings.

@@ -131,30 +131,43 @@ class FinSpectOrchestrator:
             )
             return PipelineResult(plan=plan, answer=answer)
 
-        if not plan.company.cik and self.company_resolver is not None:
+
+        # Resolve the company only when the planner did not provide a CIK.
+        if plan.company.cik:
+            resolved = {
+                "name": plan.company.name,
+                "ticker": plan.company.ticker or "",
+                "cik": plan.company.cik,
+            }
+        elif self.company_resolver is not None:
             try:
-                resolved = self.company_resolver.resolver(
+                resolved = self.company_resolver.resolve(
                     name=plan.company.name,
                     ticker=plan.company.ticker,
-                    cik=plan.company.cik,
                 )
             except CompanyResolutionError as exc:
                 answer = build_unsupported_answer(
                     question=question,
                     reason=str(exc),
                 )
+                return PipelineResult(plan=plan, answer=answer)
+        else:
+            answer = build_unsupported_answer(
+                question=question,
+                reason="Company resolution is unavailable and no CIK was provided.",
+            )
             return PipelineResult(plan=plan, answer=answer)
 
         resolved_company = plan.company.model_copy(
             update={
                 "name": resolved["name"],
-                "ticker": resolved["ticker"],
-                "cik": resolved["cik"]
+                "ticker": resolved.get("ticker") or None,
+                "cik": resolved["cik"],
             }
         )
         plan = plan.model_copy(update={"company": resolved_company})
-
         cik = plan.company.cik
+
 
         # 4. Resolve real reporting dates. Never guess fiscal-year dates.
         periods = [
