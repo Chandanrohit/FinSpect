@@ -60,7 +60,7 @@ class EdgarClient:
 
         elapsed = time.monotonic() - self._last_request_time
 
-        if elapsed < self.min_request_interval:
+        if elapsed < self.min_request_interval: 
             time.sleep(
                 self.min_request_interval - elapsed
             )
