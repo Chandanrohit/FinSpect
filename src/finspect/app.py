@@ -73,7 +73,7 @@ def display_result(result: Any) -> None:
        st.markdown(answer["text"])
        if answer.get("limitations"):
         st.warning("Limitations")
-        for limitation in answer["limitation"]:
+        for limitation in answer["limitations"]:
             st.write(f"-{limitation}")
        if answer.get("evidence"):
            st.subheader("Evidence")
@@ -172,6 +172,7 @@ if submitted:
 
         except Exception as exc:
             st.error("FinSpect could not complete this query.")
+            st.exception(exc)
             st.info(
                 " The Pipeline encountered an error."
                 "Check the developer diagnostics below." 
