@@ -36,7 +36,7 @@ class AnnualPeriod:
     start_date: str
     end_date: str
     form: str = "10-K"
-
+    concept: str = ""
 
 PeriodResolver = Callable[[str, int], AnnualPeriod]
 
@@ -95,12 +95,20 @@ class FinSpectOrchestrator:
             return PipelineResult(plan=plan, answer=answer)
 
         # 3. This first vertical slice implements Q01 only.
-        if plan.benchmark_id != "Q01" or plan.operation != "growth_rate":
+        is_revenue_growth = (
+            plan.operation == "growth_rate"
+            and any(
+                metric.name.strip().casefold() in {"total revenue", "revenue"}
+                and metric.required
+                for metric in plan.metrics
+            )
+        )
+        if not is_revenue_growth:
             answer = build_unsupported_answer(
                 question=question,
                 reason=(
-                    "The request was planned, but this pipeline version "
-                    "only executes annual revenue growth (Q01)."
+                    "This FinSpect version supports only annual revenue "
+                    "growth (Q01)."
                 ),
             )
             return PipelineResult(plan=plan, answer=answer)
@@ -139,7 +147,7 @@ class FinSpectOrchestrator:
             self.fact_retriever.get_fact(
                 cik=cik,
                 taxonomy="us-gaap",
-                concept=self.REVENUE_CONCEPT,
+                concept=period.concept,
                 start_date=period.start_date,
                 end_date=period.end_date,
                 form=period.form,
@@ -287,6 +295,7 @@ def get_orchestrator() -> FinSpectOrchestrator:
             start_date=period.start_date,
             end_date=period.end_date,
             form=period.form,
+            concept=period.concept,
         )
 
     return FinSpectOrchestrator(
