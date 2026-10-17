@@ -133,6 +133,7 @@ class ReportingPeriod(FSModel):
 
 
 class EvidenceRef(FSModel):
+    """Traceable source for textual or structured financial evidence."""
     evidence_id: NonEmpty
     document_id: NonEmpty
     section: str | None = None
@@ -141,9 +142,54 @@ class EvidenceRef(FSModel):
     row: str | None = None
     column: str | None = None
     paragraph_id: str | None = None
-    quote: NonEmpty
-    evidence_type: Literal["direct", "context", "derived"] = "direct"
+
+    # Textual evidence may have a have quote; structured XBRL evidence may not.
+    quote: str | None = None
+    evidence_type: Literal["direct", "context", "derived", "xbrl_fact"] = "direct"
     confidence: Probability = Decimal("1")
+
+    # Structured SEC provenance.
+    source_url: str | None = None
+    accession_number: str | None = None
+    taxonomy: str | None = None
+    concept: str | None = None
+    context_start_date: date | None = None
+    context_end_date: date | None = None
+    filing_date: date | None = None
+
+    @model_validator(mode="after")
+    def validate_evidence_source(self):
+        has_quote = bool(self.quote and self.quote.strip())
+
+        has_structured_source = all((
+            self.accession_number,
+            self.taxonomy,
+            self.concept,
+        ))
+
+        if not has_quote and not has_structured_source:
+            raise ValueError(
+                "Evidence must contain a quote or structured source "
+                "metadata (accession_number, taxonomy, concept)."
+            )
+
+        if self.evidence_type == "xbrl_fact" and not has_structured_source:
+            raise ValueError(
+                "XBRL evidence requires accession_number, taxonomy, "
+                "and concept."
+            )
+
+        if (
+            self.context_start_date is not None
+            and self.context_end_date is not None
+            and self.context_start_date > self.context_end_date
+        ):
+            raise ValueError(
+                "context_start_date cannot be after context_end_date."
+            )
+
+        return self
+
 
 
 class FilingMetadata(FSModel):
@@ -565,21 +611,67 @@ def require_compatible_facts(
         raise ValueError("Reporting-scope mismatch; do not mix consolidated/standalone.")
 
 
+
 def validate_growth_inputs(current: FinancialFact, prior: FinancialFact) -> None:
-    """Checks inputs for a growth formula; does not calculate growth."""
+    """Validate comparable financial facts before calculating growth."""
     require_compatible_facts(
-        current, prior, require_same_period=False, require_same_scope=True
+        current,
+        prior,
+        require_same_period=False,
+        require_same_scope=True,
     )
+
+    if current.entity != prior.entity:
+        raise ValueError("Entity mismatch; both facts must belong to the same entity.")
+
+    if current.concept != prior.concept:
+        raise ValueError("Concept mismatch; both facts must represent the same metric.")
+
     if current.period.role != PeriodRole.CURRENT:
         raise ValueError("First input must be current period.")
+
     if prior.period.role != PeriodRole.COMPARABLE_PRIOR:
         raise ValueError("Second input must be comparable prior period.")
-    if prior.value == 0:
-        raise ValueError("Growth rate undefined: prior-period value is zero.")
+
+    if not current.value.is_finite() or not prior.value.is_finite():
+        raise ValueError("Financial fact values must be finite.")
+
+    if current.unit.kind != prior.unit.kind:
+        raise ValueError("Unit-kind mismatch.")
+
+    if current.unit.currency != prior.unit.currency:
+        raise ValueError("Currency mismatch.")
+
+    if current.unit.scale <= 0 or prior.unit.scale <= 0:
+        raise ValueError("Unit scale must be positive.")
+
     if current.period.kind != prior.period.kind:
-        raise ValueError("Cannot compare an instant fact with a duration fact.")
+        raise ValueError(
+            "Cannot compare an instant fact with a duration fact."
+        )
+
     if current.period.basis != prior.period.basis:
-        raise ValueError("Period basis mismatch; e.g. quarter vs YTD.")
+        raise ValueError(
+            "Period basis mismatch; e.g. quarter vs full year."
+        )
+
+    if current.period.kind == PeriodKind.DURATION:
+        if current.period.start_date is None or prior.period.start_date is None:
+            raise ValueError("Duration facts require start dates.")
+
+        if current.period.start_date <= prior.period.start_date:
+            raise ValueError("Current period must start after prior period.")
+
+        if current.period.end_date <= prior.period.end_date:
+            raise ValueError("Current period must end after prior period.")
+
+    elif current.period.end_date <= prior.period.end_date:
+        raise ValueError("Current instant must be later than prior instant.")
+
+    if prior.normalized_value == 0:
+        raise ValueError(
+            "Growth rate undefined: prior-period normalized value is zero."
+        )
 
 
 def validate_currency_inputs(*facts: FinancialFact) -> None:

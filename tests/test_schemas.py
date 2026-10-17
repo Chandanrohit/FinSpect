@@ -141,3 +141,49 @@ def test_growth_inputs_reject_quarter_vs_full_year():
 
     with pytest.raises(ValueError, match="basis mismatch"):
         validate_growth_inputs(current, prior)
+
+
+def test_growth_inputs_reject_entity_mismatch():
+    current = make_fact(
+        fact_id="current",
+        value="150",
+        role=PeriodRole.CURRENT,
+    )
+    prior = make_fact(
+        fact_id="prior",
+        value="100",
+        role=PeriodRole.COMPARABLE_PRIOR,
+    )
+    prior.entity = "Different Company"
+
+    with pytest.raises(ValueError, match="Entity mismatch"):
+        validate_growth_inputs(current, prior)
+
+
+def test_growth_inputs_reject_non_finite_values():
+    with pytest.raises(ValidationError):
+        make_fact(
+            fact_id="current",
+            value="NaN",
+            role=PeriodRole.CURRENT,
+        )
+
+
+def test_growth_inputs_reject_non_chronological_periods():
+    current = make_fact(
+        fact_id="current",
+        value="150",
+        role=PeriodRole.CURRENT,
+    )
+    prior = make_fact(
+        fact_id="prior",
+        value="100",
+        role=PeriodRole.COMPARABLE_PRIOR,
+    )
+
+    # Deliberately make the current period earlier than the prior period.
+    current.period.start_date = date(2022, 1, 1)
+    current.period.end_date = date(2022, 12, 31)
+
+    with pytest.raises(ValueError, match="Current period must"):
+        validate_growth_inputs(current, prior)

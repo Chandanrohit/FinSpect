@@ -21,6 +21,8 @@ from finspect.edgar.xbrl import XBRLService
 from finspect.llm_planner import planner_from_environment
 from finspect.plan_normalizer import normalize_query_plan
 from finspect.period_resolver import (resolve_annual_period as resolve_sec_annual_period)
+from finspect.edgar.fact_adapter import sec_fact_to_financial_fact
+from finspect.schema import PeriodRole, ReportingScope, FinancialFact, validate_growth_inputs
 
 class Planner(Protocol):
     def plan(self, question: str) -> QueryPlan:
@@ -48,7 +50,7 @@ class PipelineResult:
     plan: QueryPlan | None
     answer: Answer
     facts: tuple[dict[str, Any], ...] = ()
-
+    canonical_facts: tuple[FinancialFact, ...] = ()
 
 class FinSpectOrchestrator:
     """
@@ -160,6 +162,19 @@ class FinSpectOrchestrator:
             for period in periods
         )
 
+        canonical_facts = tuple(
+    sec_fact_to_financial_fact(
+        raw_fact,
+        period_role=role,
+        reporting_scope=ReportingScope.CONSOLIDATED,
+    )
+    for raw_fact, role in zip(
+        facts,
+        (PeriodRole.COMPARABLE_PRIOR, PeriodRole.CURRENT),
+        strict=True,
+    )
+)
+
         # 6. Validate the retrieved periods and units before calculating.
         for fact, period in zip(facts, periods):
             if fact["start_date"] != period.start_date:
@@ -176,8 +191,46 @@ class FinSpectOrchestrator:
 
             ):
                 raise ValueError("Retrieved fact has an unexpected accession number.")
+            
+            if canonical_facts.period.end_date.isoformat() != period.end_date:
+              raise ValueError("Canonical fact has an unexpected end date.")
+
+            if canonical_facts.concept != period.concept:
+                 raise ValueError("Canonical fact has an unexpected concept.")
+
 
         prior_fact, current_fact = facts
+        prior_canonical, current_canonical = canonical_facts
+
+        for raw_fact, period in zip(facts, periods, strict=True):
+         if raw_fact["start_date"] != period.start_date:
+            raise ValueError("Retrieved fact has an unexpected start date.")
+
+         if raw_fact["end_date"] != period.end_date:
+           raise ValueError("Retrieved fact has an unexpected end date.")
+         
+         if raw_fact["unit"] != "USD":
+          raise ValueError("Revenue facts must use USD.")
+
+         if raw_fact["form"] != period.form:
+          raise ValueError("Retrieved fact has an unexpected filing form.")
+
+         if (
+        period.accession_number is not None
+        and raw_fact.get("accession_number") != period.accession_number
+    ):
+          raise ValueError(
+            "Retrieved fact has an unexpected accession number."
+        )
+
+        if prior_fact["end_date"] >= current_fact["end_date"]:
+          raise ValueError("The prior period must precede the current period.")
+
+        # Validate the canonical objects before arithmetic.
+        validate_growth_inputs(current_canonical, prior_canonical)
+
+        # Arithmetic now consumes the validated canonical values.
+        calculation = revenue_growth(current=current_canonical.normalized_value, prior=prior_canonical.normalized_value)
 
         if prior_fact["end_date"] >= current_fact["end_date"]:
             raise ValueError("The prior period must precede the current period.")
@@ -217,6 +270,7 @@ class FinSpectOrchestrator:
             plan=plan,
             answer=answer,
             facts=facts,
+            canonical_facts=canonical_facts,
         )
 
     @staticmethod
@@ -325,7 +379,7 @@ def run_query(question: str) -> dict[str, Any]:
 
     result = get_orchestrator().run(question)
     answer = result.answer
-
+    
     return {
         "answer": {
             "text": answer.text,
@@ -346,6 +400,11 @@ def run_query(question: str) -> dict[str, Any]:
             ],
             "limitations": list(answer.limitations),
         },
+        "canonical_facts": [
+            fact.model_dump(mode="json")
+            for fact in result.canonical_facts
+        ],
+
         "plan": (
             result.plan.model_dump(mode="json")
             if result.plan is not None
