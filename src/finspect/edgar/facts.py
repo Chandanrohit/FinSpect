@@ -49,6 +49,7 @@ class FinancialFactRetriever:
         form: str,
         unit: str | None = None,
         filed_on_or_before: str | None = None,
+        accession_number: str | None = None,
     ) -> dict[str, Any]:
         """
         Return one matching SEC fact with its filing evidence.
@@ -130,7 +131,8 @@ class FinancialFactRetriever:
                 continue
 
             filed = fact.get("filed")
-            if not filed:
+            # If a specific SEC filing was requested, require an exact match.
+            if (accession_number is not None and fact.get("accn") != accession_number):
                 continue
 
             # Ignore filings later than the optional cutoff.

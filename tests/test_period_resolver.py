@@ -1,7 +1,7 @@
 
 import pytest
 
-from finspect.period_resolver import find_annual_revenue_fact
+from finspect.period_resolver import find_annual_revenue_fact, resolve_annual_period, AnnualPeriod
 
 
 @pytest.fixture
@@ -116,3 +116,23 @@ def test_ignores_facts_without_a_start_date(nvidia_company_facts):
     fact = find_annual_revenue_fact(nvidia_company_facts, 2024)
 
     assert fact["val"] == 60_922_000_000
+
+
+def test_resolver_preserves_original_filing_metadata(
+    nvidia_company_facts,
+):
+    class FakeXBRLService:
+        def get_company_facts(self, cik):
+            return nvidia_company_facts
+
+    period = resolve_annual_period(
+        "0001045810",
+        2024,
+        xbrl_service=FakeXBRLService(),
+    )
+
+    assert period.start_date == "2023-01-30"
+    assert period.end_date == "2024-01-28"
+    assert period.concept == "Revenues"
+    assert period.filing_date == "2024-02-21"
+    assert period.accession_number == "0001045810-24-000029"

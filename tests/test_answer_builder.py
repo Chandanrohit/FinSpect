@@ -43,7 +43,7 @@ def test_calculation_answer_contains_result_formula_and_evidence():
         evidence=evidence,
     )
 
-    assert "30%" in answer.text
+    assert "30.00%" in answer.text
     assert result.expression in answer.text
     assert "FY2025" in answer.text
     assert "FY2024" in answer.text

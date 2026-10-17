@@ -102,7 +102,9 @@ class AnnualPeriod:
     start_date: str
     end_date: str
     form: str = "10-K"
-    concept: str = "Revenues"
+    concept: str = ""
+    filing_date: str | None = None
+    accession_number: str | None = None
 
 
 REVENUE_CONCEPT = (
@@ -130,6 +132,8 @@ def resolve_annual_period(
         start_date=fact["start"],
         end_date=fact["end"],
         form=fact.get("form", "10-K"),
-        concept=fact.get("concept", "Revenues")
+        concept=fact.get("concept", "Revenues"),
+        filing_date=fact.get("filed"),
+        accession_number=fact.get("accn") or fact.get("accession_number")
     )
 

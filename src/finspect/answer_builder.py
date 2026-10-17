@@ -36,6 +36,12 @@ def _format_decimal(value: Decimal) -> str:
     """Avoid scientific notation for ordinary financial values."""
     return format(value, ",f")
 
+def _format_result(value: Decimal, unit: str) -> str:
+    """Format results for display without changing stored precision."""
+    if unit == "percent":
+        return f"{value.quantize(Decimal('0.01')):,.2f}%"
+
+    return _format_decimal(value)
 
 def build_calculation_answer(
     *,
@@ -59,7 +65,7 @@ def build_calculation_answer(
     if result.value is None:
         raise ValueError("Cannot present a calculation with no result value.")
 
-    value_text = _format_decimal(result.value)
+    value_text = _format_result(result.value, result.unit)
     unit_text = result.unit
 
     if result.unit == "percent":
