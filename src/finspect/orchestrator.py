@@ -14,6 +14,7 @@ from finspect.answer_builder import (
     build_unsupported_answer,
 )
 from finspect.calculator import revenue_growth
+from finspect.edgar import company_resolver
 from finspect.edgar.client import EdgarClient
 from finspect.edgar.facts import FinancialFactRetriever
 from finspect.query_planner import QueryPlan
@@ -23,7 +24,7 @@ from finspect.plan_normalizer import normalize_query_plan
 from finspect.period_resolver import (resolve_annual_period as resolve_sec_annual_period)
 from finspect.edgar.fact_adapter import sec_fact_to_financial_fact
 from finspect.schema import PeriodRole, ReportingScope, FinancialFact, validate_growth_inputs
-
+from finspect.edgar.company_resolver import (SECCompanyResolver, CompanyResolutionError)
 class Planner(Protocol):
     def plan(self, question: str) -> QueryPlan:
         """Return a validated query plan."""
@@ -71,11 +72,13 @@ class FinSpectOrchestrator:
         normalizer: Callable[[QueryPlan], QueryPlan],
         period_resolver: PeriodResolver,
         fact_retriever: FinancialFactRetriever,
+        company_resolver: SECCompanyResolver | None = None,
     ) -> None:
         self.planner = planner
         self.normalizer = normalizer
         self.period_resolver = period_resolver
         self.fact_retriever = fact_retriever
+        self.company_resolver = company_resolver
 
     def run(self, question: str) -> PipelineResult:
         question = question.strip()
@@ -128,15 +131,28 @@ class FinSpectOrchestrator:
             )
             return PipelineResult(plan=plan, answer=answer)
 
-        if not plan.company.cik:
-            answer = build_unsupported_answer(
-                question=question,
-                reason=(
-                    "The company CIK has not been resolved. "
-                    "Resolve the company through SEC company metadata first."
-                ),
-            )
+        if not plan.company.cik and self.company_resolver is not None:
+            try:
+                resolved = self.company_resolver.resolver(
+                    name=plan.company.name,
+                    ticker=plan.company.ticker,
+                    cik=plan.company.cik,
+                )
+            except CompanyResolutionError as exc:
+                answer = build_unsupported_answer(
+                    question=question,
+                    reason=str(exc),
+                )
             return PipelineResult(plan=plan, answer=answer)
+
+        resolved_company = plan.company.model_copy(
+            update={
+                "name": resolved["name"],
+                "ticker": resolved["ticker"],
+                "cik": resolved["cik"]
+            }
+        )
+        plan = plan.model_copy(update={"company": resolved_company})
 
         cik = plan.company.cik
 
@@ -366,6 +382,7 @@ def get_orchestrator() -> FinSpectOrchestrator:
         normalizer=normalize_query_plan,
         period_resolver=resolve_period,
         fact_retriever=fact_retriever,
+        company_resolver = SECCompanyResolver(client),
     )
 
 

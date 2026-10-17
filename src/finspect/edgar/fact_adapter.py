@@ -86,9 +86,15 @@ def sec_fact_to_financial_fact(
         period_basis = PeriodBasis.POINT_IN_TIME
     else:
         period_kind = PeriodKind.DURATION
-        # This adapter does not guess quarter vs full-year from dates.
-        period_basis = PeriodBasis.CUSTOM
+        duration_days = (end - start_date).days
 
+# Recognize a normal annual reporting period.
+# The period resolver already anchors these facts to annual filings.
+    if 300 <= duration_days <= 400:
+        period_basis = PeriodBasis.FULL_YEAR
+    else:
+        period_basis = PeriodBasis.CUSTOM
+    
     if period_kind == PeriodKind.DURATION and start_date > end:
         raise ValueError("SEC fact start date cannot be after end date.")
 

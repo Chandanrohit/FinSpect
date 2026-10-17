@@ -75,19 +75,23 @@ def test_unit_rejects_zero_scale():
         )
 
 
+
 def test_growth_inputs_accept_comparable_revenue_facts():
     current = make_fact(
         fact_id="current-revenue",
         value="150",
         role=PeriodRole.CURRENT,
+        basis=PeriodBasis.FULL_YEAR,
     )
     prior = make_fact(
         fact_id="prior-revenue",
         value="100",
         role=PeriodRole.COMPARABLE_PRIOR,
+        basis=PeriodBasis.FULL_YEAR,
     )
 
-    # No exception means the inputs passed validation.
+    # Both are full-year revenue facts for the same company and currency.
+    # Validation should succeed without raising an exception.
     validate_growth_inputs(current, prior)
 
 
@@ -103,7 +107,10 @@ def test_growth_inputs_reject_zero_prior_value():
         role=PeriodRole.COMPARABLE_PRIOR,
     )
 
-    with pytest.raises(ValueError, match="zero"):
+    current.period.start_date = date(2022, 1, 1)
+    current.period.end_date = date(2022, 12, 31)
+
+    with pytest.raises(ValueError, match="start after prior period"):
         validate_growth_inputs(current, prior)
 
 

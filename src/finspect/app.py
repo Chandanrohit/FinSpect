@@ -10,10 +10,17 @@ from dataclasses import asdict, is_dataclass
 from decimal import Decimal
 from enum import Enum
 from typing import Any
+from pathlib import Path
+
+PROJECT_ROOT = Path(__file__).resolve().parents[2]
+BENCHMARK_PATH = PROJECT_ROOT / "data" / "benchmark.json"
 
 import streamlit as st
+import json
+import os
 
 from finspect.orchestrator import run_query
+from finspect.schema import load_benchmark
 
 
 st.set_page_config(
@@ -119,6 +126,24 @@ with st.sidebar:
         "FinSpect is a research tool, not personalized investment advice."
     )
 
+def load_question_bank():
+    if not BENCHMARK_PATH.is_file():
+        return []
+
+    benchmark = load_benchmark(BENCHMARK_PATH)
+
+    questions = []
+    for layer in benchmark.layers:
+        for item in layer.questions:
+            questions.append({
+                "id": item.id,
+                "category": item.category,
+                "track": item.track,
+                "template": item.question_template,
+            })
+
+    return questions
+
 EXAMPLES = [
     "Calculate NVIDIA's revenue growth from FY2024 to FY2025.",
     "Calculate NVIDIA's revenue growth from FY2023 to FY2024.",
@@ -137,6 +162,40 @@ for index, example in enumerate(EXAMPLES):
         use_container_width=True,
     ):
         st.session_state.question = example
+
+question_bank = load_question_bank()
+
+if question_bank:
+    st.subheader("Choose a benchmark question")
+
+    categories = sorted({
+        item["category"] for item in question_bank
+    })
+
+    selected_category = st.selectbox(
+        "Category",
+        ["All categories", *categories],
+    )
+
+    if selected_category == "All categories":
+        visible_questions = question_bank
+    else:
+        visible_questions = [
+            item for item in question_bank
+            if item["category"] == selected_category
+        ]
+
+    selected_question = st.selectbox(
+        "Benchmark question",
+        visible_questions,
+        format_func=lambda item: (
+            f'{item["id"]} · {item["category"]} · '
+            f'{item["template"]}'
+        ),
+    )
+
+    if st.button("Use selected question"):
+        st.session_state.question = selected_question["template"]
 
 with st.form("research_form"):
     question = st.text_area(

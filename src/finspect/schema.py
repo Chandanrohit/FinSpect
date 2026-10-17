@@ -646,14 +646,21 @@ def validate_growth_inputs(current: FinancialFact, prior: FinancialFact) -> None
         raise ValueError("Unit scale must be positive.")
 
     if current.period.kind != prior.period.kind:
-        raise ValueError(
-            "Cannot compare an instant fact with a duration fact."
-        )
+        raise ValueError("Cannot compare an instant fact with a duration fact.")
 
     if current.period.basis != prior.period.basis:
-        raise ValueError(
-            "Period basis mismatch; e.g. quarter vs full year."
-        )
+        raise ValueError("Period basis mismatch; e.g. quarter vs full year.")
+
+# Annual revenue growth must compare two duration periods.
+    if (current.period.kind != PeriodKind.DURATION or prior.period.kind != PeriodKind.DURATION):
+        raise ValueError("Revenue growth requires duration facts, not instant values.")
+
+    if (current.period.basis != PeriodBasis.FULL_YEAR or prior.period.basis != PeriodBasis.FULL_YEAR):
+        raise ValueError("Annual revenue growth requires two full-year periods.")
+
+    if (current.period.start_date is None or prior.period.start_date is None):
+        raise ValueError("Both annual facts must have reporting start dates.")
+
 
     if current.period.kind == PeriodKind.DURATION:
         if current.period.start_date is None or prior.period.start_date is None:
@@ -669,9 +676,7 @@ def validate_growth_inputs(current: FinancialFact, prior: FinancialFact) -> None
         raise ValueError("Current instant must be later than prior instant.")
 
     if prior.normalized_value == 0:
-        raise ValueError(
-            "Growth rate undefined: prior-period normalized value is zero."
-        )
+        raise ValueError("Growth rate undefined: prior-period normalized value is zero.")
 
 
 def validate_currency_inputs(*facts: FinancialFact) -> None:
