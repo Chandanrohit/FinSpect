@@ -4,6 +4,7 @@ __pycache__/
 *.py[cod]
 *.pyd
 .python-version
+*.PRACTICE
 
 # Virtual environments
 .venv/
@@ -42,3 +43,4 @@ dist/
 # Optional local model artifacts
 models/
 "@ | Set-Content -Path .gitignore -Encoding utf8
+/src/finspect/PRACTICE.py
