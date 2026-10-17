@@ -175,74 +175,69 @@ class FinSpectOrchestrator:
     )
 )
 
-        # 6. Validate the retrieved periods and units before calculating.
-        for fact, period in zip(facts, periods):
-            if fact["start_date"] != period.start_date:
-                raise ValueError("Retrieved fact has an unexpected start date.")
-            if fact["end_date"] != period.end_date:
-                raise ValueError("Retrieved fact has an unexpected end date.")
-            if fact["unit"] != "USD":
-                raise ValueError("Revenue facts must use USD.")
-            if fact["form"] != period.form:
-                raise ValueError("Retrieved fact has an unexpected filing form.")
-            if (
-                period.accession_number is not None
-                and fact.get("accession_number") != period.accession_number
-
-            ):
-                raise ValueError("Retrieved fact has an unexpected accession number.")
-            
-            if canonical_facts.period.end_date.isoformat() != period.end_date:
-              raise ValueError("Canonical fact has an unexpected end date.")
-
-            if canonical_facts.concept != period.concept:
-                 raise ValueError("Canonical fact has an unexpected concept.")
-
-
+        # 6. Validate raw and canonical facts before calculating.
         prior_fact, current_fact = facts
         prior_canonical, current_canonical = canonical_facts
 
-        for raw_fact, period in zip(facts, periods, strict=True):
-         if raw_fact["start_date"] != period.start_date:
-            raise ValueError("Retrieved fact has an unexpected start date.")
+        for raw_fact, period, canonical_fact in zip(
+            facts,
+            periods,
+            canonical_facts,
+            strict=True,
+        ):
+            if raw_fact["start_date"] != period.start_date:
+                raise ValueError(
+                    "Retrieved fact has an unexpected start date."
+                )
 
-         if raw_fact["end_date"] != period.end_date:
-           raise ValueError("Retrieved fact has an unexpected end date.")
-         
-         if raw_fact["unit"] != "USD":
-          raise ValueError("Revenue facts must use USD.")
+            if raw_fact["end_date"] != period.end_date:
+                raise ValueError(
+                    "Retrieved fact has an unexpected end date."
+                )
 
-         if raw_fact["form"] != period.form:
-          raise ValueError("Retrieved fact has an unexpected filing form.")
+            if raw_fact["unit"] != "USD":
+                raise ValueError("Revenue facts must use USD.")
 
-         if (
-        period.accession_number is not None
-        and raw_fact.get("accession_number") != period.accession_number
-    ):
-          raise ValueError(
-            "Retrieved fact has an unexpected accession number."
-        )
+            if raw_fact["form"] != period.form:
+                raise ValueError(
+                    "Retrieved fact has an unexpected filing form."
+                )
+
+            if (
+                period.accession_number is not None
+                and raw_fact.get("accession_number")
+                != period.accession_number
+            ):
+                raise ValueError(
+                    "Retrieved fact has an unexpected accession number."
+                )
+
+            if (
+                canonical_fact.period.end_date.isoformat()
+                != period.end_date
+            ):
+                raise ValueError(
+                    "Canonical fact has an unexpected end date."
+                )
+
+            if canonical_fact.concept != period.concept:
+                raise ValueError(
+                    "Canonical fact has an unexpected concept."
+                )
 
         if prior_fact["end_date"] >= current_fact["end_date"]:
-          raise ValueError("The prior period must precede the current period.")
+            raise ValueError(
+                "The prior period must precede the current period."
+            )
 
-        # Validate the canonical objects before arithmetic.
+        # 7. Validate canonical inputs and calculate deterministically.
         validate_growth_inputs(current_canonical, prior_canonical)
 
-        # Arithmetic now consumes the validated canonical values.
-        calculation = revenue_growth(current=current_canonical.normalized_value, prior=prior_canonical.normalized_value)
-
-        if prior_fact["end_date"] >= current_fact["end_date"]:
-            raise ValueError("The prior period must precede the current period.")
-
-        prior_value = Decimal(str(prior_fact["value"]))
-        current_value = Decimal(str(current_fact["value"]))
-
-        # 7. Deterministic arithmetic. The LLM does not calculate.
         calculation = revenue_growth(
-            current=current_value,
-            prior=prior_value,
+            current=current_canonical.normalized_value,
+            prior=prior_canonical.normalized_value,
         )
+
 
         # 8. Attach evidence from the actual SEC responses.
         evidence = tuple(

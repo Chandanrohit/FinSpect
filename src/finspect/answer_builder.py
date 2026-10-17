@@ -62,14 +62,10 @@ def build_calculation_answer(
             "A calculation answer requires source evidence for its inputs."
         )
 
-    if result.value is None:
-        raise ValueError("Cannot present a calculation with no result value.")
 
     value_text = _format_result(result.value, result.unit)
     unit_text = result.unit
 
-    if result.unit == "percent":
-        value_text += "%"
 
     lines = [
         f"Question: {question}",
