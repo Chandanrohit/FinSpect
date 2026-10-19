@@ -11,7 +11,7 @@ from finspect.query_planner import QueryPlan
 
 
 DEFAULT_OLLAMA_URL = "http://localhost:11434"
-DEFAULT_MODEL = "qwen3.5:4b"
+DEFAULT_MODEL = "qwen2.5-coder:3b"
 
 
 SYSTEM_PROMPT = """
@@ -88,13 +88,31 @@ class OllamaQueryPlanner:
                 "Ollama returned an invalid HTTP response."
             ) from exc
 
+
         try:
             content = result["message"]["content"]
-            data = json.loads(content)
-            return QueryPlan.model_validate(data)
-        except (KeyError, TypeError, json.JSONDecodeError, ValidationError) as exc:
+        except (KeyError, TypeError) as exc:
             raise QueryPlanningError(
-                "Ollama returned output that does not match QueryPlan."
+                "Ollama response is missing message.content."
+            ) from exc
+
+        try:
+            data = json.loads(content)
+        except (TypeError, json.JSONDecodeError) as exc:
+            raise QueryPlanningError(
+                f"Ollama returned invalid JSON: {exc}"
+            ) from exc
+
+        try:
+            return QueryPlan.model_validate(data)
+        except ValidationError as exc:
+            details = "; ".join(
+                f"{'.'.join(str(part) for part in error['loc'])}: "
+                f"{error['msg']}"
+                for error in exc.errors()
+            )
+            raise QueryPlanningError(
+                f"Ollama output failed QueryPlan validation: {details}"
             ) from exc
 
 

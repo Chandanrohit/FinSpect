@@ -42,7 +42,7 @@ def test_invalid_model_output_is_rejected(monkeypatch):
 
     planner = OllamaQueryPlanner()
 
-    with pytest.raises(QueryPlanningError, match="does not match QueryPlan"):
+    with pytest.raises(QueryPlanningError, match="failed QueryPlan validation"):
         planner.plan("Calculate NVIDIA revenue growth.")
 
 

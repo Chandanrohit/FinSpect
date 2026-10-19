@@ -57,43 +57,73 @@ def to_json_safe(value: Any) -> Any:
     return value
 
 
+
 def display_result(result: Any) -> None:
-    """Render either the dictionary adapter or a PipelineResult."""
+    """Render the answer and expose structured evidence when available."""
+
     if isinstance(result, dict):
         answer = result.get("answer")
-        details = {k: v for k, v in result.items() if k != "answer"}
+        details = {
+            key: value
+            for key, value in result.items()
+            if key != "answer"
+        }
     else:
         answer = getattr(result, "answer", None)
         details = {
             "plan": getattr(result, "plan", None),
             "facts": getattr(result, "facts", ()),
+            "canonical_facts": getattr(result, "canonical_facts", ()),
         }
 
     if answer is None:
         st.warning("The pipeline returned no answer.")
+
     elif isinstance(answer, str):
         st.markdown(answer)
-    elif isinstance(answer,dict) and isinstance(
+
+    elif isinstance(answer, dict) and isinstance(
         answer.get("text"), str
     ):
-    # This part deals with clean output of answer user will get rather than internal object.
-       st.markdown(answer["text"])
-       if answer.get("limitations"):
-        st.warning("Limitations")
-        for limitation in answer["limitations"]:
-            st.write(f"-{limitation}")
-       if answer.get("evidence"):
-           st.subheader("Evidence")
-           st.dataframe(
-               answer["evidence"],
-               use_container_width=True,
-               hide_index=True,
-           )
+        st.markdown(answer["text"])
+
+        limitations = answer.get("limitations") or []
+        if limitations:
+            st.warning("Limitations")
+            for limitation in limitations:
+                st.write(f"- {limitation}")
+
+        evidence = answer.get("evidence") or []
+        if evidence:
+            st.subheader("Evidence")
+            st.dataframe(
+                evidence,
+                use_container_width=True,
+                hide_index=True,
+            )
+
+    elif hasattr(answer, "text"):
+        st.markdown(answer.text)
+
+        limitations = getattr(answer, "limitations", ())
+        if limitations:
+            st.warning("Limitations")
+            for limitation in limitations:
+                st.write(f"- {limitation}")
+
+        evidence = getattr(answer, "evidence", ())
+        if evidence:
+            st.subheader("Evidence")
+            st.dataframe(
+                [to_json_safe(item) for item in evidence],
+                use_container_width=True,
+                hide_index=True,
+            )
+
     else:
-    
         st.json(to_json_safe(answer))
 
-    with st.expander("Inspect query plan, evidence, and pipeline details"):
+    with st.expander("Inspect query plan and pipeline details"):
         st.json(to_json_safe(details))
 
 

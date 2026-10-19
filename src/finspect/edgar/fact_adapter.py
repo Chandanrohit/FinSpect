@@ -4,7 +4,6 @@ from __future__ import annotations
 from datetime import date
 from decimal import Decimal, InvalidOperation
 from typing import Any
-from urllib.parse import quote
 
 from finspect.schema import (
     Currency,
@@ -21,15 +20,14 @@ from finspect.schema import (
 
 
 def sec_filing_url(cik: str | int, accession_number: str) -> str:
-    """Build the SEC Archives directory URL for a real accession number."""
-    normalized_cik = str(cik).lstrip("0")
+    """Build the SEC Archives directory URL from real SEC identifiers."""
+    normalized_cik = str(cik).strip().lstrip("0")
+    accession = str(accession_number).strip()
+
     if not normalized_cik.isdigit():
         raise ValueError("SEC CIK must contain digits.")
 
-    if not accession_number.strip():
-        raise ValueError("SEC accession number cannot be empty.")
-
-    accession_path = accession_number.replace("-", "")
+    accession_path = accession.replace("-", "")
     if not accession_path.isdigit():
         raise ValueError("Invalid SEC accession number.")
 
@@ -45,7 +43,7 @@ def sec_fact_to_financial_fact(
     period_role: PeriodRole,
     reporting_scope: ReportingScope = ReportingScope.CONSOLIDATED,
 ) -> FinancialFact:
-    """Validate and convert one raw SEC XBRL fact to FinSpect's schema."""
+    """Validate one raw SEC XBRL record and convert it to a typed fact."""
 
     required = (
         "cik",
@@ -60,99 +58,104 @@ def sec_fact_to_financial_fact(
         "accession_number",
     )
     missing = [
-        field for field in required
-        if raw.get(field) is None or raw.get(field) == ""
+        key for key in required
+        if raw.get(key) is None or raw.get(key) == ""
     ]
     if missing:
         raise ValueError(
-            f"SEC fact is missing required fields: {', '.join(missing)}"
+            "SEC fact is missing required fields: " + ", ".join(missing)
         )
     try:
         value = Decimal(str(raw["value"]))
-    except (InvalidOperation, ValueError) as exc:
+    except (InvalidOperation, TypeError, ValueError) as exc:
         raise ValueError("SEC fact value must be a valid decimal.") from exc
 
     if not value.is_finite():
         raise ValueError("SEC fact value must be finite.")
 
-    start = raw.get("start_date")
-    end = date.fromisoformat(raw["end_date"])
-    filing_date = date.fromisoformat(raw["filing_date"])
-    start_date = date.fromisoformat(start) if start else None
+    try:
+        end = date.fromisoformat(str(raw["end_date"]))
+        filing_date = date.fromisoformat(str(raw["filing_date"]))
+        start_text = raw.get("start_date")
+        start = (
+            date.fromisoformat(str(start_text))
+            if start_text
+            else None
+        )
+    except (TypeError, ValueError) as exc:
+        raise ValueError("SEC fact contains an invalid date.") from exc
 
-    if start_date is None:
-        period_kind = PeriodKind.INSTANT
-        period_basis = PeriodBasis.POINT_IN_TIME
-    else:
-        period_kind = PeriodKind.DURATION
-        duration_days = (end - start_date).days
+
+    if not value.is_finite():
+        raise ValueError("SEC fact value must be finite.")
 
     if filing_date < end:
-        # Filing dates before the reporting period end are not valid
-        # for an ordinary completed annual filing fact.
         raise ValueError(
             "SEC filing date cannot precede the reporting period end."
         )
 
-
-# Recognize a normal annual reporting period.
-# The period resolver already anchors these facts to annual filings.
-    if 300 <= duration_days <= 400:
-        period_basis = PeriodBasis.FULL_YEAR
+    if start is None:
+        kind = PeriodKind.INSTANT
+        basis = PeriodBasis.POINT_IN_TIME
     else:
-        period_basis = PeriodBasis.CUSTOM
-    
-    if period_kind == PeriodKind.DURATION and start_date > end:
-        raise ValueError("SEC fact start date cannot be after end date.")
-
-    raw_unit = str(raw["unit"])
-    if raw_unit == "USD":
-        unit = Unit(
-            kind=UnitKind.CURRENCY,
-            currency=Currency.USD,
-            scale=Decimal("1"),
-            label="USD",
+        if start > end:
+            raise ValueError(
+                "SEC fact start date cannot be after end date."
+            )
+        kind = PeriodKind.DURATION
+        duration_days = (end - start).days
+        basis = (
+            PeriodBasis.FULL_YEAR
+            if 300 <= duration_days <= 400
+            else PeriodBasis.CUSTOM
         )
-    else:
-        # Do not silently misclassify shares, percentages, or other units.
+
+    raw_unit = str(raw["unit"]).strip()
+    if raw_unit != "USD":
         raise ValueError(
             f"Unsupported unit {raw_unit!r}; add an explicit unit mapping."
         )
 
-    cik = str(raw["cik"]).lstrip("0")
-    accession = str(raw["accession_number"])
-    taxonomy = str(raw["taxonomy"])
-    concept = str(raw["concept"])
-    source_url = sec_filing_url(cik, accession)
+    cik = str(raw["cik"]).strip().lstrip("0")
+    accession = str(raw["accession_number"]).strip()
+    taxonomy = str(raw["taxonomy"]).strip()
+    concept = str(raw["concept"]).strip()
 
-    # XBRL values are structured data; no quotation is fabricated.
+    if not cik.isdigit():
+        raise ValueError("SEC CIK must contain digits.")
+    if not taxonomy or not concept:
+        raise ValueError("SEC taxonomy and concept must not be empty.")
+
     evidence = EvidenceRef(
         evidence_id=f"sec-xbrl:{accession}:{taxonomy}:{concept}:{end}",
         document_id=f"sec-filing:{accession}",
         evidence_type="xbrl_fact",
-        source_url=source_url,
+        source_url=sec_filing_url(cik, accession),
         accession_number=accession,
         taxonomy=taxonomy,
         concept=concept,
-        context_start_date=start_date,
+        context_start_date=start,
         context_end_date=end,
         filing_date=filing_date,
     )
 
     fiscal_year = raw.get("fiscal_year")
     if fiscal_year is not None:
-        fiscal_year = int(fiscal_year)
+        try:
+            fiscal_year = int(fiscal_year)
+        except (TypeError, ValueError) as exc:
+            raise ValueError("fiscal_year must be an integer.") from exc
 
     period = ReportingPeriod(
         label=(
             f"FY{fiscal_year}"
             if fiscal_year is not None
-            else f"{start_date or 'instant'} to {end}"
+            else f"{start or 'instant'} to {end}"
         ),
-        kind=period_kind,
-        basis=period_basis,
+        kind=kind,
+        basis=basis,
         role=period_role,
-        start_date=start_date,
+        start_date=start,
         end_date=end,
         fiscal_year=fiscal_year,
     )
@@ -161,7 +164,12 @@ def sec_fact_to_financial_fact(
         fact_id=f"sec:{accession}:{taxonomy}:{concept}:{end}",
         concept=concept,
         value=value,
-        unit=unit,
+        unit=Unit(
+            kind=UnitKind.CURRENCY,
+            currency=Currency.USD,
+            scale=Decimal("1"),
+            label="USD",
+        ),
         period=period,
         entity=str(raw["company"]),
         scope=reporting_scope,

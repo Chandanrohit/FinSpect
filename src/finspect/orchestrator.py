@@ -100,6 +100,34 @@ class FinSpectOrchestrator:
                 plan.clarification_question or question
             )
             return PipelineResult(plan=plan, answer=answer)
+        # Do not silently answer an absolute-change question with a rate.
+        # Dollar-change calculations are not yet wired into this pipeline.
+        import re
+
+        asks_absolute_change = bool(
+            re.search(
+                r"\b("
+                r"how much.*(?:increase|decrease|increased|decreased)|"
+                r"(?:increase|decrease|increased|decreased).*(?:dollar|amount)|"
+                r"absolute change|change in dollars|dollar increase|"
+                r"dollar decrease|amount of the increase|amount of the decrease"
+                r")\b",
+                question.casefold(),
+            )
+        )
+
+        if asks_absolute_change:
+            answer = build_unsupported_answer(
+                question=question,
+                reason=(
+                    "This version supports annual revenue growth as a "
+                    "percentage (Q01), but not absolute dollar-change "
+                    "questions yet. No percentage was substituted for "
+                    "the requested dollar amount."
+                ),
+            )
+            return PipelineResult(plan=plan, answer=answer)
+
 
         # 3. This first vertical slice implements Q01 only.
         is_revenue_growth = (
