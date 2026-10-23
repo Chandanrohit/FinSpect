@@ -106,24 +106,25 @@ class FinSpectOrchestrator:
         import re
         # This first vertical slice implements Q01 only.
         is_supported_revenue_operation = (
-          plan.operation in {"growth_rate", "absolute_change"}
-         and any(
-         metric.name.strip().casefold().replace("_", " ")
-          in {"total revenue", "revenue"}
-          and metric.required
-          for metric in plan.metrics
-           )
+            plan.operation in {"growth_rate", "absolute_change"}
+            and any(
+                metric.name.strip().casefold().replace("_", " ")
+                in {"total revenue", "revenue"}
+                and metric.required
+                for metric in plan.metrics
+            )
         )
 
         if not is_supported_revenue_operation:
-           answer = build_unsupported_answer(
-        question=question,
-        reason=(
-            "This FinSpect version supports annual revenue growth "
-            "and absolute annual revenue change only."
-          ),
-       )
-        return PipelineResult(plan=plan, answer=answer)
+            answer = build_unsupported_answer(
+                question=question,
+                reason=(
+                    "This FinSpect version supports annual revenue growth "
+                    "and absolute annual revenue change only."
+                ),
+            )
+            return PipelineResult(plan=plan, answer=answer)
+
     
         fiscal_years = self._get_two_annual_years(plan)
         if fiscal_years is None:
@@ -264,20 +265,33 @@ class FinSpectOrchestrator:
                 "The prior period must precede the current period."
             )
 
+
         # 7. Validate canonical inputs and calculate deterministically.
-        if plan.opertion == "growth_rate":
+        if plan.operation == "growth_rate":
             validate_growth_inputs(current_canonical, prior_canonical)
-
-            calculation = revenure_growth(current=current_canonical.normalized_value, prior=prior_canonical.normalized_value)
+            calculation = revenue_growth(
+                current=current_canonical.normalized_value,
+                prior=prior_canonical.normalized_value,
+            )
         elif plan.operation == "absolute_change":
-            validate_absolute_change_inputs(current_canonical, prior_canonical)
-
-            calculation = absolute_change(current=current_canonical.normalized_value, prior=prior_canonical.normalized_value)
+            validate_absolute_change_inputs(
+                current_canonical,
+                prior_canonical,
+            )
+            calculation = absolute_change(
+                current=current_canonical.normalized_value,
+                prior=prior_canonical.normalized_value,
+            )
         else:
-            # Defensive fallback if a future operation reaches this code.
-            answer = build_unsupported_answer(question=question, reason=f"Calculation operation {plan.operation!r} is not implemented.",)
-            
+            answer = build_unsupported_answer(
+                question=question,
+                reason=(
+                    f"Calculation operation {plan.operation!r} "
+                    "is not implemented."
+                ),
+            )
             return PipelineResult(plan=plan, answer=answer)
+
         
         # 8. Attach evidence from the actual SEC responses.
         evidence = tuple(
