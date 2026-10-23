@@ -687,6 +687,65 @@ def validate_growth_inputs(current: FinancialFact, prior: FinancialFact) -> None
     if prior.normalized_value == 0:
         raise ValueError("Growth rate undefined: prior-period normalized value is zero.")
 
+def validate_absolute_change_inputs(
+    current: FinancialFact,
+    prior: FinancialFact,
+) -> None:
+    """Validate two financial facts before calculating their difference."""
+    require_compatible_facts(
+        current,
+        prior,
+        require_same_period=False,
+        require_same_scope=True,
+    )
+
+    if current.entity != prior.entity:
+        raise ValueError("Entity mismatch; both facts must belong to the same entity.")
+
+    if current.concept != prior.concept:
+        raise ValueError("Concept mismatch; both facts must represent the same metric.")
+
+    if current.period.role != PeriodRole.CURRENT:
+        raise ValueError("First input must be the current period.")
+
+    if prior.period.role != PeriodRole.COMPARABLE_PRIOR:
+        raise ValueError("Second input must be the comparable prior period.")
+
+    if not current.value.is_finite() or not prior.value.is_finite():
+        raise ValueError("Financial fact values must be finite.")
+
+    if current.unit.scale <= 0 or prior.unit.scale <= 0:
+        raise ValueError("Unit scale must be positive.")
+
+    if current.period.kind != PeriodKind.DURATION:
+        raise ValueError("This annual revenue calculation requires duration facts.")
+
+    if prior.period.kind != PeriodKind.DURATION:
+        raise ValueError("This annual revenue calculation requires duration facts.")
+
+    if current.period.basis != PeriodBasis.FULL_YEAR:
+        raise ValueError("Current period must be a full fiscal year.")
+
+    if prior.period.basis != PeriodBasis.FULL_YEAR:
+        raise ValueError("Prior period must be a full fiscal year.")
+
+    if current.period.start_date is None or prior.period.start_date is None:
+        raise ValueError("Both annual facts must have reporting start dates.")
+
+    if current.period.start_date <= prior.period.start_date:
+        raise ValueError("Current period must start after prior period.")
+
+    if current.period.end_date <= prior.period.end_date:
+        raise ValueError("Current period must end after prior period.")
+
+    current_days = (current.period.end_date - current.period.start_date).days
+    prior_days = (prior.period.end_date - prior.period.start_date).days
+
+    if not 300 <= current_days <= 400:
+        raise ValueError("Current full-year period has an unexpected duration.")
+
+    if not 300 <= prior_days <= 400:
+        raise ValueError("Prior full-year period has an unexpected duration.")
 
 def validate_currency_inputs(*facts: FinancialFact) -> None:
     if not facts:

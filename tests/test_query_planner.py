@@ -231,3 +231,22 @@ def test_material_disclosure_synthesis_requires_multi_part_task():
 
     with pytest.raises(ValidationError):
         QueryPlan.model_validate(payload)
+
+def test_absolute_change_operation_is_accepted():
+    payload = make_growth_plan().model_dump()
+    payload["operation"] = "absolute_change"
+    payload["answer"]["expected_output"] = "currency"
+
+    plan = QueryPlan.model_validate(payload)
+
+    assert plan.operation == "absolute_change"
+    assert plan.answer.expected_output == "currency"
+
+
+def test_absolute_change_is_not_a_disclosure_analysis_operation():
+    payload = make_growth_plan().model_dump()
+    payload["operation"] = "absolute_change"
+    payload["task_type"] = "disclosure_analysis"
+
+    with pytest.raises(ValidationError):
+        QueryPlan.model_validate(payload)

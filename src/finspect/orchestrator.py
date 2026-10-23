@@ -13,7 +13,7 @@ from finspect.answer_builder import (
     build_clarification_answer,
     build_unsupported_answer,
 )
-from finspect.calculator import revenue_growth
+from finspect.calculator import absolute_change, revenue_growth
 from finspect.edgar import company_resolver
 from finspect.edgar.client import EdgarClient
 from finspect.edgar.facts import FinancialFactRetriever
@@ -23,7 +23,7 @@ from finspect.llm_planner import planner_from_environment
 from finspect.plan_normalizer import normalize_query_plan
 from finspect.period_resolver import (resolve_annual_period as resolve_sec_annual_period)
 from finspect.edgar.fact_adapter import sec_fact_to_financial_fact
-from finspect.schema import PeriodRole, ReportingScope, FinancialFact, validate_growth_inputs
+from finspect.schema import PeriodRole, ReportingScope, FinancialFact, validate_growth_inputs, validate_absolute_change_inputs
 from finspect.edgar.company_resolver import (SECCompanyResolver, CompanyResolutionError)
 class Planner(Protocol):
     def plan(self, question: str) -> QueryPlan:
@@ -102,52 +102,29 @@ class FinSpectOrchestrator:
             return PipelineResult(plan=plan, answer=answer)
         # Do not silently answer an absolute-change question with a rate.
         # Dollar-change calculations are not yet wired into this pipeline.
+
         import re
-
-        asks_absolute_change = bool(
-            re.search(
-                r"\b("
-                r"how much.*(?:increase|decrease|increased|decreased)|"
-                r"(?:increase|decrease|increased|decreased).*(?:dollar|amount)|"
-                r"absolute change|change in dollars|dollar increase|"
-                r"dollar decrease|amount of the increase|amount of the decrease"
-                r")\b",
-                question.casefold(),
-            )
+        # This first vertical slice implements Q01 only.
+        is_supported_revenue_operation = (
+          plan.operation in {"growth_rate", "absolute_change"}
+         and any(
+         metric.name.strip().casefold().replace("_", " ")
+          in {"total revenue", "revenue"}
+          and metric.required
+          for metric in plan.metrics
+           )
         )
 
-        if asks_absolute_change:
-            answer = build_unsupported_answer(
-                question=question,
-                reason=(
-                    "This version supports annual revenue growth as a "
-                    "percentage (Q01), but not absolute dollar-change "
-                    "questions yet. No percentage was substituted for "
-                    "the requested dollar amount."
-                ),
-            )
-            return PipelineResult(plan=plan, answer=answer)
-
-
-        # 3. This first vertical slice implements Q01 only.
-        is_revenue_growth = (
-            plan.operation == "growth_rate"
-            and any(
-                metric.name.strip().casefold() in {"total revenue", "revenue"}
-                and metric.required
-                for metric in plan.metrics
-            )
-        )
-        if not is_revenue_growth:
-            answer = build_unsupported_answer(
-                question=question,
-                reason=(
-                    "This FinSpect version supports only annual revenue "
-                    "growth (Q01)."
-                ),
-            )
-            return PipelineResult(plan=plan, answer=answer)
-
+        if not is_supported_revenue_operation:
+           answer = build_unsupported_answer(
+        question=question,
+        reason=(
+            "This FinSpect version supports annual revenue growth "
+            "and absolute annual revenue change only."
+          ),
+       )
+        return PipelineResult(plan=plan, answer=answer)
+    
         fiscal_years = self._get_two_annual_years(plan)
         if fiscal_years is None:
             answer = build_unsupported_answer(
@@ -288,14 +265,20 @@ class FinSpectOrchestrator:
             )
 
         # 7. Validate canonical inputs and calculate deterministically.
-        validate_growth_inputs(current_canonical, prior_canonical)
+        if plan.opertion == "growth_rate":
+            validate_growth_inputs(current_canonical, prior_canonical)
 
-        calculation = revenue_growth(
-            current=current_canonical.normalized_value,
-            prior=prior_canonical.normalized_value,
-        )
+            calculation = revenure_growth(current=current_canonical.normalized_value, prior=prior_canonical.normalized_value)
+        elif plan.operation == "absolute_change":
+            validate_absolute_change_inputs(current_canonical, prior_canonical)
 
-
+            calculation = absolute_change(current=current_canonical.normalized_value, prior=prior_canonical.normalized_value)
+        else:
+            # Defensive fallback if a future operation reaches this code.
+            answer = build_unsupported_answer(question=question, reason=f"Calculation operation {plan.operation!r} is not implemented.",)
+            
+            return PipelineResult(plan=plan, answer=answer)
+        
         # 8. Attach evidence from the actual SEC responses.
         evidence = tuple(
             AnswerEvidence(

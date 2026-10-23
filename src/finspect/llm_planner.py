@@ -33,6 +33,16 @@ Rules:
 7. The plan describes what to retrieve and calculate. Do not calculate
    the final financial answer.
 8. Preserve the user's original question exactly.
+9. Choose "absolute_change" when the user asks how much a financial
+   metric increased or decreased in currency or absolute units.
+10. Choose "growth_rate" when the user explicitly asks for percentage
+    growth or percentage change.
+11. For absolute_change, set answer.expected_output to "currency".
+12. Never substitute a percentage-growth calculation for an
+    absolute-change request.
+13. For comparisons between fiscal years, specify both the current
+    and comparison periods and retrieve the same financial metric
+    for both periods.
 """
 
 

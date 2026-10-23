@@ -41,6 +41,7 @@ RetrievalSource = Literal[
 
 Operation = Literal[
     "growth_rate",
+    "absolute_change",
     "growth_contribution",
     "margin_change",
     "expense_growth_contribution",
@@ -93,8 +94,7 @@ class PeriodRequest(FSModel):
         "annual",
         "quarterly",
         "instant",
-        "unspecified",
-    ] = "unspecified"
+        "unspecified"] = "unspecified"
 
     fiscal_year: int | None = Field(
         default=None,
@@ -260,6 +260,7 @@ class QueryPlan(FSModel):
                 "expense_growth_contribution",
                 "change_relationship",
                 "balance_change",
+                "absolute_change",
                 "liquidity_asset_contribution",
                 "growth_comparison",
                 "inventory_revenue_growth_comparison",

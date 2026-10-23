@@ -233,7 +233,6 @@ def sensitivity_ratio(sensitivity_amount: Decimal, relevant_measure: Decimal) ->
                    {"sensitivity_amount": s, "relevant_measure": m}, FormulaSource.BENCHMARK_DERIVED,
                    "The filing determines the sensitivity definition and the appropriate denominator; do not infer either from this function.")
 
-
 def absolute_change(
     current: Decimal,
     prior: Decimal,
@@ -377,9 +376,6 @@ def percentage_change(current: Decimal, prior: Decimal) -> Decimal:
 def percentage_of_total(part: Decimal, total: Decimal) -> Decimal:
     return _pct(dec(part), dec(total), label="percentage of total")
 
-
-def absolute_change(current: Decimal, prior: Decimal) -> Decimal:
-    return dec(current)-dec(prior)
 
 
 def largest_increase_contributor(
