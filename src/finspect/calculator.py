@@ -234,6 +234,29 @@ def sensitivity_ratio(sensitivity_amount: Decimal, relevant_measure: Decimal) ->
                    "The filing determines the sensitivity definition and the appropriate denominator; do not infer either from this function.")
 
 
+def absolute_change(
+    current: Decimal,
+    prior: Decimal,
+) -> CalculationResult:
+    """Calculate the absolute change between comparable financial values."""
+    current_value = dec(current)
+    prior_value = dec(prior)
+    change = current_value - prior_value
+
+    return _result(
+        "ABS_CHANGE",
+        change,
+        "currency",
+        "current_value - prior_value",
+        {
+            "current_value": current_value,
+            "prior_value": prior_value,
+        },
+        FormulaSource.FINANCEQA_COMMON,
+        "Inputs must use the same currency, unit scale, metric, and "
+        "comparable reporting periods.",
+    )
+
 # ---------------------------------------------------------------------------
 # FinanceQA-common extensions (not specified in the benchmark JSON)
 # ---------------------------------------------------------------------------

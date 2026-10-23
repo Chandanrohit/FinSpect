@@ -58,3 +58,36 @@ def test_revenue_growth_uses_decimal_arithmetic():
     )
 
     assert result.value == Decimal("37.5")
+
+
+def test_absolute_change_returns_positive_currency_change():
+    from finspect.calculator import absolute_change
+
+    result = absolute_change(
+        current=Decimal("130497000000"),
+        prior=Decimal("60922000000"),
+    )
+
+    assert result == Decimal("69575000000")
+
+
+def test_absolute_change_handles_decrease():
+    from finspect.calculator import absolute_change
+
+    result = absolute_change(
+        current=Decimal("80"),
+        prior=Decimal("100"),
+    )
+
+    assert result == Decimal("-20")
+
+
+def test_absolute_change_handles_no_change():
+    from finspect.calculator import absolute_change
+
+    result = absolute_change(
+        current=Decimal("100"),
+        prior=Decimal("100"),
+    )
+
+    assert result == Decimal("0")
