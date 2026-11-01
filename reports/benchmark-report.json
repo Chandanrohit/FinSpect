@@ -1,0 +1,619 @@
+{
+  "benchmark_name": "FinSpect Universal Quarterly Filing Benchmark",
+  "benchmark_version": "0.2",
+  "evaluation_method": "deterministic SEC snapshot plus current pipeline coverage",
+  "live_sec_integration_tested": false,
+  "live_query_planner_tested": false,
+  "question_count": 20,
+  "aggregate_counts": {
+    "PASS": 0,
+    "PARTIAL": 1,
+    "UNSUPPORTED": 19,
+    "FAIL": 0
+  },
+  "accuracy_percentage": null,
+  "accuracy_note": "No accuracy percentage is reported: the benchmark is company-agnostic, only Q01 has a checked-in filing snapshot, and the planner was not run live.",
+  "questions": [
+    {
+      "question_id": "Q01",
+      "question": "Calculate NVIDIA's revenue growth from FY2024 to FY2025.",
+      "company": {
+        "name": "NVIDIA Corporation",
+        "ticker": "NVDA",
+        "cik": "0001045810"
+      },
+      "filings": [
+        {
+          "form": "10-K",
+          "filing_date": "2024-02-21",
+          "accession_number": "0001045810-24-000029",
+          "url": "https://www.sec.gov/Archives/edgar/data/1045810/000104581024000029/0001045810-24-000029-index.htm"
+        },
+        {
+          "form": "10-K",
+          "filing_date": "2025-02-26",
+          "accession_number": "0001045810-25-000023",
+          "url": "https://www.sec.gov/Archives/edgar/data/1045810/000104581025000023/0001045810-25-000023-index.htm"
+        }
+      ],
+      "reporting_periods": [
+        {
+          "fiscal_year": 2024,
+          "start_date": "2023-01-29",
+          "end_date": "2024-01-28"
+        },
+        {
+          "fiscal_year": 2025,
+          "start_date": "2024-01-29",
+          "end_date": "2025-01-26"
+        }
+      ],
+      "expected_concepts": [
+        "total_revenue"
+      ],
+      "retrieval_mode": "checked_in_sec_snapshot_not_live_retrieval",
+      "retrieved_inputs": [
+        {
+          "concept": "Revenues",
+          "value": "60922000000",
+          "unit": "USD",
+          "period_end": "2024-01-28"
+        },
+        {
+          "concept": "Revenues",
+          "value": "130497000000",
+          "unit": "USD",
+          "period_end": "2025-01-26"
+        }
+      ],
+      "selected_evidence": [
+        {
+          "concept": "Revenues",
+          "value": "60922000000",
+          "unit": "USD",
+          "period_start": "2023-01-29",
+          "period_end": "2024-01-28",
+          "form": "10-K",
+          "filing_date": "2024-02-21",
+          "accession_number": "0001045810-24-000029",
+          "source_url": "https://www.sec.gov/Archives/edgar/data/1045810/000104581024000029/0001045810-24-000029-index.htm"
+        },
+        {
+          "concept": "Revenues",
+          "value": "130497000000",
+          "unit": "USD",
+          "period_start": "2024-01-29",
+          "period_end": "2025-01-26",
+          "form": "10-K",
+          "filing_date": "2025-02-26",
+          "accession_number": "0001045810-25-000023",
+          "source_url": "https://www.sec.gov/Archives/edgar/data/1045810/000104581025000023/0001045810-25-000023-index.htm"
+        }
+      ],
+      "calculation_formula": "(current_revenue - prior_revenue) / prior_revenue * 100",
+      "expected_answer": {
+        "growth_percent": "114.2034076359935655428252520",
+        "display": "114.20%"
+      },
+      "actual_answer": {
+        "text": "Question: Calculate NVIDIA's revenue growth from FY2024 to FY2025.\n\nResult: NVIDIA Corporation's result is 114.20%.\n\nFormula: (current_revenue - prior_revenue) / prior_revenue * 100\nCalculation ID: Q01\nCalculation source: benchmark_json\n\nInputs:\n- current_revenue: 130,497,000,000\n- prior_revenue: 60,922,000,000\n\nEvidence:\n- Revenue: 60,922,000,000 USD; period FY2024 (2023-01-29 to 2024-01-28); filed 2024-02-21.\n  Source: https://www.sec.gov/Archives/edgar/data/1045810/000104581024000029/0001045810-24-000029-index.htm\n- Revenue: 130,497,000,000 USD; period FY2025 (2024-01-29 to 2025-01-26); filed 2025-02-26.\n  Source: https://www.sec.gov/Archives/edgar/data/1045810/000104581025000023/0001045810-25-000023-index.htm",
+        "result_value": "114.2034076359935655428252520",
+        "result_unit": "percent"
+      },
+      "checks": {
+        "input_retrieval_correctness": "not_evaluated_live_retrieval",
+        "period_correctness": true,
+        "unit_correctness": true,
+        "calculation_correctness": true,
+        "evidence_correctness": true,
+        "query_interpretation_correctness": "not_evaluated"
+      },
+      "overall_status": "PARTIAL",
+      "failure_reason": "Query interpretation and live SEC retrieval were not tested; the validated plan and filing facts came from deterministic fixtures."
+    },
+    {
+      "question_id": "Q02",
+      "question": "Which disclosed business segment contributed the largest amount to the company's year-over-year revenue increase, and what percentage of the total revenue increase did it represent?",
+      "company": null,
+      "filings": [],
+      "reporting_periods": [],
+      "expected_concepts": [
+        "total_revenue",
+        "segment_revenue"
+      ],
+      "retrieval_mode": "not_run",
+      "retrieved_inputs": [],
+      "selected_evidence": [],
+      "calculation_formula": "(segment_current - segment_prior) / (total_current - total_prior) * 100",
+      "expected_answer": null,
+      "actual_answer": "I cannot answer this request reliably yet: No complete retrieval-to-answer path is implemented for Q02; calculator registration alone is not support.\n\nYour question: Which disclosed business segment contributed the largest amount to the company's year-over-year revenue increase, and what percentage of the total revenue increase did it represent?",
+      "checks": {
+        "input_retrieval_correctness": null,
+        "period_correctness": null,
+        "unit_correctness": null,
+        "calculation_correctness": null,
+        "evidence_correctness": null,
+        "query_interpretation_correctness": null
+      },
+      "overall_status": "UNSUPPORTED",
+      "failure_reason": "No complete retrieval-to-answer path is implemented for Q02; calculator registration alone is not support."
+    },
+    {
+      "question_id": "Q03",
+      "question": "How did operating income change relative to revenue between the current and comparable prior-year periods, and what happened to the operating margin?",
+      "company": null,
+      "filings": [],
+      "reporting_periods": [],
+      "expected_concepts": [
+        "revenue",
+        "operating_income"
+      ],
+      "retrieval_mode": "not_run",
+      "retrieved_inputs": [],
+      "selected_evidence": [],
+      "calculation_formula": null,
+      "expected_answer": null,
+      "actual_answer": "I cannot answer this request reliably yet: No complete retrieval-to-answer path is implemented for Q03; calculator registration alone is not support.\n\nYour question: How did operating income change relative to revenue between the current and comparable prior-year periods, and what happened to the operating margin?",
+      "checks": {
+        "input_retrieval_correctness": null,
+        "period_correctness": null,
+        "unit_correctness": null,
+        "calculation_correctness": null,
+        "evidence_correctness": null,
+        "query_interpretation_correctness": null
+      },
+      "overall_status": "UNSUPPORTED",
+      "failure_reason": "No complete retrieval-to-answer path is implemented for Q03; calculator registration alone is not support."
+    },
+    {
+      "question_id": "Q04",
+      "question": "What percentage of the year-over-year increase in operating expenses was attributable to the largest disclosed operating-expense category?",
+      "company": null,
+      "filings": [],
+      "reporting_periods": [],
+      "expected_concepts": [
+        "operating_expenses",
+        "expense_category"
+      ],
+      "retrieval_mode": "not_run",
+      "retrieved_inputs": [],
+      "selected_evidence": [],
+      "calculation_formula": "(category_current - category_prior) / (total_opex_current - total_opex_prior) * 100",
+      "expected_answer": null,
+      "actual_answer": "I cannot answer this request reliably yet: No complete retrieval-to-answer path is implemented for Q04; calculator registration alone is not support.\n\nYour question: What percentage of the year-over-year increase in operating expenses was attributable to the largest disclosed operating-expense category?",
+      "checks": {
+        "input_retrieval_correctness": null,
+        "period_correctness": null,
+        "unit_correctness": null,
+        "calculation_correctness": null,
+        "evidence_correctness": null,
+        "query_interpretation_correctness": null
+      },
+      "overall_status": "UNSUPPORTED",
+      "failure_reason": "No complete retrieval-to-answer path is implemented for Q04; calculator registration alone is not support."
+    },
+    {
+      "question_id": "Q05",
+      "question": "How much of the change in operating income between the two comparable periods was reflected in the change in net income?",
+      "company": null,
+      "filings": [],
+      "reporting_periods": [],
+      "expected_concepts": [
+        "operating_income",
+        "net_income"
+      ],
+      "retrieval_mode": "not_run",
+      "retrieved_inputs": [],
+      "selected_evidence": [],
+      "calculation_formula": "(net_income_current - net_income_prior) / (operating_income_current - operating_income_prior) * 100",
+      "expected_answer": null,
+      "actual_answer": "I cannot answer this request reliably yet: No complete retrieval-to-answer path is implemented for Q05; calculator registration alone is not support.\n\nYour question: How much of the change in operating income between the two comparable periods was reflected in the change in net income?",
+      "checks": {
+        "input_retrieval_correctness": null,
+        "period_correctness": null,
+        "unit_correctness": null,
+        "calculation_correctness": null,
+        "evidence_correctness": null,
+        "query_interpretation_correctness": null
+      },
+      "overall_status": "UNSUPPORTED",
+      "failure_reason": "No complete retrieval-to-answer path is implemented for Q05; calculator registration alone is not support."
+    },
+    {
+      "question_id": "Q06",
+      "question": "How did shareholders' equity change between the beginning and end of the reporting period, and what were the principal disclosed components of that change?",
+      "company": null,
+      "filings": [],
+      "reporting_periods": [],
+      "expected_concepts": [
+        "shareholders_equity"
+      ],
+      "retrieval_mode": "not_run",
+      "retrieved_inputs": [],
+      "selected_evidence": [],
+      "calculation_formula": "ending_equity - beginning_equity",
+      "expected_answer": null,
+      "actual_answer": "I cannot answer this request reliably yet: No complete retrieval-to-answer path is implemented for Q06; calculator registration alone is not support.\n\nYour question: How did shareholders' equity change between the beginning and end of the reporting period, and what were the principal disclosed components of that change?",
+      "checks": {
+        "input_retrieval_correctness": null,
+        "period_correctness": null,
+        "unit_correctness": null,
+        "calculation_correctness": null,
+        "evidence_correctness": null,
+        "query_interpretation_correctness": null
+      },
+      "overall_status": "UNSUPPORTED",
+      "failure_reason": "No complete retrieval-to-answer path is implemented for Q06; calculator registration alone is not support."
+    },
+    {
+      "question_id": "Q07",
+      "question": "How did cash, cash equivalents and short-term investments or marketable securities change during the reporting period, and what percentage of the change in total assets did this represent?",
+      "company": null,
+      "filings": [],
+      "reporting_periods": [],
+      "expected_concepts": [
+        "cash_and_cash_equivalents",
+        "short_term_investments_or_marketable_securities",
+        "total_assets"
+      ],
+      "retrieval_mode": "not_run",
+      "retrieved_inputs": [],
+      "selected_evidence": [],
+      "calculation_formula": "(liquid_assets_end - liquid_assets_begin) / (total_assets_end - total_assets_begin) * 100",
+      "expected_answer": null,
+      "actual_answer": "I cannot answer this request reliably yet: No complete retrieval-to-answer path is implemented for Q07; calculator registration alone is not support.\n\nYour question: How did cash, cash equivalents and short-term investments or marketable securities change during the reporting period, and what percentage of the change in total assets did this represent?",
+      "checks": {
+        "input_retrieval_correctness": null,
+        "period_correctness": null,
+        "unit_correctness": null,
+        "calculation_correctness": null,
+        "evidence_correctness": null,
+        "query_interpretation_correctness": null
+      },
+      "overall_status": "UNSUPPORTED",
+      "failure_reason": "No complete retrieval-to-answer path is implemented for Q07; calculator registration alone is not support."
+    },
+    {
+      "question_id": "Q08",
+      "question": "How did accounts receivable growth compare with revenue growth over the comparable reporting periods?",
+      "company": null,
+      "filings": [],
+      "reporting_periods": [],
+      "expected_concepts": [
+        "accounts_receivable",
+        "revenue"
+      ],
+      "retrieval_mode": "not_run",
+      "retrieved_inputs": [],
+      "selected_evidence": [],
+      "calculation_formula": null,
+      "expected_answer": null,
+      "actual_answer": "I cannot answer this request reliably yet: No complete retrieval-to-answer path is implemented for Q08; calculator registration alone is not support.\n\nYour question: How did accounts receivable growth compare with revenue growth over the comparable reporting periods?",
+      "checks": {
+        "input_retrieval_correctness": null,
+        "period_correctness": null,
+        "unit_correctness": null,
+        "calculation_correctness": null,
+        "evidence_correctness": null,
+        "query_interpretation_correctness": null
+      },
+      "overall_status": "UNSUPPORTED",
+      "failure_reason": "No complete retrieval-to-answer path is implemented for Q08; calculator registration alone is not support."
+    },
+    {
+      "question_id": "Q09",
+      "question": "How did inventory change relative to revenue over the comparable periods, and what inventory-related factors does management disclose as affecting the change?",
+      "company": null,
+      "filings": [],
+      "reporting_periods": [],
+      "expected_concepts": [
+        "inventory",
+        "revenue"
+      ],
+      "retrieval_mode": "not_run",
+      "retrieved_inputs": [],
+      "selected_evidence": [],
+      "calculation_formula": null,
+      "expected_answer": null,
+      "actual_answer": "I cannot answer this request reliably yet: No complete retrieval-to-answer path is implemented for Q09; calculator registration alone is not support.\n\nYour question: How did inventory change relative to revenue over the comparable periods, and what inventory-related factors does management disclose as affecting the change?",
+      "checks": {
+        "input_retrieval_correctness": null,
+        "period_correctness": null,
+        "unit_correctness": null,
+        "calculation_correctness": null,
+        "evidence_correctness": null,
+        "query_interpretation_correctness": null
+      },
+      "overall_status": "UNSUPPORTED",
+      "failure_reason": "No complete retrieval-to-answer path is implemented for Q09; calculator registration alone is not support."
+    },
+    {
+      "question_id": "Q10",
+      "question": "What amount did the company spend on share repurchases during the reporting period, what percentage of operating cash flow did this represent, and how did the amount compare with the comparable prior-year period?",
+      "company": null,
+      "filings": [],
+      "reporting_periods": [],
+      "expected_concepts": [
+        "share_repurchase_cash",
+        "operating_cash_flow"
+      ],
+      "retrieval_mode": "not_run",
+      "retrieved_inputs": [],
+      "selected_evidence": [],
+      "calculation_formula": "share_repurchase_cash / operating_cash_flow * 100",
+      "expected_answer": null,
+      "actual_answer": "I cannot answer this request reliably yet: No complete retrieval-to-answer path is implemented for Q10; calculator registration alone is not support.\n\nYour question: What amount did the company spend on share repurchases during the reporting period, what percentage of operating cash flow did this represent, and how did the amount compare with the comparable prior-year period?",
+      "checks": {
+        "input_retrieval_correctness": null,
+        "period_correctness": null,
+        "unit_correctness": null,
+        "calculation_correctness": null,
+        "evidence_correctness": null,
+        "query_interpretation_correctness": null
+      },
+      "overall_status": "UNSUPPORTED",
+      "failure_reason": "No complete retrieval-to-answer path is implemented for Q10; calculator registration alone is not support."
+    },
+    {
+      "question_id": "Q11",
+      "question": "What percentage of basic weighted-average shares was represented by the dilutive effect of outstanding equity awards?",
+      "company": null,
+      "filings": [],
+      "reporting_periods": [],
+      "expected_concepts": [
+        "basic_weighted_average_shares",
+        "dilutive_effect"
+      ],
+      "retrieval_mode": "not_run",
+      "retrieved_inputs": [],
+      "selected_evidence": [],
+      "calculation_formula": "dilutive_effect / basic_weighted_average_shares * 100",
+      "expected_answer": null,
+      "actual_answer": "I cannot answer this request reliably yet: No complete retrieval-to-answer path is implemented for Q11; calculator registration alone is not support.\n\nYour question: What percentage of basic weighted-average shares was represented by the dilutive effect of outstanding equity awards?",
+      "checks": {
+        "input_retrieval_correctness": null,
+        "period_correctness": null,
+        "unit_correctness": null,
+        "calculation_correctness": null,
+        "evidence_correctness": null,
+        "query_interpretation_correctness": null
+      },
+      "overall_status": "UNSUPPORTED",
+      "failure_reason": "No complete retrieval-to-answer path is implemented for Q11; calculator registration alone is not support."
+    },
+    {
+      "question_id": "Q12",
+      "question": "What were the principal changes in shareholders' equity during the reporting period, and what percentage of the ending equity balance did the largest component represent?",
+      "company": null,
+      "filings": [],
+      "reporting_periods": [],
+      "expected_concepts": [
+        "shareholders_equity",
+        "equity_components"
+      ],
+      "retrieval_mode": "not_run",
+      "retrieved_inputs": [],
+      "selected_evidence": [],
+      "calculation_formula": null,
+      "expected_answer": null,
+      "actual_answer": "I cannot answer this request reliably yet: No complete retrieval-to-answer path is implemented for Q12; calculator registration alone is not support.\n\nYour question: What were the principal changes in shareholders' equity during the reporting period, and what percentage of the ending equity balance did the largest component represent?",
+      "checks": {
+        "input_retrieval_correctness": null,
+        "period_correctness": null,
+        "unit_correctness": null,
+        "calculation_correctness": null,
+        "evidence_correctness": null,
+        "query_interpretation_correctness": null
+      },
+      "overall_status": "UNSUPPORTED",
+      "failure_reason": "No complete retrieval-to-answer path is implemented for Q12; calculator registration alone is not support."
+    },
+    {
+      "question_id": "Q13",
+      "question": "What percentage of net income was converted into operating cash flow during the reporting period, and how did this compare with the comparable prior-year period?",
+      "company": null,
+      "filings": [],
+      "reporting_periods": [],
+      "expected_concepts": [
+        "net_income",
+        "operating_cash_flow"
+      ],
+      "retrieval_mode": "not_run",
+      "retrieved_inputs": [],
+      "selected_evidence": [],
+      "calculation_formula": "operating_cash_flow / net_income * 100",
+      "expected_answer": null,
+      "actual_answer": "I cannot answer this request reliably yet: No complete retrieval-to-answer path is implemented for Q13; calculator registration alone is not support.\n\nYour question: What percentage of net income was converted into operating cash flow during the reporting period, and how did this compare with the comparable prior-year period?",
+      "checks": {
+        "input_retrieval_correctness": null,
+        "period_correctness": null,
+        "unit_correctness": null,
+        "calculation_correctness": null,
+        "evidence_correctness": null,
+        "query_interpretation_correctness": null
+      },
+      "overall_status": "UNSUPPORTED",
+      "failure_reason": "No complete retrieval-to-answer path is implemented for Q13; calculator registration alone is not support."
+    },
+    {
+      "question_id": "Q14",
+      "question": "What proportion of operating cash flow was allocated to shareholder returns and capital expenditure during the reporting period?",
+      "company": null,
+      "filings": [],
+      "reporting_periods": [],
+      "expected_concepts": [
+        "operating_cash_flow",
+        "share_repurchase",
+        "dividends",
+        "capital_expenditure"
+      ],
+      "retrieval_mode": "not_run",
+      "retrieved_inputs": [],
+      "selected_evidence": [],
+      "calculation_formula": "(share_repurchase + dividends + capital_expenditure) / operating_cash_flow * 100",
+      "expected_answer": null,
+      "actual_answer": "I cannot answer this request reliably yet: No complete retrieval-to-answer path is implemented for Q14; calculator registration alone is not support.\n\nYour question: What proportion of operating cash flow was allocated to shareholder returns and capital expenditure during the reporting period?",
+      "checks": {
+        "input_retrieval_correctness": null,
+        "period_correctness": null,
+        "unit_correctness": null,
+        "calculation_correctness": null,
+        "evidence_correctness": null,
+        "query_interpretation_correctness": null
+      },
+      "overall_status": "UNSUPPORTED",
+      "failure_reason": "No complete retrieval-to-answer path is implemented for Q14; calculator registration alone is not support."
+    },
+    {
+      "question_id": "Q15",
+      "question": "What are the company's disclosed future contractual or purchase commitments, what proportion is due within the next fiscal year, and how does that near-term obligation compare with available liquid resources?",
+      "company": null,
+      "filings": [],
+      "reporting_periods": [],
+      "expected_concepts": [
+        "future_commitments",
+        "near_term_commitments",
+        "cash_and_cash_equivalents",
+        "marketable_securities_or_short_term_investments"
+      ],
+      "retrieval_mode": "not_run",
+      "retrieved_inputs": [],
+      "selected_evidence": [],
+      "calculation_formula": null,
+      "expected_answer": null,
+      "actual_answer": "I cannot answer this request reliably yet: No complete retrieval-to-answer path is implemented for Q15; calculator registration alone is not support.\n\nYour question: What are the company's disclosed future contractual or purchase commitments, what proportion is due within the next fiscal year, and how does that near-term obligation compare with available liquid resources?",
+      "checks": {
+        "input_retrieval_correctness": null,
+        "period_correctness": null,
+        "unit_correctness": null,
+        "calculation_correctness": null,
+        "evidence_correctness": null,
+        "query_interpretation_correctness": null
+      },
+      "overall_status": "UNSUPPORTED",
+      "failure_reason": "No complete retrieval-to-answer path is implemented for Q15; calculator registration alone is not support."
+    },
+    {
+      "question_id": "Q16",
+      "question": "What material regulatory, export-control, trade or government-policy risks does the filing identify, and which disclosed business activities, products, markets or geographic exposures could be affected?",
+      "company": null,
+      "filings": [],
+      "reporting_periods": [],
+      "expected_concepts": [],
+      "retrieval_mode": "not_run",
+      "retrieved_inputs": [],
+      "selected_evidence": [],
+      "calculation_formula": null,
+      "expected_answer": null,
+      "actual_answer": "I cannot answer this request reliably yet: No complete retrieval-to-answer path is implemented for Q16; calculator registration alone is not support.\n\nYour question: What material regulatory, export-control, trade or government-policy risks does the filing identify, and which disclosed business activities, products, markets or geographic exposures could be affected?",
+      "checks": {
+        "input_retrieval_correctness": null,
+        "period_correctness": null,
+        "unit_correctness": null,
+        "calculation_correctness": null,
+        "evidence_correctness": null,
+        "query_interpretation_correctness": null
+      },
+      "overall_status": "UNSUPPORTED",
+      "failure_reason": "No complete retrieval-to-answer path is implemented for Q16; calculator registration alone is not support."
+    },
+    {
+      "question_id": "Q17",
+      "question": "What proportion of revenue or assets was associated with the largest disclosed geographic exposure, and what limitations or distinctions does the company provide regarding the geographic classification?",
+      "company": null,
+      "filings": [],
+      "reporting_periods": [],
+      "expected_concepts": [
+        "geographic_revenue_or_assets"
+      ],
+      "retrieval_mode": "not_run",
+      "retrieved_inputs": [],
+      "selected_evidence": [],
+      "calculation_formula": null,
+      "expected_answer": null,
+      "actual_answer": "I cannot answer this request reliably yet: No complete retrieval-to-answer path is implemented for Q17; calculator registration alone is not support.\n\nYour question: What proportion of revenue or assets was associated with the largest disclosed geographic exposure, and what limitations or distinctions does the company provide regarding the geographic classification?",
+      "checks": {
+        "input_retrieval_correctness": null,
+        "period_correctness": null,
+        "unit_correctness": null,
+        "calculation_correctness": null,
+        "evidence_correctness": null,
+        "query_interpretation_correctness": null
+      },
+      "overall_status": "UNSUPPORTED",
+      "failure_reason": "No complete retrieval-to-answer path is implemented for Q17; calculator registration alone is not support."
+    },
+    {
+      "question_id": "Q18",
+      "question": "What quantitative market-risk sensitivity does the company disclose, and what would the disclosed sensitivity represent relative to the relevant financial measure for the reporting period?",
+      "company": null,
+      "filings": [],
+      "reporting_periods": [],
+      "expected_concepts": [],
+      "retrieval_mode": "not_run",
+      "retrieved_inputs": [],
+      "selected_evidence": [],
+      "calculation_formula": null,
+      "expected_answer": null,
+      "actual_answer": "I cannot answer this request reliably yet: No complete retrieval-to-answer path is implemented for Q18; calculator registration alone is not support.\n\nYour question: What quantitative market-risk sensitivity does the company disclose, and what would the disclosed sensitivity represent relative to the relevant financial measure for the reporting period?",
+      "checks": {
+        "input_retrieval_correctness": null,
+        "period_correctness": null,
+        "unit_correctness": null,
+        "calculation_correctness": null,
+        "evidence_correctness": null,
+        "query_interpretation_correctness": null
+      },
+      "overall_status": "UNSUPPORTED",
+      "failure_reason": "No complete retrieval-to-answer path is implemented for Q18; calculator registration alone is not support."
+    },
+    {
+      "question_id": "Q19",
+      "question": "What material legal proceedings, contingencies or claims does the company disclose, what financial exposure is disclosed where available, and what uncertainty does the company state about potential losses?",
+      "company": null,
+      "filings": [],
+      "reporting_periods": [],
+      "expected_concepts": [],
+      "retrieval_mode": "not_run",
+      "retrieved_inputs": [],
+      "selected_evidence": [],
+      "calculation_formula": null,
+      "expected_answer": null,
+      "actual_answer": "I cannot answer this request reliably yet: No complete retrieval-to-answer path is implemented for Q19; calculator registration alone is not support.\n\nYour question: What material legal proceedings, contingencies or claims does the company disclose, what financial exposure is disclosed where available, and what uncertainty does the company state about potential losses?",
+      "checks": {
+        "input_retrieval_correctness": null,
+        "period_correctness": null,
+        "unit_correctness": null,
+        "calculation_correctness": null,
+        "evidence_correctness": null,
+        "query_interpretation_correctness": null
+      },
+      "overall_status": "UNSUPPORTED",
+      "failure_reason": "No complete retrieval-to-answer path is implemented for Q19; calculator registration alone is not support."
+    },
+    {
+      "question_id": "Q20",
+      "question": "Identify material changes or disclosures in the filing that could affect interpretation of the company's reported financial results, and provide the supporting evidence and quantitative exposure where disclosed.",
+      "company": null,
+      "filings": [],
+      "reporting_periods": [],
+      "expected_concepts": [],
+      "retrieval_mode": "not_run",
+      "retrieved_inputs": [],
+      "selected_evidence": [],
+      "calculation_formula": null,
+      "expected_answer": null,
+      "actual_answer": "I cannot answer this request reliably yet: No complete retrieval-to-answer path is implemented for Q20; calculator registration alone is not support.\n\nYour question: Identify material changes or disclosures in the filing that could affect interpretation of the company's reported financial results, and provide the supporting evidence and quantitative exposure where disclosed.",
+      "checks": {
+        "input_retrieval_correctness": null,
+        "period_correctness": null,
+        "unit_correctness": null,
+        "calculation_correctness": null,
+        "evidence_correctness": null,
+        "query_interpretation_correctness": null
+      },
+      "overall_status": "UNSUPPORTED",
+      "failure_reason": "No complete retrieval-to-answer path is implemented for Q20; calculator registration alone is not support."
+    }
+  ]
+}
