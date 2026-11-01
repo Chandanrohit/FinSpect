@@ -1,117 +1,104 @@
 # FinSpect
-FinSpect is an experimental financial research assistant that combines natural-language query planning, SEC filing retrieval, evidence validation, deterministic calculations, and a Streamlit interface.
+
+FinSpect is an experimental financial research system. It uses a language model to interpret a question, SEC filing data to supply financial inputs, validation rules to reject incompatible facts, and deterministic Python calculations to produce an answer with its periods and sources.
+
+> **Prototype status:** the current end-to-end calculation path is annual revenue growth and absolute annual revenue change. The 20-question benchmark is not broadly supported. The current reproducible evaluation is **1 PARTIAL, 19 UNSUPPORTED**; see [`reports/benchmark-report.json`](reports/benchmark-report.json).
 
 ## Problem
 
-Reading annual reports and connecting information across financial statements and disclosures takes time. FinSpect aims to help users investigate selected financial questions while preserving the source evidence and reporting periods behind its answers.
+Financial research requires finding the right company, concept, reporting period, and unit across filings before doing any calculation. A general-purpose LLM can mix periods, select the wrong metric, or invent values and citations. FinSpect separates those responsibilities:
+
+**LLMs interpret questions. Validated filing data and deterministic code calculate.**
 
 ## Architecture
 
-1. **Streamlit interface** — accepts a research question and displays the result.
-2. **LLM query planner** — converts a question into a structured research plan.
-3. **Plan normalizer and period resolver** — normalize known company identifiers and resolve reporting periods.
-4. **SEC retrieval** — retrieves structured financial facts and filing information.
-5. **Evidence and validation** — preserve provenance and check whether the retrieved inputs are suitable.
-6. **Deterministic calculator** — performs supported financial calculations.
-7. **Answer builder** — formats conclusions, calculations, evidence, and limitations.
+```mermaid
+flowchart LR
+    U[Research question] --> P[Ollama query planner]
+    P --> N[Plan normalization]
+    N --> C[Company and annual period resolution]
+    C --> S[SEC EDGAR Company Facts]
+    S --> V[Fact, unit, period, identity and provenance validation]
+    V --> D[Decimal calculation]
+    D --> A[Answer with formula, inputs and SEC evidence]
+```
 
-Narrative disclosure retrieval is being developed for questions involving risks, litigation, and management discussion.
+The Streamlit application calls the same orchestrator. It displays the structured plan and evidence returned by the pipeline; it does not calculate financial values in the UI.
 
-## Current status
+## Current capabilities
 
-The project is under active development. Unit tests cover query planning, schema validation, evidence handling, answer construction, and initial narrative retrieval.
+- SEC company and filing metadata retrieval, plus XBRL Company Facts retrieval.
+- Structured query plans validated with Pydantic.
+- Deterministic company identity, annual period, unit, entity, and provenance checks.
+- Q01 annual revenue growth and absolute annual revenue change in the orchestrator.
+- Decimal-based calculator functions for benchmark formulas; registration does **not** mean an operation is wired end to end.
+- Evidence-bearing answers with reporting periods, filing dates, accession numbers, and SEC URLs.
+- An initial filing parser and keyword-ranked narrative passage retriever. Disclosure answers are not enabled end to end.
 
-Passing unit tests do not yet establish that every benchmark question is supported or that every answer is financially correct. End-to-end evaluation is still required.
+## Setup
 
-## Run locally
-
-Use Python 3.11 or newer.
-
-Install the project and development dependencies from the repository root:
+Use Python 3.11 or newer. From the repository root:
 
 ```powershell
 python -m pip install -e ".[dev]"
-python -m pytest -q
 ```
 
-Launch Streamlit:
+Set a descriptive SEC User-Agent and start a local Ollama server with a model that supports structured JSON output:
+
+```powershell
+$env:SEC_USER_AGENT = "FinSpect/0.1 contact you@example.com"
+$env:FINSPECT_OLLAMA_MODEL = "qwen2.5-coder:3b"
+```
+
+Run the app:
 
 ```powershell
 python -m streamlit run src/finspect/app.py
 ```
 
-The application may require a running local Ollama model and internet access for SEC requests. Check the configuration and model requirements before running it.
+The application needs internet access for SEC requests and a reachable Ollama endpoint. `FINSPECT_OLLAMA_URL` can override the default local endpoint. No Gnani AI credential is needed by the current application.
 
-## Design principles
+## Tests and benchmark evaluation
 
-- Preserve source and reporting-period information.
-- Keep financial arithmetic deterministic.
-- Validate retrieved inputs before calculating.
-- Report unsupported questions and missing evidence explicitly.
-- Avoid fabricating values or citations.
+Run deterministic tests:
 
-## Limitations
+```powershell
+python -m pytest -q
+```
 
-FinSpect is a research prototype, not a financial adviser. Its coverage is limited to implemented retrieval and calculation paths. Results require verification against the original SEC filings.
+Generate the benchmark report:
 
-## Contributing
+```powershell
+python -m finspect.benchmark_eval --output reports/benchmark-report.json
+```
 
-Issues and pull requests are welcome. Please include tests for behavior changes and explain the evidence supporting any financial calculation changes.
+The checked-in NVIDIA FY2024/FY2025 snapshot provides a repeatable Q01 calculation check. Revenue inputs are USD 60.922 billion and USD 130.497 billion, producing **114.20%** growth. The values and filing provenance are from the [FY2024 Form 10-K](https://www.sec.gov/Archives/edgar/data/1045810/0001045810-24-000029-index.htm) and [FY2025 Form 10-K](https://www.sec.gov/Archives/edgar/data/1045810/0001045810-25-000023-index.htm).
 
+The Q01 report is **PARTIAL** because it uses a checked-in filing snapshot and a validated fixture plan; it does not run live SEC retrieval or the Ollama planner. Q02–Q20 are **UNSUPPORTED** by the current retrieval-to-answer pipeline. No benchmark accuracy percentage is claimed. The benchmark itself contains generic question templates rather than fixed companies, filings, or reference answers.
 
-## Project Status
+## Demo
 
-**FinSpect v0.1 — Under Active Development**
+1. Install the project and set `SEC_USER_AGENT` and the Ollama model as shown above.
+2. Start the application with Streamlit.
+3. Ask: `Calculate NVIDIA's revenue growth from FY2024 to FY2025.`
+4. Inspect the plan, result, periods, formula, and SEC evidence shown with the answer.
+5. For a deterministic offline calculation/evidence check, run the Q01 benchmark evaluator.
 
-FinSpect is an experimental financial analysis system designed to answer questions about company financial statements using SEC filings, structured financial facts, and deterministic calculations.
+The live demo depends on Ollama and SEC availability. The benchmark snapshot is the reproducible demonstration when those services are unavailable.
 
-The project is being developed incrementally, with a focus on data provenance, calculation correctness, explicit validation, and reducing numerical hallucinations in LLM-assisted financial analysis.
+## Gnani AI integration
 
-### What Works So Far
+Gnani AI speech-to-text and text-to-speech are **not implemented or live-tested**. The intended voice flow is speech input → Gnani transcription → existing FinSpect research pipeline → spoken summary, with the full cited answer still visible in the app. Integration will be added only after verifying the account's current API configuration and model documentation.
 
-- **SEC EDGAR integration:** Retrieve company filing information and structured financial data from SEC sources.
-- **Financial fact retrieval:** Work with financial facts associated with reporting periods and accounting concepts.
-- **Typed data contracts:** Use Pydantic schemas to represent financial facts, reporting periods, units, and supporting evidence.
-- **Deterministic calculations:** Perform supported financial calculations using Python's `Decimal` arithmetic rather than relying on an LLM to calculate numerical results.
-- **Query planning:** Use an LLM-assisted planning layer to interpret supported financial questions.
-- **Streamlit interface:** Provide a user interface for submitting questions and inspecting pipeline results.
-- **Initial validation and testing:** Maintain automated tests for core schemas, calculations, retrieval, and pipeline components.
+Keep API keys out of source code, chat, screenshots, logs, and commits. The repository ignores `.env` files and `.streamlit/secrets.toml`. For local Streamlit development, store secrets in a local ignored secrets file or use environment settings; for a hosted demo, use the host's secret store. Never place a key in a browser-visible component. Rotate it if it is exposed.
 
-### Current Functional Scope
+## Limitations and next work
 
-The current end-to-end implementation focuses on **annual revenue growth** using SEC-backed financial data.
+- Only annual US SEC revenue growth and absolute revenue change have a complete calculation path.
+- The planner and SEC live integration have not been jointly benchmarked against reference answers.
+- Quarterly periods, non-revenue concepts, segment facts, balance-sheet calculations, and disclosure answers need complete retrieval-to-answer paths and tests.
+- Narrative section extraction uses heuristics and keyword ranking; it is not yet reliable enough for material-risk answers.
+- The benchmark has no fixed gold answers for its general templates. Evaluation needs declared company/filing snapshots and references for each question.
+- Gnani STT/TTS, voice playback, CI, and a public demo recording remain future work.
 
-Other financial questions, including net income analysis, operating cash flow, and absolute dollar-change calculations, are not yet fully supported end-to-end.
-
-### Work in Progress
-
-- Strengthening financial-fact validation and evidence contracts.
-- Improving reporting-period selection and query interpretation.
-- Preventing unsupported questions from producing misleading answers.
-- Expanding retrieval and calculation support beyond annual revenue growth.
-- Evaluating the 20-question financial benchmark end-to-end.
-- Improving error handling, reproducibility, and the Streamlit experience.
-- Integrating Gnani AI models into the application.
-
-### Design Principle
-
-**LLMs interpret; validated data and deterministic code calculate.**
-
-FinSpect aims to separate language understanding from numerical execution. Financial results should be traceable to their underlying data and reporting periods, with unsupported questions handled explicitly instead of answered through guesswork.
-
-### Limitations
-
-This is a work in progress, not a production-ready financial research platform. Supported functionality is limited, and results require verification against the underlying filings. Passing unit tests does not by itself establish that every financial question is supported or that all outputs are financially correct.
-
-### Roadmap
-
-- [x] Establish core financial schemas and calculation components.
-- [x] Integrate initial SEC-backed financial-data retrieval.
-- [x] Build an initial Streamlit application.
-- [ ] Complete validation and evidence-contract reliability work.
-- [ ] Expand supported financial metrics and query types.
-- [ ] Run the benchmark end-to-end and report measured results.
-- [ ] Integrate Gnani AI and evaluate the resulting user experience.
-- [ ] Complete documentation, deployment preparation, and a public demo.
-
-*Roadmap items reflect development plans and should be updated as features are completed and tested.*
+FinSpect is a learning-focused prototype, not financial advice. Verify results against the cited filing before relying on them.
