@@ -8,7 +8,7 @@ from finspect.answer_builder import (
     build_clarification_answer,
     build_unsupported_answer,
 )
-from finspect.calculator import revenue_growth
+from finspect.calculator import margin_change, revenue_growth
 
 
 def test_calculation_answer_contains_result_formula_and_evidence():
@@ -65,6 +65,31 @@ def test_calculation_answer_requires_evidence():
             result=result,
             evidence=[],
         )
+
+
+def test_percentage_point_results_include_their_unit_in_answer_text():
+    result = margin_change(
+        current_income=Decimal("62"),
+        current_revenue=Decimal("100"),
+        prior_income=Decimal("50"),
+        prior_revenue=Decimal("100"),
+    )
+    answer = build_calculation_answer(
+        company_name="Example Corporation",
+        question="How did operating margin change?",
+        result=result,
+        evidence=[
+            AnswerEvidence(
+                label="Revenue and operating income",
+                value=Decimal("100"),
+                unit="USD",
+                period="FY2025",
+                filing_date="2026-02-25",
+            )
+        ],
+    )
+
+    assert "12.00 percentage points" in answer.text
 
 
 def test_clarification_answer_has_no_calculation():

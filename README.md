@@ -2,7 +2,7 @@
 
 FinSpect is an experimental financial research system. It uses a language model to interpret a question, SEC filing data to supply financial inputs, validation rules to reject incompatible facts, and deterministic Python calculations to produce an answer with its periods and sources.
 
-> **Prototype status:** the current end-to-end calculation path is annual revenue growth and absolute annual revenue change. The 20-question benchmark is not broadly supported. The current reproducible evaluation is **1 PARTIAL, 19 UNSUPPORTED**; see [`reports/benchmark-report.json`](reports/benchmark-report.json).
+> **Prototype status:** the current end-to-end calculation paths cover annual revenue growth, absolute annual revenue change, and annual operating margin change. The 20-question benchmark is not broadly supported. The current reproducible evaluation is **2 PARTIAL, 18 UNSUPPORTED**; see [`reports/benchmark-report.json`](reports/benchmark-report.json).
 
 ## Problem
 
@@ -31,6 +31,7 @@ The Streamlit application calls the same orchestrator. It displays the structure
 - Structured query plans validated with Pydantic.
 - Deterministic company identity, annual period, unit, entity, and provenance checks.
 - Q01 annual revenue growth and absolute annual revenue change in the orchestrator.
+- Q03 annual operating margin change from SEC revenue and operating-income facts.
 - Decimal-based calculator functions for benchmark formulas; registration does **not** mean an operation is wired end to end.
 - Evidence-bearing answers with reporting periods, filing dates, accession numbers, and SEC URLs.
 - An initial filing parser and keyword-ranked narrative passage retriever. Disclosure answers are not enabled end to end.
@@ -72,15 +73,15 @@ Generate the benchmark report:
 python -m finspect.benchmark_eval --output reports/benchmark-report.json
 ```
 
-The checked-in NVIDIA FY2024/FY2025 snapshot provides a repeatable Q01 calculation check. Revenue inputs are USD 60.922 billion and USD 130.497 billion, producing **114.20%** growth. The values and filing provenance are from the [FY2024 Form 10-K](https://www.sec.gov/Archives/edgar/data/1045810/0001045810-24-000029-index.htm) and [FY2025 Form 10-K](https://www.sec.gov/Archives/edgar/data/1045810/0001045810-25-000023-index.htm).
+The checked-in NVIDIA FY2024/FY2025 snapshots provide repeatable Q01 and Q03 checks. Revenue inputs are USD 60.922 billion and USD 130.497 billion, producing **114.20%** growth. Operating income is USD 32.972 billion and USD 81.453 billion; the operating margin increased **8.30 percentage points**. Values and filing provenance are from the [FY2024 Form 10-K](https://www.sec.gov/Archives/edgar/data/1045810/0001045810-24-000029-index.htm) and [FY2025 Form 10-K](https://www.sec.gov/Archives/edgar/data/1045810/0001045810-25-000023-index.htm).
 
-The Q01 report is **PARTIAL** because it uses a checked-in filing snapshot and a validated fixture plan; it does not run live SEC retrieval or the Ollama planner. Q02–Q20 are **UNSUPPORTED** by the current retrieval-to-answer pipeline. No benchmark accuracy percentage is claimed. The benchmark itself contains generic question templates rather than fixed companies, filings, or reference answers.
+The Q01 and Q03 reports are **PARTIAL** because they use checked-in filing snapshots and validated fixture plans; they do not run live SEC retrieval or the Ollama planner. Q02, Q04–Q20 are **UNSUPPORTED** by the current retrieval-to-answer pipeline. No benchmark accuracy percentage is claimed. The benchmark itself contains generic question templates rather than fixed companies, filings, or reference answers.
 
 ## Demo
 
 1. Install the project and set `SEC_USER_AGENT` and the Ollama model as shown above.
 2. Start the application with Streamlit.
-3. Ask: `Calculate NVIDIA's revenue growth from FY2024 to FY2025.`
+3. Ask: `Calculate NVIDIA's revenue growth from FY2024 to FY2025.` or `How did NVIDIA's operating margin change from FY2024 to FY2025?`
 4. Inspect the plan, result, periods, formula, and SEC evidence shown with the answer.
 5. For a deterministic offline calculation/evidence check, run the Q01 benchmark evaluator.
 
@@ -94,9 +95,9 @@ Keep API keys out of source code, chat, screenshots, logs, and commits. The repo
 
 ## Limitations and next work
 
-- Only annual US SEC revenue growth and absolute revenue change have a complete calculation path.
+- Only annual US SEC revenue growth, absolute revenue change, and operating margin change have complete calculation paths.
 - The planner and SEC live integration have not been jointly benchmarked against reference answers.
-- Quarterly periods, non-revenue concepts, segment facts, balance-sheet calculations, and disclosure answers need complete retrieval-to-answer paths and tests.
+- Quarterly periods, segment facts, balance-sheet calculations, and disclosure answers need complete retrieval-to-answer paths and tests.
 - Narrative section extraction uses heuristics and keyword ranking; it is not yet reliable enough for material-risk answers.
 - The benchmark has no fixed gold answers for its general templates. Evaluation needs declared company/filing snapshots and references for each question.
 - Gnani STT/TTS, voice playback, CI, and a public demo recording remain future work.

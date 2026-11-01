@@ -14,8 +14,7 @@ from finspect.answer_builder import (
     build_clarification_answer,
     build_unsupported_answer,
 )
-from finspect.calculator import absolute_change, revenue_growth
-from finspect.edgar import company_resolver
+from finspect.calculator import absolute_change, margin_change, revenue_growth
 from finspect.edgar.client import EdgarClient
 from finspect.edgar.facts import FinancialFactRetriever
 from finspect.query_planner import QueryPlan
@@ -24,7 +23,15 @@ from finspect.llm_planner import planner_from_environment
 from finspect.plan_normalizer import normalize_query_plan
 from finspect.period_resolver import (resolve_annual_period as resolve_sec_annual_period)
 from finspect.edgar.fact_adapter import sec_fact_to_financial_fact
-from finspect.schema import PeriodRole, ReportingScope, FinancialFact, validate_growth_inputs, validate_absolute_change_inputs
+from finspect.schema import (
+    PeriodRole,
+    ReportingScope,
+    FinancialFact,
+    require_compatible_facts,
+    validate_absolute_change_inputs,
+    validate_currency_inputs,
+    validate_growth_inputs,
+)
 from finspect.edgar.company_resolver import (
     SECCompanyResolver,
     CompanyResolutionError,
@@ -63,7 +70,7 @@ class FinSpectOrchestrator:
     Coordinates planning, period resolution, SEC retrieval,
     deterministic calculation, and answer formatting.
 
-    This first version supports annual revenue growth (Q01) only.
+    Supports annual revenue change/growth (Q01) and operating margin change (Q03).
     """
 
     REVENUE_CONCEPT = (
@@ -108,24 +115,39 @@ class FinSpectOrchestrator:
         # Do not silently answer an absolute-change question with a rate.
         # Dollar-change calculations are not yet wired into this pipeline.
 
-        import re
-        # This first vertical slice implements Q01 only.
+        metric_names = {
+            metric.name.strip().casefold().replace("_", " ")
+            for metric in plan.metrics
+            if metric.required
+        }
+        has_revenue = bool(metric_names & {"total revenue", "revenue"})
+        has_operating_income = bool(
+            metric_names & {"operating income", "operating income loss"}
+        )
         is_supported_revenue_operation = (
             plan.operation in {"growth_rate", "absolute_change"}
-            and any(
-                metric.name.strip().casefold().replace("_", " ")
-                in {"total revenue", "revenue"}
-                and metric.required
-                for metric in plan.metrics
-            )
+            and has_revenue
+            and metric_names <= {"total revenue", "revenue"}
+        )
+        is_supported_margin_operation = (
+            plan.operation == "margin_change"
+            and has_revenue
+            and has_operating_income
+            and metric_names <= {
+                "total revenue",
+                "revenue",
+                "operating income",
+                "operating income loss",
+            }
         )
 
-        if not is_supported_revenue_operation:
+        if not (is_supported_revenue_operation or is_supported_margin_operation):
             answer = build_unsupported_answer(
                 question=question,
                 reason=(
-                    "This FinSpect version supports annual revenue growth "
-                    "and absolute annual revenue change only."
+                    "This FinSpect version supports annual revenue growth, "
+                    "absolute annual revenue change, and operating margin "
+                    "change only."
                 ),
             )
             return PipelineResult(plan=plan, answer=answer)
@@ -137,7 +159,7 @@ class FinSpectOrchestrator:
                 question=question,
                 reason=(
                     "Two explicit fiscal years are required for this "
-                    "revenue-growth calculation."
+                    "annual comparison calculation."
                 ),
             )
             return PipelineResult(plan=plan, answer=answer)
@@ -189,146 +211,132 @@ class FinSpectOrchestrator:
         ]
         for period, requested_year in zip(periods, fiscal_years, strict=True):
             self._validate_annual_period(period, requested_year)
-
-        # 5. Retrieve both facts from SEC XBRL.
-        facts = tuple(
-            self.fact_retriever.get_fact(
-                cik=cik,
-                taxonomy="us-gaap",
-                concept=period.concept,
-                start_date=period.start_date,
-                end_date=period.end_date,
-                form=period.form,
-                unit="USD",
-                filed_on_or_before=period.filing_date,
-                accession_number=period.accession_number,
-            )
-            for period in periods
-        )
-
-        adapted_facts = tuple(
-            sec_fact_to_financial_fact(
-                raw_fact,
-                period_role=role,
-                reporting_scope=ReportingScope.CONSOLIDATED,
-            )
-            for raw_fact, role in zip(
-                facts,
-                (PeriodRole.COMPARABLE_PRIOR, PeriodRole.CURRENT),
-                strict=True,
-            )
-        )
-        # Company Facts can vary legal suffix spelling between filings
-        # (for example, "CORP" and "CORPORATION"). The raw names are
-        # validated below; use the resolved SEC name in canonical facts so
-        # comparable periods have a stable entity identity.
-        canonical_facts = tuple(
-            fact.model_copy(update={"entity": resolved["name"]})
-            for fact in adapted_facts
-        )
-
-        # 6. Validate raw and canonical facts before calculating.
-        prior_fact, current_fact = facts
-        prior_canonical, current_canonical = canonical_facts
-
-        for raw_fact, period, canonical_fact in zip(
-            facts,
-            periods,
-            canonical_facts,
-            strict=True,
+        if date.fromisoformat(periods[1].start_date) <= date.fromisoformat(
+            periods[0].end_date
         ):
-            if str(raw_fact.get("cik", "")).zfill(10) != cik:
-                raise ValueError("Retrieved fact belongs to an unexpected CIK.")
+            raise ValueError("Comparable annual periods must not overlap.")
 
-            if raw_fact.get("company") != resolved["name"]:
+        # 5. Resolve supported metrics to controlled SEC concepts, then
+        # retrieve each concept for the same verified annual periods.
+        concept_specs = {"revenue": periods[0].concept}
+        if is_supported_margin_operation:
+            concept_specs["operating_income"] = "OperatingIncomeLoss"
+
+        raw_by_metric: dict[str, tuple[dict[str, Any], ...]] = {}
+        canonical_by_metric: dict[str, tuple[FinancialFact, ...]] = {}
+        roles = (PeriodRole.COMPARABLE_PRIOR, PeriodRole.CURRENT)
+
+        for metric_name, concept in concept_specs.items():
+            raw_facts = tuple(
+                self.fact_retriever.get_fact(
+                    cik=cik,
+                    taxonomy="us-gaap",
+                    concept=concept,
+                    start_date=period.start_date,
+                    end_date=period.end_date,
+                    form=period.form,
+                    unit="USD",
+                    filed_on_or_before=period.filing_date,
+                    accession_number=period.accession_number,
+                )
+                for period in periods
+            )
+            adapted_facts = tuple(
+                sec_fact_to_financial_fact(
+                    raw_fact,
+                    period_role=role,
+                    reporting_scope=ReportingScope.CONSOLIDATED,
+                )
+                for raw_fact, role in zip(raw_facts, roles, strict=True)
+            )
+            canonical_facts = tuple(
+                fact.model_copy(update={"entity": resolved["name"]})
+                for fact in adapted_facts
+            )
+            raw_by_metric[metric_name] = raw_facts
+            canonical_by_metric[metric_name] = canonical_facts
+
+            # 6. Check identity, concept, dates, units, and filing provenance
+            # before any metric can reach the calculator.
+            for raw_fact, period, canonical_fact in zip(
+                raw_facts,
+                periods,
+                canonical_facts,
+                strict=True,
+            ):
+                if str(raw_fact.get("cik", "")).zfill(10) != cik:
+                    raise ValueError("Retrieved fact belongs to an unexpected CIK.")
                 if normalize_company_text(
                     str(raw_fact.get("company", ""))
                 ) != normalize_company_text(resolved["name"]):
                     raise ValueError(
                         "Retrieved fact company name does not match the resolved company."
                     )
+                if raw_fact.get("start_date") != period.start_date:
+                    raise ValueError("Retrieved fact has an unexpected start date.")
+                if raw_fact.get("end_date") != period.end_date:
+                    raise ValueError("Retrieved fact has an unexpected end date.")
+                if raw_fact.get("unit") != "USD":
+                    raise ValueError(f"{metric_name} facts must use USD.")
+                if raw_fact.get("form") != period.form:
+                    raise ValueError("Retrieved fact has an unexpected filing form.")
+                if raw_fact.get("accession_number") != period.accession_number:
+                    raise ValueError(
+                        "Retrieved fact has an unexpected accession number."
+                    )
+                if canonical_fact.period.end_date.isoformat() != period.end_date:
+                    raise ValueError("Canonical fact has an unexpected end date.")
+                if canonical_fact.concept != concept:
+                    raise ValueError("Canonical fact has an unexpected concept.")
 
-            if raw_fact["start_date"] != period.start_date:
-                raise ValueError(
-                    "Retrieved fact has an unexpected start date."
+        revenue_prior, revenue_current = canonical_by_metric["revenue"]
+        if plan.operation in {"growth_rate", "absolute_change"}:
+            if plan.operation == "growth_rate":
+                validate_growth_inputs(revenue_current, revenue_prior)
+                calculation = revenue_growth(
+                    current=revenue_current.normalized_value,
+                    prior=revenue_prior.normalized_value,
                 )
-
-            if raw_fact["end_date"] != period.end_date:
-                raise ValueError(
-                    "Retrieved fact has an unexpected end date."
+            else:
+                validate_absolute_change_inputs(revenue_current, revenue_prior)
+                calculation = absolute_change(
+                    current=revenue_current.normalized_value,
+                    prior=revenue_prior.normalized_value,
                 )
-
-            if raw_fact["unit"] != "USD":
-                raise ValueError("Revenue facts must use USD.")
-
-            if raw_fact["form"] != period.form:
-                raise ValueError(
-                    "Retrieved fact has an unexpected filing form."
-                )
-
-            if (
-                period.accession_number is not None
-                and raw_fact.get("accession_number")
-                != period.accession_number
-            ):
-                raise ValueError(
-                    "Retrieved fact has an unexpected accession number."
-                )
-
-            if (
-                canonical_fact.period.end_date.isoformat()
-                != period.end_date
-            ):
-                raise ValueError(
-                    "Canonical fact has an unexpected end date."
-                )
-
-            if canonical_fact.concept != period.concept:
-                raise ValueError(
-                    "Canonical fact has an unexpected concept."
-                )
-
-        if prior_fact["end_date"] >= current_fact["end_date"]:
-            raise ValueError(
-                "The prior period must precede the current period."
-            )
-        if current_fact["start_date"] <= prior_fact["end_date"]:
-            raise ValueError(
-                "Comparable annual revenue periods must not overlap."
-            )
-
-
-        # 7. Validate canonical inputs and calculate deterministically.
-        if plan.operation == "growth_rate":
-            validate_growth_inputs(current_canonical, prior_canonical)
-            calculation = revenue_growth(
-                current=current_canonical.normalized_value,
-                prior=prior_canonical.normalized_value,
-            )
-        elif plan.operation == "absolute_change":
-            validate_absolute_change_inputs(
-                current_canonical,
-                prior_canonical,
-            )
-            calculation = absolute_change(
-                current=current_canonical.normalized_value,
-                prior=prior_canonical.normalized_value,
-            )
         else:
-            answer = build_unsupported_answer(
-                question=question,
-                reason=(
-                    f"Calculation operation {plan.operation!r} "
-                    "is not implemented."
-                ),
+            income_prior, income_current = canonical_by_metric["operating_income"]
+            validate_absolute_change_inputs(revenue_current, revenue_prior)
+            validate_absolute_change_inputs(income_current, income_prior)
+            require_compatible_facts(revenue_current, income_current)
+            require_compatible_facts(revenue_prior, income_prior)
+            validate_currency_inputs(
+                revenue_current,
+                revenue_prior,
+                income_current,
+                income_prior,
             )
-            return PipelineResult(plan=plan, answer=answer)
+            calculation = margin_change(
+                current_income=income_current.normalized_value,
+                current_revenue=revenue_current.normalized_value,
+                prior_income=income_prior.normalized_value,
+                prior_revenue=revenue_prior.normalized_value,
+            )
 
-        
-        # 8. Attach evidence from the actual SEC responses.
+        facts = tuple(
+            fact
+            for metric_facts in raw_by_metric.values()
+            for fact in metric_facts
+        )
+        canonical_facts = tuple(
+            fact
+            for metric_facts in canonical_by_metric.values()
+            for fact in metric_facts
+        )
+
+        # 7. Attach source evidence for every input actually used.
         evidence = tuple(
             AnswerEvidence(
-                label=fact.get("label") or "Revenue",
+                label=fact.get("label") or metric_name.replace("_", " ").title(),
                 value=Decimal(str(fact["value"])),
                 unit=fact["unit"],
                 period=f"FY{period.fiscal_year} "
@@ -337,7 +345,8 @@ class FinSpectOrchestrator:
                 accession_number=fact.get("accession_number"),
                 source_url=self._filing_url(fact),
             )
-            for fact, period in zip(facts, periods)
+            for metric_name, raw_facts in raw_by_metric.items()
+            for fact, period in zip(raw_facts, periods, strict=True)
         )
 
         answer = build_calculation_answer(

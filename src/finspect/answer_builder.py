@@ -40,6 +40,11 @@ def _format_result(value: Decimal, unit: str) -> str:
     """Format results for display without changing stored precision."""
     if unit == "percent":
         return f"{value.quantize(Decimal('0.01')):,.2f}%"
+    if unit == "percentage_points":
+        return (
+            f"{value.quantize(Decimal('0.01')):,.2f} "
+            "percentage points"
+        )
 
     return _format_decimal(value)
 

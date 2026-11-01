@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import argparse
 import json
+from datetime import date
 from decimal import Decimal
 from pathlib import Path
 from typing import Any
@@ -13,12 +14,15 @@ from finspect.answer_builder import (
     build_calculation_answer,
     build_unsupported_answer,
 )
-from finspect.calculator import revenue_growth
+from finspect.calculator import margin_change, revenue_growth
 from finspect.edgar.fact_adapter import sec_fact_to_financial_fact
 from finspect.schema import (
     PeriodRole,
     ReportingScope,
     load_benchmark,
+    require_compatible_facts,
+    validate_absolute_change_inputs,
+    validate_currency_inputs,
     validate_growth_inputs,
 )
 
@@ -26,6 +30,7 @@ from finspect.schema import (
 ROOT = Path(__file__).resolve().parents[2]
 DEFAULT_BENCHMARK = ROOT / "data" / "benchmark.json"
 DEFAULT_FIXTURE = ROOT / "data" / "fixtures" / "nvidia_q01_fy2024_fy2025.json"
+DEFAULT_Q03_FIXTURE = ROOT / "data" / "fixtures" / "nvidia_q03_fy2024_fy2025.json"
 
 
 def _evaluate_q01(question: Any, fixture: dict[str, Any]) -> dict[str, Any]:
@@ -183,22 +188,192 @@ def _evaluate_q01(question: Any, fixture: dict[str, Any]) -> dict[str, Any]:
     }
 
 
+def _evaluate_q03(question: Any, fixture: dict[str, Any]) -> dict[str, Any]:
+    company = fixture["company"]
+    periods = fixture["periods"]
+    facts_by_metric: dict[str, list[Any]] = {
+        "revenue": [],
+        "operating_income": [],
+    }
+    for item in periods:
+        role = (
+            PeriodRole.CURRENT
+            if item["role"] == "current"
+            else PeriodRole.COMPARABLE_PRIOR
+        )
+        for metric_name, raw_metric in item["facts"].items():
+            raw = {
+                "cik": company["cik"],
+                "company": "NVIDIA CORP",
+                **raw_metric,
+                "start_date": item["start_date"],
+                "end_date": item["end_date"],
+                "fiscal_year": item["fiscal_year"],
+                "form": item["form"],
+                "filing_date": item["filing_date"],
+                "accession_number": item["accession_number"],
+            }
+            fact = sec_fact_to_financial_fact(
+                raw,
+                period_role=role,
+                reporting_scope=ReportingScope.CONSOLIDATED,
+            ).model_copy(update={"entity": company["name"]})
+            facts_by_metric[metric_name].append(fact)
+
+    revenue_prior, revenue_current = facts_by_metric["revenue"]
+    income_prior, income_current = facts_by_metric["operating_income"]
+    validate_absolute_change_inputs(revenue_current, revenue_prior)
+    validate_absolute_change_inputs(income_current, income_prior)
+    require_compatible_facts(revenue_current, income_current)
+    require_compatible_facts(revenue_prior, income_prior)
+    validate_currency_inputs(
+        revenue_current,
+        revenue_prior,
+        income_current,
+        income_prior,
+    )
+    result = margin_change(
+        current_income=income_current.normalized_value,
+        current_revenue=revenue_current.normalized_value,
+        prior_income=income_prior.normalized_value,
+        prior_revenue=revenue_prior.normalized_value,
+    )
+    expected_value = Decimal(fixture["expected_margin_change_percentage_points"])
+    correct_result = result.value == expected_value
+
+    selected_evidence = []
+    for item in periods:
+        for metric_name, fact in item["facts"].items():
+            selected_evidence.append({
+                "concept": fact["concept"],
+                "value": fact["value"],
+                "unit": fact["unit"],
+                "period_start": item["start_date"],
+                "period_end": item["end_date"],
+                "form": item["form"],
+                "filing_date": item["filing_date"],
+                "accession_number": item["accession_number"],
+                "source_url": item["source_url"],
+                "metric": metric_name,
+            })
+    evidence_valid = all(
+        item["accession_number"]
+        and item["source_url"].startswith("https://www.sec.gov/")
+        for item in selected_evidence
+    )
+    periods_valid = all(
+        item["form"] == "10-K"
+        and 300 <= (
+            date.fromisoformat(item["end_date"])
+            - date.fromisoformat(item["start_date"])
+        ).days <= 400
+        for item in periods
+    )
+    checks = {
+        "input_retrieval_correctness": "not_evaluated_live_retrieval",
+        "period_correctness": periods_valid,
+        "unit_correctness": all(
+            fact["unit"] == "USD"
+            for item in periods
+            for fact in item["facts"].values()
+        ),
+        "calculation_correctness": correct_result,
+        "evidence_correctness": evidence_valid,
+        "query_interpretation_correctness": "not_evaluated",
+    }
+    status = "PARTIAL" if all(
+        value is True
+        for key, value in checks.items()
+        if key not in {
+            "query_interpretation_correctness",
+            "input_retrieval_correctness",
+        }
+    ) else "FAIL"
+    answer = build_calculation_answer(
+        company_name=company["name"],
+        question=fixture["question"],
+        result=result,
+        evidence=tuple(
+            AnswerEvidence(
+                label=fact["label"],
+                value=Decimal(fact["value"]),
+                unit=fact["unit"],
+                period=f"FY{item['fiscal_year']} ({item['start_date']} to {item['end_date']})",
+                filing_date=item["filing_date"],
+                accession_number=item["accession_number"],
+                source_url=item["source_url"],
+            )
+            for item in periods
+            for fact in item["facts"].values()
+        ),
+    )
+    return {
+        "question_id": question.id,
+        "question": fixture["question"],
+        "company": company,
+        "filings": [
+            {
+                "form": item["form"],
+                "filing_date": item["filing_date"],
+                "accession_number": item["accession_number"],
+                "url": item["source_url"],
+            }
+            for item in periods
+        ],
+        "reporting_periods": [
+            {
+                "fiscal_year": item["fiscal_year"],
+                "start_date": item["start_date"],
+                "end_date": item["end_date"],
+            }
+            for item in periods
+        ],
+        "expected_concepts": question.required_concepts,
+        "retrieval_mode": "checked_in_sec_snapshot_not_live_retrieval",
+        "retrieved_inputs": selected_evidence,
+        "selected_evidence": selected_evidence,
+        "calculation_formula": result.expression,
+        "expected_answer": {
+            "margin_change_percentage_points": str(expected_value),
+            "display": f"{expected_value.quantize(Decimal('0.01'))} percentage points",
+        },
+        "actual_answer": {
+            "text": answer.text,
+            "result_value": answer.result_value,
+            "result_unit": answer.result_unit,
+        },
+        "checks": checks,
+        "overall_status": status,
+        "failure_reason": (
+            "Query interpretation and live SEC retrieval were not tested; "
+            "the validated plan and filing facts came from deterministic fixtures."
+        ),
+    }
+
+
 def evaluate_benchmark(
     benchmark_path: Path = DEFAULT_BENCHMARK,
     fixture_path: Path = DEFAULT_FIXTURE,
+    q03_fixture_path: Path = DEFAULT_Q03_FIXTURE,
 ) -> dict[str, Any]:
     """Evaluate the current supported fixture and explicitly classify the rest."""
     benchmark = load_benchmark(benchmark_path)
     fixture = json.loads(fixture_path.read_text(encoding="utf-8"))
+    q03_fixture = json.loads(q03_fixture_path.read_text(encoding="utf-8"))
     questions = benchmark.question_map()
     if fixture.get("question_id") != "Q01" or "Q01" not in questions:
         raise ValueError("The configured fixture must target benchmark Q01.")
+    if q03_fixture.get("question_id") != "Q03" or "Q03" not in questions:
+        raise ValueError("The configured fixture must target benchmark Q03.")
 
     report_questions = []
     for question_id in sorted(questions):
         question = questions[question_id]
         if question_id == "Q01":
             report_questions.append(_evaluate_q01(question, fixture))
+            continue
+        if question_id == "Q03":
+            report_questions.append(_evaluate_q03(question, q03_fixture))
             continue
 
         reason = (
@@ -252,7 +427,7 @@ def evaluate_benchmark(
         "accuracy_percentage": None,
         "accuracy_note": (
             "No accuracy percentage is reported: the benchmark is company-agnostic, "
-            "only Q01 has a checked-in filing snapshot, and the planner was not run live."
+            "only Q01 and Q03 have checked-in filing snapshots, and the planner was not run live."
         ),
         "questions": report_questions,
     }
@@ -273,6 +448,12 @@ def main() -> int:
         help="Path to the deterministic Q01 filing snapshot.",
     )
     parser.add_argument(
+        "--q03-fixture",
+        type=Path,
+        default=DEFAULT_Q03_FIXTURE,
+        help="Path to the deterministic Q03 filing snapshot.",
+    )
+    parser.add_argument(
         "--output",
         type=Path,
         default=ROOT / "reports" / "benchmark-report.json",
@@ -280,7 +461,7 @@ def main() -> int:
     )
     args = parser.parse_args()
 
-    report = evaluate_benchmark(args.benchmark, args.fixture)
+    report = evaluate_benchmark(args.benchmark, args.fixture, args.q03_fixture)
     args.output.parent.mkdir(parents=True, exist_ok=True)
     args.output.write_text(json.dumps(report, indent=2) + "\n", encoding="utf-8")
     print(

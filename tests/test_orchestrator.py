@@ -10,6 +10,7 @@ from finspect.query_planner import (
     MetricRequest,
     PeriodRequest,
     QueryPlan,
+    AnswerRequirements,
 )
 from finspect.schema import load_benchmark
 
@@ -112,10 +113,20 @@ FACTS = {
     },
 }
 
+OPERATING_INCOME_FACTS = {
+    2024: {**FACTS[2024], "concept": "OperatingIncomeLoss", "label": "Operating income", "value": 32_972_000_000},
+    2025: {**FACTS[2025], "concept": "OperatingIncomeLoss", "label": "Operating income", "value": 81_453_000_000},
+}
+
 
 class FixtureFactRetriever:
     def get_fact(self, *, end_date, **kwargs):
-        fact = next(fact for fact in FACTS.values() if fact["end_date"] == end_date)
+        source = (
+            OPERATING_INCOME_FACTS
+            if kwargs["concept"] == "OperatingIncomeLoss"
+            else FACTS
+        )
+        fact = next(fact for fact in source.values() if fact["end_date"] == end_date)
         assert kwargs["cik"] == CIK
         assert kwargs["unit"] == "USD"
         return fact
@@ -151,6 +162,56 @@ def test_q01_nvidia_fy2024_fy2025_end_to_end_fixture():
     ]
     assert all(item.source_url and "sec.gov/Archives" in item.source_url
                for item in result.answer.evidence)
+
+
+def test_q03_nvidia_operating_margin_change_end_to_end_fixture():
+    question = (
+        "How did NVIDIA's operating margin change from FY2024 to FY2025?"
+    )
+    plan = make_plan().model_copy(update={
+        "original_question": question,
+        "benchmark_id": "Q03",
+        "operation": "margin_change",
+        "metrics": [
+            MetricRequest(name="revenue", role="supporting", sources=["xbrl"]),
+            MetricRequest(name="operating_income", role="primary", sources=["xbrl"]),
+        ],
+        "answer": AnswerRequirements(
+            include_formula=True,
+            expected_output="percentage_points",
+        ),
+    })
+
+    class Planner:
+        def plan(self, _question):
+            return plan
+
+    orchestrator = FinSpectOrchestrator(
+        planner=Planner(),
+        normalizer=normalize_query_plan,
+        period_resolver=lambda _cik, year: PERIODS[year],
+        fact_retriever=FixtureFactRetriever(),
+        company_resolver=FixtureCompanyResolver(),
+    )
+    result = orchestrator.run(question)
+
+    expected = (
+        Decimal("81453000000") / Decimal("130497000000") * Decimal("100")
+        - Decimal("32972000000") / Decimal("60922000000") * Decimal("100")
+    )
+    assert result.answer.formula_id == "Q03"
+    assert result.answer.result_unit == "percentage_points"
+    assert Decimal(result.answer.result_value) == expected
+    assert "8.30 percentage points" in result.answer.text
+    assert len(result.answer.evidence) == 4
+    assert {item.label for item in result.answer.evidence} == {
+        "Revenue",
+        "Operating income",
+    }
+    assert {item.accession_number for item in result.answer.evidence} == {
+        "0001045810-24-000029",
+        "0001045810-25-000023",
+    }
 
 
 def test_q01_rejects_fact_for_different_company():
@@ -197,6 +258,28 @@ def test_resolved_period_must_be_a_provenanced_full_year(
 ):
     with pytest.raises(ValueError, match=message):
         FinSpectOrchestrator._validate_annual_period(period, requested_year)
+
+
+def test_revenue_growth_rejects_overlapping_annual_periods():
+    overlapping_current = AnnualPeriod(
+        fiscal_year=2025,
+        start_date="2024-01-01",
+        end_date="2025-01-26",
+        filing_date="2025-02-26",
+        accession_number="0001045810-25-000023",
+    )
+    orchestrator = FinSpectOrchestrator(
+        planner=FixturePlanner(),
+        normalizer=normalize_query_plan,
+        period_resolver=lambda _cik, year: (
+            PERIODS[2024] if year == 2024 else overlapping_current
+        ),
+        fact_retriever=FixtureFactRetriever(),
+        company_resolver=FixtureCompanyResolver(),
+    )
+
+    with pytest.raises(ValueError, match="periods must not overlap"):
+        orchestrator.run(QUESTION)
 
 
 BENCHMARK_PATH = Path(__file__).resolve().parents[1] / "data" / "benchmark.json"
@@ -261,7 +344,7 @@ def make_unsupported_benchmark_plan(question):
 
 @pytest.mark.parametrize(
     "question_id",
-    [f"Q{number:02d}" for number in range(2, 21)],
+    [f"Q{number:02d}" for number in range(2, 21) if number != 3],
 )
 def test_other_benchmark_operations_are_explicitly_unsupported(question_id):
     benchmark = load_benchmark(BENCHMARK_PATH)

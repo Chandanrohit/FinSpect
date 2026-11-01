@@ -7,12 +7,12 @@
   "question_count": 20,
   "aggregate_counts": {
     "PASS": 0,
-    "PARTIAL": 1,
-    "UNSUPPORTED": 19,
+    "PARTIAL": 2,
+    "UNSUPPORTED": 18,
     "FAIL": 0
   },
   "accuracy_percentage": null,
-  "accuracy_note": "No accuracy percentage is reported: the benchmark is company-agnostic, only Q01 has a checked-in filing snapshot, and the planner was not run live.",
+  "accuracy_note": "No accuracy percentage is reported: the benchmark is company-agnostic, only Q01 and Q03 have checked-in filing snapshots, and the planner was not run live.",
   "questions": [
     {
       "question_id": "Q01",
@@ -140,30 +140,163 @@
     },
     {
       "question_id": "Q03",
-      "question": "How did operating income change relative to revenue between the current and comparable prior-year periods, and what happened to the operating margin?",
-      "company": null,
-      "filings": [],
-      "reporting_periods": [],
+      "question": "How did NVIDIA's operating margin change from FY2024 to FY2025?",
+      "company": {
+        "name": "NVIDIA Corporation",
+        "ticker": "NVDA",
+        "cik": "0001045810"
+      },
+      "filings": [
+        {
+          "form": "10-K",
+          "filing_date": "2024-02-21",
+          "accession_number": "0001045810-24-000029",
+          "url": "https://www.sec.gov/Archives/edgar/data/1045810/000104581024000029/0001045810-24-000029-index.htm"
+        },
+        {
+          "form": "10-K",
+          "filing_date": "2025-02-26",
+          "accession_number": "0001045810-25-000023",
+          "url": "https://www.sec.gov/Archives/edgar/data/1045810/000104581025000023/0001045810-25-000023-index.htm"
+        }
+      ],
+      "reporting_periods": [
+        {
+          "fiscal_year": 2024,
+          "start_date": "2023-01-29",
+          "end_date": "2024-01-28"
+        },
+        {
+          "fiscal_year": 2025,
+          "start_date": "2024-01-29",
+          "end_date": "2025-01-26"
+        }
+      ],
       "expected_concepts": [
         "revenue",
         "operating_income"
       ],
-      "retrieval_mode": "not_run",
-      "retrieved_inputs": [],
-      "selected_evidence": [],
-      "calculation_formula": null,
-      "expected_answer": null,
-      "actual_answer": "I cannot answer this request reliably yet: No complete retrieval-to-answer path is implemented for Q03; calculator registration alone is not support.\n\nYour question: How did operating income change relative to revenue between the current and comparable prior-year periods, and what happened to the operating margin?",
-      "checks": {
-        "input_retrieval_correctness": null,
-        "period_correctness": null,
-        "unit_correctness": null,
-        "calculation_correctness": null,
-        "evidence_correctness": null,
-        "query_interpretation_correctness": null
+      "retrieval_mode": "checked_in_sec_snapshot_not_live_retrieval",
+      "retrieved_inputs": [
+        {
+          "concept": "Revenues",
+          "value": "60922000000",
+          "unit": "USD",
+          "period_start": "2023-01-29",
+          "period_end": "2024-01-28",
+          "form": "10-K",
+          "filing_date": "2024-02-21",
+          "accession_number": "0001045810-24-000029",
+          "source_url": "https://www.sec.gov/Archives/edgar/data/1045810/000104581024000029/0001045810-24-000029-index.htm",
+          "metric": "revenue"
+        },
+        {
+          "concept": "OperatingIncomeLoss",
+          "value": "32972000000",
+          "unit": "USD",
+          "period_start": "2023-01-29",
+          "period_end": "2024-01-28",
+          "form": "10-K",
+          "filing_date": "2024-02-21",
+          "accession_number": "0001045810-24-000029",
+          "source_url": "https://www.sec.gov/Archives/edgar/data/1045810/000104581024000029/0001045810-24-000029-index.htm",
+          "metric": "operating_income"
+        },
+        {
+          "concept": "Revenues",
+          "value": "130497000000",
+          "unit": "USD",
+          "period_start": "2024-01-29",
+          "period_end": "2025-01-26",
+          "form": "10-K",
+          "filing_date": "2025-02-26",
+          "accession_number": "0001045810-25-000023",
+          "source_url": "https://www.sec.gov/Archives/edgar/data/1045810/000104581025000023/0001045810-25-000023-index.htm",
+          "metric": "revenue"
+        },
+        {
+          "concept": "OperatingIncomeLoss",
+          "value": "81453000000",
+          "unit": "USD",
+          "period_start": "2024-01-29",
+          "period_end": "2025-01-26",
+          "form": "10-K",
+          "filing_date": "2025-02-26",
+          "accession_number": "0001045810-25-000023",
+          "source_url": "https://www.sec.gov/Archives/edgar/data/1045810/000104581025000023/0001045810-25-000023-index.htm",
+          "metric": "operating_income"
+        }
+      ],
+      "selected_evidence": [
+        {
+          "concept": "Revenues",
+          "value": "60922000000",
+          "unit": "USD",
+          "period_start": "2023-01-29",
+          "period_end": "2024-01-28",
+          "form": "10-K",
+          "filing_date": "2024-02-21",
+          "accession_number": "0001045810-24-000029",
+          "source_url": "https://www.sec.gov/Archives/edgar/data/1045810/000104581024000029/0001045810-24-000029-index.htm",
+          "metric": "revenue"
+        },
+        {
+          "concept": "OperatingIncomeLoss",
+          "value": "32972000000",
+          "unit": "USD",
+          "period_start": "2023-01-29",
+          "period_end": "2024-01-28",
+          "form": "10-K",
+          "filing_date": "2024-02-21",
+          "accession_number": "0001045810-24-000029",
+          "source_url": "https://www.sec.gov/Archives/edgar/data/1045810/000104581024000029/0001045810-24-000029-index.htm",
+          "metric": "operating_income"
+        },
+        {
+          "concept": "Revenues",
+          "value": "130497000000",
+          "unit": "USD",
+          "period_start": "2024-01-29",
+          "period_end": "2025-01-26",
+          "form": "10-K",
+          "filing_date": "2025-02-26",
+          "accession_number": "0001045810-25-000023",
+          "source_url": "https://www.sec.gov/Archives/edgar/data/1045810/000104581025000023/0001045810-25-000023-index.htm",
+          "metric": "revenue"
+        },
+        {
+          "concept": "OperatingIncomeLoss",
+          "value": "81453000000",
+          "unit": "USD",
+          "period_start": "2024-01-29",
+          "period_end": "2025-01-26",
+          "form": "10-K",
+          "filing_date": "2025-02-26",
+          "accession_number": "0001045810-25-000023",
+          "source_url": "https://www.sec.gov/Archives/edgar/data/1045810/000104581025000023/0001045810-25-000023-index.htm",
+          "metric": "operating_income"
+        }
+      ],
+      "calculation_formula": "(current_income/current_revenue*100) - (prior_income/prior_revenue*100)",
+      "expected_answer": {
+        "margin_change_percentage_points": "8.29586307291370803100428203",
+        "display": "8.30 percentage points"
       },
-      "overall_status": "UNSUPPORTED",
-      "failure_reason": "No complete retrieval-to-answer path is implemented for Q03; calculator registration alone is not support."
+      "actual_answer": {
+        "text": "Question: How did NVIDIA's operating margin change from FY2024 to FY2025?\n\nResult: NVIDIA Corporation's result is 8.30 percentage points.\n\nFormula: (current_income/current_revenue*100) - (prior_income/prior_revenue*100)\nCalculation ID: Q03\nCalculation source: benchmark_json\n\nInputs:\n- current_income: 81,453,000,000\n- current_revenue: 130,497,000,000\n- prior_income: 32,972,000,000\n- prior_revenue: 60,922,000,000\n\nEvidence:\n- Revenue: 60,922,000,000 USD; period FY2024 (2023-01-29 to 2024-01-28); filed 2024-02-21.\n  Source: https://www.sec.gov/Archives/edgar/data/1045810/000104581024000029/0001045810-24-000029-index.htm\n- Operating income: 32,972,000,000 USD; period FY2024 (2023-01-29 to 2024-01-28); filed 2024-02-21.\n  Source: https://www.sec.gov/Archives/edgar/data/1045810/000104581024000029/0001045810-24-000029-index.htm\n- Revenue: 130,497,000,000 USD; period FY2025 (2024-01-29 to 2025-01-26); filed 2025-02-26.\n  Source: https://www.sec.gov/Archives/edgar/data/1045810/000104581025000023/0001045810-25-000023-index.htm\n- Operating income: 81,453,000,000 USD; period FY2025 (2024-01-29 to 2025-01-26); filed 2025-02-26.\n  Source: https://www.sec.gov/Archives/edgar/data/1045810/000104581025000023/0001045810-25-000023-index.htm\n\nCalculation notes:\n- current_margin=62.41752683969746430952435688; prior_margin=54.12166376678375627852007485",
+        "result_value": "8.29586307291370803100428203",
+        "result_unit": "percentage_points"
+      },
+      "checks": {
+        "input_retrieval_correctness": "not_evaluated_live_retrieval",
+        "period_correctness": true,
+        "unit_correctness": true,
+        "calculation_correctness": true,
+        "evidence_correctness": true,
+        "query_interpretation_correctness": "not_evaluated"
+      },
+      "overall_status": "PARTIAL",
+      "failure_reason": "Query interpretation and live SEC retrieval were not tested; the validated plan and filing facts came from deterministic fixtures."
     },
     {
       "question_id": "Q04",
