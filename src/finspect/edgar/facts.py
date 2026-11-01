@@ -151,6 +151,24 @@ class FinancialFactRetriever:
                 f"{end_date}, form {form!r}, unit {unit!r}."
             )
 
+        # A single accession/period/unit should not contain two different
+        # values for the same concept. Do not hide malformed or conflicting
+        # SEC rows behind the latest-candidate selection policy.
+        values_by_filing: dict[tuple[str, str], set[str]] = {}
+        for candidate in candidates:
+            identity = (
+                str(candidate.get("accn", "")),
+                str(candidate.get("filed", "")),
+            )
+            values_by_filing.setdefault(identity, set()).add(
+                str(candidate.get("val"))
+            )
+        if any(len(values) > 1 for values in values_by_filing.values()):
+            raise FactRetrievalError(
+                "Conflicting values were returned for the same SEC filing "
+                "and reporting period."
+            )
+
         # Prefer the latest filed matching fact. This is an explicit
         # policy, not proof that a fact is always the right business choice.
         candidates.sort(

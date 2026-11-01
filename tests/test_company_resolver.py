@@ -53,3 +53,25 @@ def test_missing_company_identifier_raises():
 
     with pytest.raises(CompanyResolutionError, match="Provide a company"):
         resolver.resolve()
+
+
+def test_cik_conflicting_with_ticker_is_rejected():
+    resolver = SECCompanyResolver(FakeSECClient())
+
+    with pytest.raises(CompanyResolutionError, match="ticker and CIK"):
+        resolver.resolve(cik="789019", ticker="AMZN")
+
+
+def test_cik_conflicting_with_exact_company_name_is_rejected():
+    resolver = SECCompanyResolver(FakeSECClient())
+
+    with pytest.raises(CompanyResolutionError, match="name and CIK"):
+        resolver.resolve(cik="789019", name="Amazon.com, Inc.")
+
+
+def test_corporate_suffix_variants_normalize_equally():
+    resolver = SECCompanyResolver(FakeSECClient())
+
+    result = resolver.resolve(cik="1018724", name="Amazon.com, Inc.")
+
+    assert result["ticker"] == "AMZN"

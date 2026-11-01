@@ -13,6 +13,10 @@ def normalize_company_text(value: str) -> str:
     """Normalize company names and tickers for comparison."""
     value = value.casefold().strip()
     value = re.sub(r"[^a-z0-9]+", " ", value)
+    value = re.sub(r"\b(corp|corporation)\b", "corporation", value)
+    value = re.sub(r"\b(inc|incorporated)\b", "incorporated", value)
+    value = re.sub(r"\b(co|company)\b", "company", value)
+    value = re.sub(r"\b(ltd|limited)\b", "limited", value)
     return " ".join(value.split())
 
 
@@ -69,6 +73,31 @@ class SECCompanyResolver:
                 company for company in companies
                 if company["cik"] == normalized_cik
             ]
+
+            # A planner may return a plausible but incorrect CIK. When it
+            # also supplied a ticker or an exact SEC company name, require
+            # those identifiers to agree with the CIK lookup.
+            if len(matches) == 1:
+                resolved = matches[0]
+                if ticker and ticker.strip().upper() != resolved["ticker"]:
+                    raise CompanyResolutionError(
+                        "The supplied ticker and CIK identify different SEC companies."
+                    )
+
+                if name and name.strip():
+                    requested_name = normalize_company_text(name)
+                    exact_name_matches = [
+                        company for company in companies
+                        if normalize_company_text(company["name"])
+                        == requested_name
+                    ]
+                    if (
+                        len(exact_name_matches) == 1
+                        and exact_name_matches[0]["cik"] != resolved["cik"]
+                    ):
+                        raise CompanyResolutionError(
+                            "The supplied company name and CIK identify different SEC companies."
+                        )
         elif ticker and ticker.strip():
             requested_ticker = ticker.strip().upper()
             matches = [

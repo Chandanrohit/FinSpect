@@ -3,6 +3,7 @@ from __future__ import annotations
 import os
 from functools import lru_cache
 from dataclasses import dataclass
+from datetime import date
 from decimal import Decimal
 from typing import Any, Callable, Protocol
 
@@ -24,7 +25,11 @@ from finspect.plan_normalizer import normalize_query_plan
 from finspect.period_resolver import (resolve_annual_period as resolve_sec_annual_period)
 from finspect.edgar.fact_adapter import sec_fact_to_financial_fact
 from finspect.schema import PeriodRole, ReportingScope, FinancialFact, validate_growth_inputs, validate_absolute_change_inputs
-from finspect.edgar.company_resolver import (SECCompanyResolver, CompanyResolutionError)
+from finspect.edgar.company_resolver import (
+    SECCompanyResolver,
+    CompanyResolutionError,
+    normalize_company_text,
+)
 class Planner(Protocol):
     def plan(self, question: str) -> QueryPlan:
         """Return a validated query plan."""
@@ -138,18 +143,14 @@ class FinSpectOrchestrator:
             return PipelineResult(plan=plan, answer=answer)
 
 
-        # Resolve the company only when the planner did not provide a CIK.
-        if plan.company.cik:
-            resolved = {
-                "name": plan.company.name,
-                "ticker": plan.company.ticker or "",
-                "cik": plan.company.cik,
-            }
-        elif self.company_resolver is not None:
+        # Verify a planner-provided CIK too. Never let a CIK silently
+        # override a conflicting ticker or exact company-name match.
+        if self.company_resolver is not None:
             try:
                 resolved = self.company_resolver.resolve(
                     name=plan.company.name,
                     ticker=plan.company.ticker,
+                    cik=plan.company.cik,
                 )
             except CompanyResolutionError as exc:
                 answer = build_unsupported_answer(
@@ -157,6 +158,12 @@ class FinSpectOrchestrator:
                     reason=str(exc),
                 )
                 return PipelineResult(plan=plan, answer=answer)
+        elif plan.company.cik:
+            resolved = {
+                "name": plan.company.name,
+                "ticker": plan.company.ticker or "",
+                "cik": plan.company.cik.zfill(10),
+            }
         else:
             answer = build_unsupported_answer(
                 question=question,
@@ -180,6 +187,8 @@ class FinSpectOrchestrator:
             self.period_resolver(cik, year)
             for year in fiscal_years
         ]
+        for period, requested_year in zip(periods, fiscal_years, strict=True):
+            self._validate_annual_period(period, requested_year)
 
         # 5. Retrieve both facts from SEC XBRL.
         facts = tuple(
@@ -197,18 +206,26 @@ class FinSpectOrchestrator:
             for period in periods
         )
 
+        adapted_facts = tuple(
+            sec_fact_to_financial_fact(
+                raw_fact,
+                period_role=role,
+                reporting_scope=ReportingScope.CONSOLIDATED,
+            )
+            for raw_fact, role in zip(
+                facts,
+                (PeriodRole.COMPARABLE_PRIOR, PeriodRole.CURRENT),
+                strict=True,
+            )
+        )
+        # Company Facts can vary legal suffix spelling between filings
+        # (for example, "CORP" and "CORPORATION"). The raw names are
+        # validated below; use the resolved SEC name in canonical facts so
+        # comparable periods have a stable entity identity.
         canonical_facts = tuple(
-    sec_fact_to_financial_fact(
-        raw_fact,
-        period_role=role,
-        reporting_scope=ReportingScope.CONSOLIDATED,
-    )
-    for raw_fact, role in zip(
-        facts,
-        (PeriodRole.COMPARABLE_PRIOR, PeriodRole.CURRENT),
-        strict=True,
-    )
-)
+            fact.model_copy(update={"entity": resolved["name"]})
+            for fact in adapted_facts
+        )
 
         # 6. Validate raw and canonical facts before calculating.
         prior_fact, current_fact = facts
@@ -220,6 +237,17 @@ class FinSpectOrchestrator:
             canonical_facts,
             strict=True,
         ):
+            if str(raw_fact.get("cik", "")).zfill(10) != cik:
+                raise ValueError("Retrieved fact belongs to an unexpected CIK.")
+
+            if raw_fact.get("company") != resolved["name"]:
+                if normalize_company_text(
+                    str(raw_fact.get("company", ""))
+                ) != normalize_company_text(resolved["name"]):
+                    raise ValueError(
+                        "Retrieved fact company name does not match the resolved company."
+                    )
+
             if raw_fact["start_date"] != period.start_date:
                 raise ValueError(
                     "Retrieved fact has an unexpected start date."
@@ -263,6 +291,10 @@ class FinSpectOrchestrator:
         if prior_fact["end_date"] >= current_fact["end_date"]:
             raise ValueError(
                 "The prior period must precede the current period."
+            )
+        if current_fact["start_date"] <= prior_fact["end_date"]:
+            raise ValueError(
+                "Comparable annual revenue periods must not overlap."
             )
 
 
@@ -352,6 +384,33 @@ class FinSpectOrchestrator:
             return None
 
         return prior_year, current_year
+
+    @staticmethod
+    def _validate_annual_period(
+        period: AnnualPeriod,
+        requested_year: int,
+    ) -> None:
+        """Fail closed if period metadata does not substantiate an annual filing."""
+        if period.fiscal_year != requested_year:
+            raise ValueError(
+                f"Period resolver returned FY{period.fiscal_year} for "
+                f"requested FY{requested_year}."
+            )
+        if period.form != "10-K":
+            raise ValueError("Annual revenue retrieval requires a 10-K filing.")
+        if not period.start_date or not period.end_date:
+            raise ValueError("Annual period must include start and end dates.")
+        start = date.fromisoformat(period.start_date)
+        end = date.fromisoformat(period.end_date)
+        if start >= end or not 300 <= (end - start).days <= 400:
+            raise ValueError("Resolved reporting period is not a full fiscal year.")
+        if not period.filing_date or not period.accession_number:
+            raise ValueError(
+                "Annual period must include filing date and accession number."
+            )
+        filing_date = date.fromisoformat(period.filing_date)
+        if filing_date < end:
+            raise ValueError("Filing date cannot precede the reporting period end.")
 
     @staticmethod
     def _filing_url(fact: dict[str, Any]) -> str | None:
