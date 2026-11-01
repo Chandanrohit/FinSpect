@@ -11,7 +11,7 @@ dependencies = [
     "beautifulsoup4>=4.12",
     "pydantic>=2.6",
     "requests>=2.31",
-    "streamlit>=1.32",
+    "streamlit>=1.40",
 ]
 
 [project.optional-dependencies]

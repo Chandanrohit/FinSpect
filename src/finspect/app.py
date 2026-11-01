@@ -21,6 +21,12 @@ import os
 
 from finspect.orchestrator import run_query
 from finspect.schema import load_benchmark
+from finspect.gnani_voice import (
+    GnaniAPIError,
+    GnaniVoiceClient,
+    gnani_api_key,
+    prepare_spoken_summary,
+)
 
 
 st.set_page_config(
@@ -127,6 +133,53 @@ def display_result(result: Any) -> None:
         st.json(to_json_safe(details))
 
 
+def configured_gnani_key() -> str | None:
+    """Read server-side env/secrets without ever rendering the credential."""
+    key = gnani_api_key()
+    if key:
+        return key
+    try:
+        return str(st.secrets.get("GNANI_API_KEY_ID", "")).strip() or None
+    except Exception:
+        return None
+
+
+def research_and_display(question: str, *, speak: bool = False) -> None:
+    try:
+        with st.spinner("Planning the question and retrieving SEC evidence..."):
+            result = run_query(question)
+        st.divider()
+        st.subheader("Research result")
+        display_result(result)
+
+        if speak:
+            answer = result.get("answer", {}) if isinstance(result, dict) else {}
+            summary = prepare_spoken_summary(
+                str(answer.get("text", "")),
+                answer.get("result_unit"),
+            )
+            try:
+                api_key = configured_gnani_key()
+                if not api_key:
+                    st.info(
+                        "Speech playback is disabled until GNANI_API_KEY_ID is "
+                        "configured in the server environment or Streamlit secrets."
+                    )
+                    return
+                with st.spinner("Generating a concise spoken summary with Gnani AI..."):
+                    audio = GnaniVoiceClient(api_key).synthesize(summary)
+                st.caption("Spoken summary")
+                st.audio(audio, format="audio/wav")
+            except GnaniAPIError as exc:
+                st.warning(f"Speech playback is unavailable: {exc}")
+    except Exception as exc:
+        st.error("FinSpect could not complete this query.")
+        st.exception(exc)
+        st.info("Check the developer diagnostics below.")
+        with st.expander("Developer diagnostics", expanded=True):
+            st.code(f"{type(exc).__name__}: {exc}", language="text")
+
+
 st.title("📊 FinSpect")
 st.caption(
     "Evidence-grounded financial research using SEC company filings."
@@ -184,6 +237,69 @@ if "question" not in st.session_state:
     st.session_state.question = ""
 
 st.subheader("Ask a financial research question")
+
+with st.expander("Ask by voice with Gnani AI"):
+    st.caption(
+        "The recorded clip is sent to Gnani AI for transcription. Review the "
+        "transcribed question before FinSpect retrieves filing data. The "
+        "spoken response is a concise English summary; exact figures and SEC "
+        "evidence stay in the written answer."
+    )
+    voice_languages = {
+        "English (India)": "en-IN",
+        "Hindi": "hi-IN",
+        "Tamil": "ta-IN",
+        "Telugu": "te-IN",
+        "Kannada": "kn-IN",
+        "Malayalam": "ml-IN",
+        "Marathi": "mr-IN",
+        "Punjabi": "pa-IN",
+        "Bengali": "bn-IN",
+        "Gujarati": "gu-IN",
+    }
+    voice_language = st.selectbox(
+        "Spoken language",
+        list(voice_languages),
+        key="voice_language",
+    )
+    recorded_audio = st.audio_input("Record a question (maximum 30 seconds)")
+    if st.button(
+        "Transcribe with Gnani AI",
+        disabled=recorded_audio is None,
+        key="transcribe_voice_question",
+    ):
+        api_key = configured_gnani_key()
+        if not api_key:
+            st.warning(
+                "Set GNANI_API_KEY_ID in the server environment or "
+                ".streamlit/secrets.toml to enable voice features."
+            )
+        else:
+            try:
+                with st.spinner("Transcribing with Gnani Prisma..."):
+                    client = GnaniVoiceClient(api_key)
+                    transcript = client.transcribe(
+                        recorded_audio.getvalue(),
+                        filename="question.wav",
+                        language_code=voice_languages[voice_language],
+                    )
+                st.session_state["voice_transcript"] = transcript
+            except (GnaniAPIError, ValueError) as exc:
+                st.warning(f"Voice transcription is unavailable: {exc}")
+
+    if "voice_transcript" not in st.session_state:
+        st.session_state["voice_transcript"] = ""
+    if st.session_state["voice_transcript"]:
+        transcript = st.text_area(
+            "Recognized question (edit before running if needed)",
+            key="voice_transcript",
+            height=90,
+        )
+        if st.button("Research recognized question", type="primary"):
+            if transcript.strip():
+                research_and_display(transcript.strip(), speak=True)
+            else:
+                st.warning("The recognized question is empty.")
 
 example_cols = st.columns(len(EXAMPLES))
 for index, example in enumerate(EXAMPLES):
@@ -249,25 +365,4 @@ if submitted:
     if not cleaned_question:
         st.warning("Please enter a question.")
     else:
-        try:
-            with st.spinner(
-                "Planning the question and retrieving SEC evidence..."
-            ):
-                result = run_query(cleaned_question)
-
-            st.divider()
-            st.subheader("Research result")
-            display_result(result)
-
-        except Exception as exc:
-            st.error("FinSpect could not complete this query.")
-            st.exception(exc)
-            st.info(
-                " The Pipeline encountered an error."
-                "Check the developer diagnostics below." 
-            )
-            with st.expander("Developer diagnostics", expanded=True):
-                st.code(
-                    f"{type(exc).__name__}: {exc}",
-                    language="text",
-                 )
+        research_and_display(cleaned_question)

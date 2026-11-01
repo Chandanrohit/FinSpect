@@ -34,6 +34,7 @@ The Streamlit application calls the same orchestrator. It displays the structure
 - Q03 annual operating margin change from SEC revenue and operating-income facts.
 - Q08 annual receivables growth compared with revenue growth, with matching fiscal year ends.
 - Q13 annual operating cash flow divided by net income for the current and comparable prior year, with both ratios and their percentage-point change.
+- Optional Gnani Prisma v2.5 voice question input and Timbre v2.5 spoken result summary; the full written answer and SEC evidence remain visible.
 - Decimal-based calculator functions for benchmark formulas; registration does **not** mean an operation is wired end to end.
 - Evidence-bearing answers with reporting periods, filing dates, accession numbers, and SEC URLs.
 - An initial filing parser and keyword-ranked narrative passage retriever. Disclosure answers are not enabled end to end.
@@ -59,7 +60,7 @@ Run the app:
 python -m streamlit run src/finspect/app.py
 ```
 
-The application needs internet access for SEC requests and a reachable Ollama endpoint. `FINSPECT_OLLAMA_URL` can override the default local endpoint. No Gnani AI credential is needed by the current application.
+The text workflow needs internet access for SEC requests and a reachable Ollama endpoint. `FINSPECT_OLLAMA_URL` can override the default local endpoint. Voice input/output additionally needs `GNANI_API_KEY_ID`; text research continues to work without it.
 
 ## Tests and benchmark evaluation
 
@@ -75,6 +76,8 @@ Generate the benchmark report:
 python -m finspect.benchmark_eval --output reports/benchmark-report.json
 ```
 
+GitHub Actions runs the test suite on Python 3.11 and 3.12 for pushes and pull requests targeting `main`.
+
 The checked-in NVIDIA FY2024/FY2025 snapshots provide repeatable Q01, Q03, Q08, and Q13 checks. Revenue inputs are USD 60.922 billion and USD 130.497 billion, producing **114.20%** growth. Operating income is USD 32.972 billion and USD 81.453 billion; the operating margin increased **8.30 percentage points**. Receivables are USD 9.999 billion and USD 23.065 billion; their growth exceeded revenue growth by **16.47 percentage points**. Net income was USD 29.760 billion and USD 72.880 billion; operating cash flow was USD 28.090 billion and USD 64.089 billion. Cash conversion was **94.39%** in FY2024 and **87.94%** in FY2025, a **6.45 percentage-point decrease**. Values and filing provenance are from the [FY2024 Form 10-K](https://www.sec.gov/Archives/edgar/data/1045810/0001045810-24-000029-index.htm) and [FY2025 Form 10-K](https://www.sec.gov/Archives/edgar/data/1045810/0001045810-25-000023-index.htm).
 
 The Q01, Q03, Q08, and Q13 reports are **PARTIAL** because they use checked-in filing snapshots and validated fixture plans; they do not run live SEC retrieval or the Ollama planner. Q02, Q04–Q07, Q09–Q12, and Q14–Q20 are **UNSUPPORTED** by the current retrieval-to-answer pipeline. No benchmark accuracy percentage is claimed. The benchmark itself contains generic question templates rather than fixed companies, filings, or reference answers.
@@ -83,25 +86,28 @@ The Q01, Q03, Q08, and Q13 reports are **PARTIAL** because they use checked-in f
 
 1. Install the project and set `SEC_USER_AGENT` and the Ollama model as shown above.
 2. Start the application with Streamlit.
-3. Ask one of: `Calculate NVIDIA's revenue growth from FY2024 to FY2025.`; `How did NVIDIA's operating margin change from FY2024 to FY2025?`; or `How did NVIDIA accounts receivable growth compare with revenue growth from FY2024 to FY2025?`
+3. Ask one of: `Calculate NVIDIA's revenue growth from FY2024 to FY2025.`; `How did NVIDIA's operating margin change from FY2024 to FY2025?`; `How did NVIDIA accounts receivable growth compare with revenue growth from FY2024 to FY2025?`; or `What percentage of NVIDIA net income was converted into operating cash flow during FY2025, and how did this compare with FY2024?`
 4. Inspect the plan, result, periods, formula, and SEC evidence shown with the answer.
-5. For a deterministic offline calculation/evidence check, run the Q01 benchmark evaluator.
+5. For deterministic offline checks of the four supported benchmark questions, regenerate the benchmark report.
+6. To try voice input and spoken playback, set `GNANI_API_KEY_ID`; review the transcript before running the financial research query.
 
 The live demo depends on Ollama and SEC availability. The benchmark snapshot is the reproducible demonstration when those services are unavailable.
 
 ## Gnani AI integration
 
-Gnani AI speech-to-text and text-to-speech are **not implemented or live-tested**. The intended voice flow is speech input → Gnani transcription → existing FinSpect research pipeline → spoken summary, with the full cited answer still visible in the app. Integration will be added only after verifying the account's current API configuration and model documentation.
+The app can record a short question, send it to Gnani STT REST (`/stt/v3`, Prisma v2.5 default), show the transcript for review, and pass an edited transcript into the existing research pipeline. It can then speak only the concise result paragraph using Gnani TTS REST (`/api/v1/tts/inference`, Timbre v2.5); the full written answer and SEC evidence remain visible. The STT endpoint supports clips up to 30 seconds. See the [official STT REST guide](https://docs.gnani.ai/api/STT/speech-to-text) and [official TTS REST guide](https://docs.gnani.ai/api/TTS/tts-inference).
+
+Set `GNANI_API_KEY_ID` in the server process environment or in the local `.streamlit/secrets.toml` file. The app reads the value server-side and sends it only in Gnani's `X-API-Key-ID` request header. Do not paste the key into chat, put it in source code, or commit `secrets.toml`; the local secrets file is ignored by Git. For hosted deployments, use the host's secrets manager. Voice requests are not sent when the key is absent. Automated tests mock the HTTP layer; **real STT/TTS account calls have not been tested yet**.
 
 Keep API keys out of source code, chat, screenshots, logs, and commits. The repository ignores `.env` files and `.streamlit/secrets.toml`. For local Streamlit development, store secrets in a local ignored secrets file or use environment settings; for a hosted demo, use the host's secret store. Never place a key in a browser-visible component. Rotate it if it is exposed.
 
 ## Limitations and next work
 
-- Only annual US SEC revenue growth, absolute revenue change, operating margin change, and receivables/revenue growth comparison have complete calculation paths.
+- Only annual US SEC revenue growth, absolute revenue change, operating margin change, receivables/revenue growth comparison, and cash conversion comparison have complete calculation paths.
 - The planner and SEC live integration have not been jointly benchmarked against reference answers.
 - Quarterly periods, segment facts, other balance-sheet calculations, and disclosure answers need complete retrieval-to-answer paths and tests.
 - Narrative section extraction uses heuristics and keyword ranking; it is not yet reliable enough for material-risk answers.
 - The benchmark has no fixed gold answers for its general templates. Evaluation needs declared company/filing snapshots and references for each question.
-- Gnani STT/TTS, voice playback, CI, and a public demo recording remain future work.
+- Real Gnani STT/TTS account calls, a public demo recording, and deployment remain future work.
 
 FinSpect is a learning-focused prototype, not financial advice. Verify results against the cited filing before relying on them.
