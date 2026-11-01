@@ -14,7 +14,12 @@ from finspect.answer_builder import (
     build_clarification_answer,
     build_unsupported_answer,
 )
-from finspect.calculator import absolute_change, margin_change, revenue_growth
+from finspect.calculator import (
+    absolute_change,
+    growth_comparison,
+    margin_change,
+    revenue_growth,
+)
 from finspect.edgar.client import EdgarClient
 from finspect.edgar.facts import FinancialFactRetriever
 from finspect.query_planner import QueryPlan
@@ -31,6 +36,7 @@ from finspect.schema import (
     validate_absolute_change_inputs,
     validate_currency_inputs,
     validate_growth_inputs,
+    validate_instant_growth_inputs,
 )
 from finspect.edgar.company_resolver import (
     SECCompanyResolver,
@@ -124,6 +130,10 @@ class FinSpectOrchestrator:
         has_operating_income = bool(
             metric_names & {"operating income", "operating income loss"}
         )
+        has_receivables = bool(
+            metric_names
+            & {"accounts receivable", "receivables", "accounts receivable net"}
+        )
         is_supported_revenue_operation = (
             plan.operation in {"growth_rate", "absolute_change"}
             and has_revenue
@@ -140,14 +150,30 @@ class FinSpectOrchestrator:
                 "operating income loss",
             }
         )
+        is_supported_receivables_operation = (
+            plan.operation == "growth_comparison"
+            and has_revenue
+            and has_receivables
+            and metric_names <= {
+                "total revenue",
+                "revenue",
+                "accounts receivable",
+                "receivables",
+                "accounts receivable net",
+            }
+        )
 
-        if not (is_supported_revenue_operation or is_supported_margin_operation):
+        if not (
+            is_supported_revenue_operation
+            or is_supported_margin_operation
+            or is_supported_receivables_operation
+        ):
             answer = build_unsupported_answer(
                 question=question,
                 reason=(
                     "This FinSpect version supports annual revenue growth, "
                     "absolute annual revenue change, and operating margin "
-                    "change only."
+                    "change, plus annual receivables/revenue growth comparison."
                 ),
             )
             return PipelineResult(plan=plan, answer=answer)
@@ -218,21 +244,26 @@ class FinSpectOrchestrator:
 
         # 5. Resolve supported metrics to controlled SEC concepts, then
         # retrieve each concept for the same verified annual periods.
-        concept_specs = {"revenue": periods[0].concept}
+        concept_specs = {"revenue": (periods[0].concept, False)}
         if is_supported_margin_operation:
-            concept_specs["operating_income"] = "OperatingIncomeLoss"
+            concept_specs["operating_income"] = ("OperatingIncomeLoss", False)
+        elif is_supported_receivables_operation:
+            concept_specs["accounts_receivable"] = (
+                "AccountsReceivableNetCurrent",
+                True,
+            )
 
         raw_by_metric: dict[str, tuple[dict[str, Any], ...]] = {}
         canonical_by_metric: dict[str, tuple[FinancialFact, ...]] = {}
         roles = (PeriodRole.COMPARABLE_PRIOR, PeriodRole.CURRENT)
 
-        for metric_name, concept in concept_specs.items():
+        for metric_name, (concept, is_instant) in concept_specs.items():
             raw_facts = tuple(
                 self.fact_retriever.get_fact(
                     cik=cik,
                     taxonomy="us-gaap",
                     concept=concept,
-                    start_date=period.start_date,
+                    start_date=None if is_instant else period.start_date,
                     end_date=period.end_date,
                     form=period.form,
                     unit="USD",
@@ -272,7 +303,8 @@ class FinSpectOrchestrator:
                     raise ValueError(
                         "Retrieved fact company name does not match the resolved company."
                     )
-                if raw_fact.get("start_date") != period.start_date:
+                expected_start_date = None if is_instant else period.start_date
+                if raw_fact.get("start_date") != expected_start_date:
                     raise ValueError("Retrieved fact has an unexpected start date.")
                 if raw_fact.get("end_date") != period.end_date:
                     raise ValueError("Retrieved fact has an unexpected end date.")
@@ -286,6 +318,11 @@ class FinSpectOrchestrator:
                     )
                 if canonical_fact.period.end_date.isoformat() != period.end_date:
                     raise ValueError("Canonical fact has an unexpected end date.")
+                expected_kind = "instant" if is_instant else "duration"
+                if canonical_fact.period.kind != expected_kind:
+                    raise ValueError(
+                        f"{metric_name} fact has an incompatible period kind."
+                    )
                 if canonical_fact.concept != concept:
                     raise ValueError("Canonical fact has an unexpected concept.")
 
@@ -303,7 +340,7 @@ class FinSpectOrchestrator:
                     current=revenue_current.normalized_value,
                     prior=revenue_prior.normalized_value,
                 )
-        else:
+        elif is_supported_margin_operation:
             income_prior, income_current = canonical_by_metric["operating_income"]
             validate_absolute_change_inputs(revenue_current, revenue_prior)
             validate_absolute_change_inputs(income_current, income_prior)
@@ -320,6 +357,42 @@ class FinSpectOrchestrator:
                 current_revenue=revenue_current.normalized_value,
                 prior_income=income_prior.normalized_value,
                 prior_revenue=revenue_prior.normalized_value,
+            )
+        elif is_supported_receivables_operation:
+            receivables_prior, receivables_current = canonical_by_metric[
+                "accounts_receivable"
+            ]
+            validate_growth_inputs(revenue_current, revenue_prior)
+            validate_instant_growth_inputs(receivables_current, receivables_prior)
+            if (
+                receivables_current.period.end_date
+                != revenue_current.period.end_date
+                or receivables_prior.period.end_date != revenue_prior.period.end_date
+            ):
+                raise ValueError(
+                    "Receivables balances must align with the revenue fiscal year ends."
+                )
+            require_compatible_facts(
+                receivables_current,
+                revenue_current,
+                require_same_period=False,
+            )
+            require_compatible_facts(
+                receivables_prior,
+                revenue_prior,
+                require_same_period=False,
+            )
+            validate_currency_inputs(
+                receivables_current,
+                receivables_prior,
+                revenue_current,
+                revenue_prior,
+            )
+            calculation = growth_comparison(
+                ar_current=receivables_current.normalized_value,
+                ar_prior=receivables_prior.normalized_value,
+                revenue_current=revenue_current.normalized_value,
+                revenue_prior=revenue_prior.normalized_value,
             )
 
         facts = tuple(

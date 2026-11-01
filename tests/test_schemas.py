@@ -17,6 +17,7 @@ from finspect.schema import (
     Unit,
     UnitKind,
     validate_growth_inputs,
+    validate_instant_growth_inputs,
 )
 
 
@@ -114,6 +115,22 @@ def test_growth_inputs_reject_zero_prior_value():
         validate_growth_inputs(current, prior)
 
 
+def test_growth_inputs_reject_negative_prior_denominator():
+    current = make_fact(
+        fact_id="current-revenue",
+        value="150",
+        role=PeriodRole.CURRENT,
+    )
+    prior = make_fact(
+        fact_id="prior-revenue",
+        value="-100",
+        role=PeriodRole.COMPARABLE_PRIOR,
+    )
+
+    with pytest.raises(ValueError, match="prior-period amount must be positive"):
+        validate_growth_inputs(current, prior)
+
+
 def test_growth_inputs_reject_currency_mismatch():
     current = make_fact(
         fact_id="current-revenue",
@@ -194,3 +211,116 @@ def test_growth_inputs_reject_non_chronological_periods():
 
     with pytest.raises(ValueError, match="Current period must"):
         validate_growth_inputs(current, prior)
+
+
+def test_instant_growth_inputs_accept_comparable_balance_sheet_facts():
+    current = make_fact(
+        fact_id="ar-current",
+        value="23065",
+        role=PeriodRole.CURRENT,
+    )
+    prior = make_fact(
+        fact_id="ar-prior",
+        value="9999",
+        role=PeriodRole.COMPARABLE_PRIOR,
+    )
+    current = current.model_copy(update={
+        "concept": "AccountsReceivableNetCurrent",
+        "period": ReportingPeriod(
+            label="FY2025 ending balance",
+            kind=PeriodKind.INSTANT,
+            basis=PeriodBasis.POINT_IN_TIME,
+            role=PeriodRole.CURRENT,
+            end_date=date(2025, 1, 26),
+            fiscal_year=2025,
+        ),
+    })
+    prior = prior.model_copy(update={
+        "concept": "AccountsReceivableNetCurrent",
+        "period": ReportingPeriod(
+            label="FY2024 ending balance",
+            kind=PeriodKind.INSTANT,
+            basis=PeriodBasis.POINT_IN_TIME,
+            role=PeriodRole.COMPARABLE_PRIOR,
+            end_date=date(2024, 1, 28),
+            fiscal_year=2024,
+        ),
+    })
+
+    validate_instant_growth_inputs(current, prior)
+
+
+def test_instant_growth_inputs_reject_zero_prior_balance():
+    current = make_fact(
+        fact_id="ar-current",
+        value="23065",
+        role=PeriodRole.CURRENT,
+    )
+    prior = make_fact(
+        fact_id="ar-prior",
+        value="0",
+        role=PeriodRole.COMPARABLE_PRIOR,
+    )
+    current = current.model_copy(update={
+        "concept": "AccountsReceivableNetCurrent",
+        "period": ReportingPeriod(
+            label="FY2025 ending balance",
+            kind=PeriodKind.INSTANT,
+            basis=PeriodBasis.POINT_IN_TIME,
+            role=PeriodRole.CURRENT,
+            end_date=date(2025, 1, 26),
+            fiscal_year=2025,
+        ),
+    })
+    prior = prior.model_copy(update={
+        "concept": "AccountsReceivableNetCurrent",
+        "period": ReportingPeriod(
+            label="FY2024 ending balance",
+            kind=PeriodKind.INSTANT,
+            basis=PeriodBasis.POINT_IN_TIME,
+            role=PeriodRole.COMPARABLE_PRIOR,
+            end_date=date(2024, 1, 28),
+            fiscal_year=2024,
+        ),
+    })
+
+    with pytest.raises(ValueError, match="Growth rate undefined"):
+        validate_instant_growth_inputs(current, prior)
+
+
+def test_instant_growth_inputs_reject_negative_prior_balance():
+    current = make_fact(
+        fact_id="ar-current",
+        value="23065",
+        role=PeriodRole.CURRENT,
+    )
+    prior = make_fact(
+        fact_id="ar-prior",
+        value="-9999",
+        role=PeriodRole.COMPARABLE_PRIOR,
+    )
+    current = current.model_copy(update={
+        "concept": "AccountsReceivableNetCurrent",
+        "period": ReportingPeriod(
+            label="FY2025 ending balance",
+            kind=PeriodKind.INSTANT,
+            basis=PeriodBasis.POINT_IN_TIME,
+            role=PeriodRole.CURRENT,
+            end_date=date(2025, 1, 26),
+            fiscal_year=2025,
+        ),
+    })
+    prior = prior.model_copy(update={
+        "concept": "AccountsReceivableNetCurrent",
+        "period": ReportingPeriod(
+            label="FY2024 ending balance",
+            kind=PeriodKind.INSTANT,
+            basis=PeriodBasis.POINT_IN_TIME,
+            role=PeriodRole.COMPARABLE_PRIOR,
+            end_date=date(2024, 1, 28),
+            fiscal_year=2024,
+        ),
+    })
+
+    with pytest.raises(ValueError, match="prior balance must be positive"):
+        validate_instant_growth_inputs(current, prior)

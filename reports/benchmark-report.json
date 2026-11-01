@@ -7,12 +7,12 @@
   "question_count": 20,
   "aggregate_counts": {
     "PASS": 0,
-    "PARTIAL": 2,
-    "UNSUPPORTED": 18,
+    "PARTIAL": 3,
+    "UNSUPPORTED": 17,
     "FAIL": 0
   },
   "accuracy_percentage": null,
-  "accuracy_note": "No accuracy percentage is reported: the benchmark is company-agnostic, only Q01 and Q03 have checked-in filing snapshots, and the planner was not run live.",
+  "accuracy_note": "No accuracy percentage is reported: the benchmark is company-agnostic, only Q01, Q03, and Q08 have checked-in filing snapshots, and the planner was not run live.",
   "questions": [
     {
       "question_id": "Q01",
@@ -408,30 +408,163 @@
     },
     {
       "question_id": "Q08",
-      "question": "How did accounts receivable growth compare with revenue growth over the comparable reporting periods?",
-      "company": null,
-      "filings": [],
-      "reporting_periods": [],
+      "question": "How did NVIDIA accounts receivable growth compare with revenue growth from FY2024 to FY2025?",
+      "company": {
+        "name": "NVIDIA Corporation",
+        "ticker": "NVDA",
+        "cik": "0001045810"
+      },
+      "filings": [
+        {
+          "form": "10-K",
+          "filing_date": "2024-02-21",
+          "accession_number": "0001045810-24-000029",
+          "url": "https://www.sec.gov/Archives/edgar/data/1045810/000104581024000029/0001045810-24-000029-index.htm"
+        },
+        {
+          "form": "10-K",
+          "filing_date": "2025-02-26",
+          "accession_number": "0001045810-25-000023",
+          "url": "https://www.sec.gov/Archives/edgar/data/1045810/000104581025000023/0001045810-25-000023-index.htm"
+        }
+      ],
+      "reporting_periods": [
+        {
+          "fiscal_year": 2024,
+          "start_date": "2023-01-29",
+          "end_date": "2024-01-28"
+        },
+        {
+          "fiscal_year": 2025,
+          "start_date": "2024-01-29",
+          "end_date": "2025-01-26"
+        }
+      ],
       "expected_concepts": [
         "accounts_receivable",
         "revenue"
       ],
-      "retrieval_mode": "not_run",
-      "retrieved_inputs": [],
-      "selected_evidence": [],
-      "calculation_formula": null,
-      "expected_answer": null,
-      "actual_answer": "I cannot answer this request reliably yet: No complete retrieval-to-answer path is implemented for Q08; calculator registration alone is not support.\n\nYour question: How did accounts receivable growth compare with revenue growth over the comparable reporting periods?",
-      "checks": {
-        "input_retrieval_correctness": null,
-        "period_correctness": null,
-        "unit_correctness": null,
-        "calculation_correctness": null,
-        "evidence_correctness": null,
-        "query_interpretation_correctness": null
+      "retrieval_mode": "checked_in_sec_snapshot_not_live_retrieval",
+      "retrieved_inputs": [
+        {
+          "concept": "Revenues",
+          "value": "60922000000",
+          "unit": "USD",
+          "period_start": "2023-01-29",
+          "period_end": "2024-01-28",
+          "form": "10-K",
+          "filing_date": "2024-02-21",
+          "accession_number": "0001045810-24-000029",
+          "source_url": "https://www.sec.gov/Archives/edgar/data/1045810/000104581024000029/0001045810-24-000029-index.htm",
+          "metric": "revenue"
+        },
+        {
+          "concept": "AccountsReceivableNetCurrent",
+          "value": "9999000000",
+          "unit": "USD",
+          "period_start": null,
+          "period_end": "2024-01-28",
+          "form": "10-K",
+          "filing_date": "2024-02-21",
+          "accession_number": "0001045810-24-000029",
+          "source_url": "https://www.sec.gov/Archives/edgar/data/1045810/000104581024000029/0001045810-24-000029-index.htm",
+          "metric": "accounts_receivable"
+        },
+        {
+          "concept": "Revenues",
+          "value": "130497000000",
+          "unit": "USD",
+          "period_start": "2024-01-29",
+          "period_end": "2025-01-26",
+          "form": "10-K",
+          "filing_date": "2025-02-26",
+          "accession_number": "0001045810-25-000023",
+          "source_url": "https://www.sec.gov/Archives/edgar/data/1045810/000104581025000023/0001045810-25-000023-index.htm",
+          "metric": "revenue"
+        },
+        {
+          "concept": "AccountsReceivableNetCurrent",
+          "value": "23065000000",
+          "unit": "USD",
+          "period_start": null,
+          "period_end": "2025-01-26",
+          "form": "10-K",
+          "filing_date": "2025-02-26",
+          "accession_number": "0001045810-25-000023",
+          "source_url": "https://www.sec.gov/Archives/edgar/data/1045810/000104581025000023/0001045810-25-000023-index.htm",
+          "metric": "accounts_receivable"
+        }
+      ],
+      "selected_evidence": [
+        {
+          "concept": "Revenues",
+          "value": "60922000000",
+          "unit": "USD",
+          "period_start": "2023-01-29",
+          "period_end": "2024-01-28",
+          "form": "10-K",
+          "filing_date": "2024-02-21",
+          "accession_number": "0001045810-24-000029",
+          "source_url": "https://www.sec.gov/Archives/edgar/data/1045810/000104581024000029/0001045810-24-000029-index.htm",
+          "metric": "revenue"
+        },
+        {
+          "concept": "AccountsReceivableNetCurrent",
+          "value": "9999000000",
+          "unit": "USD",
+          "period_start": null,
+          "period_end": "2024-01-28",
+          "form": "10-K",
+          "filing_date": "2024-02-21",
+          "accession_number": "0001045810-24-000029",
+          "source_url": "https://www.sec.gov/Archives/edgar/data/1045810/000104581024000029/0001045810-24-000029-index.htm",
+          "metric": "accounts_receivable"
+        },
+        {
+          "concept": "Revenues",
+          "value": "130497000000",
+          "unit": "USD",
+          "period_start": "2024-01-29",
+          "period_end": "2025-01-26",
+          "form": "10-K",
+          "filing_date": "2025-02-26",
+          "accession_number": "0001045810-25-000023",
+          "source_url": "https://www.sec.gov/Archives/edgar/data/1045810/000104581025000023/0001045810-25-000023-index.htm",
+          "metric": "revenue"
+        },
+        {
+          "concept": "AccountsReceivableNetCurrent",
+          "value": "23065000000",
+          "unit": "USD",
+          "period_start": null,
+          "period_end": "2025-01-26",
+          "form": "10-K",
+          "filing_date": "2025-02-26",
+          "accession_number": "0001045810-25-000023",
+          "source_url": "https://www.sec.gov/Archives/edgar/data/1045810/000104581025000023/0001045810-25-000023-index.htm",
+          "metric": "accounts_receivable"
+        }
+      ],
+      "calculation_formula": "receivables_growth - revenue_growth",
+      "expected_answer": {
+        "growth_difference_percentage_points": "16.4696596707371075244814787",
+        "display": "16.47 percentage points"
       },
-      "overall_status": "UNSUPPORTED",
-      "failure_reason": "No complete retrieval-to-answer path is implemented for Q08; calculator registration alone is not support."
+      "actual_answer": {
+        "text": "Question: How did NVIDIA accounts receivable growth compare with revenue growth from FY2024 to FY2025?\n\nResult: NVIDIA Corporation's result is 16.47 percentage points.\n\nFormula: receivables_growth - revenue_growth\nCalculation ID: Q08\nCalculation source: benchmark_json\n\nInputs:\n- ar_current: 23,065,000,000\n- ar_prior: 9,999,000,000\n- revenue_current: 130,497,000,000\n- revenue_prior: 60,922,000,000\n\nEvidence:\n- Revenue: 60,922,000,000 USD; period FY2024 (2023-01-29 to 2024-01-28); filed 2024-02-21.\n  Source: https://www.sec.gov/Archives/edgar/data/1045810/000104581024000029/0001045810-24-000029-index.htm\n- Accounts receivable, net: 9,999,000,000 USD; period FY2024 (2023-01-29 to 2024-01-28); filed 2024-02-21.\n  Source: https://www.sec.gov/Archives/edgar/data/1045810/000104581024000029/0001045810-24-000029-index.htm\n- Revenue: 130,497,000,000 USD; period FY2025 (2024-01-29 to 2025-01-26); filed 2025-02-26.\n  Source: https://www.sec.gov/Archives/edgar/data/1045810/000104581025000023/0001045810-25-000023-index.htm\n- Accounts receivable, net: 23,065,000,000 USD; period FY2025 (2024-01-29 to 2025-01-26); filed 2025-02-26.\n  Source: https://www.sec.gov/Archives/edgar/data/1045810/000104581025000023/0001045810-25-000023-index.htm\n\nCalculation notes:\n- receivables_growth=130.6730673067306730673067307; revenue_growth=114.2034076359935655428252520",
+        "result_value": "16.4696596707371075244814787",
+        "result_unit": "percentage_points"
+      },
+      "checks": {
+        "input_retrieval_correctness": "not_evaluated_live_retrieval",
+        "period_correctness": true,
+        "unit_correctness": true,
+        "calculation_correctness": true,
+        "evidence_correctness": true,
+        "query_interpretation_correctness": "not_evaluated"
+      },
+      "overall_status": "PARTIAL",
+      "failure_reason": "Query interpretation and live SEC retrieval were not tested; the validated plan and filing facts came from deterministic fixtures."
     },
     {
       "question_id": "Q09",

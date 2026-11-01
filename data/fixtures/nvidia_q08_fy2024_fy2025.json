@@ -1,0 +1,70 @@
+{
+  "fixture_id": "nvda-q08-fy2024-fy2025-v1",
+  "description": "SEC 10-K balance-sheet and income-statement snapshot for deterministic Q08 evaluation; not a live API response.",
+  "question_id": "Q08",
+  "question": "How did NVIDIA accounts receivable growth compare with revenue growth from FY2024 to FY2025?",
+  "company": {
+    "name": "NVIDIA Corporation",
+    "ticker": "NVDA",
+    "cik": "0001045810"
+  },
+  "periods": [
+    {
+      "role": "comparable_prior",
+      "fiscal_year": 2024,
+      "start_date": "2023-01-29",
+      "end_date": "2024-01-28",
+      "form": "10-K",
+      "filing_date": "2024-02-21",
+      "accession_number": "0001045810-24-000029",
+      "source_url": "https://www.sec.gov/Archives/edgar/data/1045810/000104581024000029/0001045810-24-000029-index.htm",
+      "revenue": {
+        "taxonomy": "us-gaap",
+        "concept": "Revenues",
+        "label": "Revenue",
+        "value": "60922000000",
+        "unit": "USD",
+        "period_kind": "duration"
+      },
+      "accounts_receivable": {
+        "taxonomy": "us-gaap",
+        "concept": "AccountsReceivableNetCurrent",
+        "label": "Accounts receivable, net",
+        "value": "9999000000",
+        "unit": "USD",
+        "period_kind": "instant"
+      }
+    },
+    {
+      "role": "current",
+      "fiscal_year": 2025,
+      "start_date": "2024-01-29",
+      "end_date": "2025-01-26",
+      "form": "10-K",
+      "filing_date": "2025-02-26",
+      "accession_number": "0001045810-25-000023",
+      "source_url": "https://www.sec.gov/Archives/edgar/data/1045810/000104581025000023/0001045810-25-000023-index.htm",
+      "revenue": {
+        "taxonomy": "us-gaap",
+        "concept": "Revenues",
+        "label": "Revenue",
+        "value": "130497000000",
+        "unit": "USD",
+        "period_kind": "duration"
+      },
+      "accounts_receivable": {
+        "taxonomy": "us-gaap",
+        "concept": "AccountsReceivableNetCurrent",
+        "label": "Accounts receivable, net",
+        "value": "23065000000",
+        "unit": "USD",
+        "period_kind": "instant"
+      }
+    }
+  ],
+  "expected_growth_difference_percentage_points": "16.4696596707371075244814787",
+  "references": [
+    "https://www.sec.gov/Archives/edgar/data/1045810/000104581024000029/0001045810-24-000029-index.htm",
+    "https://www.sec.gov/Archives/edgar/data/1045810/000104581025000023/0001045810-25-000023-index.htm"
+  ]
+}

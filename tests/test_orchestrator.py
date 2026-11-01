@@ -118,12 +118,31 @@ OPERATING_INCOME_FACTS = {
     2025: {**FACTS[2025], "concept": "OperatingIncomeLoss", "label": "Operating income", "value": 81_453_000_000},
 }
 
+RECEIVABLE_FACTS = {
+    2024: {
+        **FACTS[2024],
+        "concept": "AccountsReceivableNetCurrent",
+        "label": "Accounts receivable, net",
+        "value": 9_999_000_000,
+        "start_date": None,
+    },
+    2025: {
+        **FACTS[2025],
+        "concept": "AccountsReceivableNetCurrent",
+        "label": "Accounts receivable, net",
+        "value": 23_065_000_000,
+        "start_date": None,
+    },
+}
+
 
 class FixtureFactRetriever:
     def get_fact(self, *, end_date, **kwargs):
         source = (
             OPERATING_INCOME_FACTS
             if kwargs["concept"] == "OperatingIncomeLoss"
+            else RECEIVABLE_FACTS
+            if kwargs["concept"] == "AccountsReceivableNetCurrent"
             else FACTS
         )
         fact = next(fact for fact in source.values() if fact["end_date"] == end_date)
@@ -211,6 +230,63 @@ def test_q03_nvidia_operating_margin_change_end_to_end_fixture():
     assert {item.accession_number for item in result.answer.evidence} == {
         "0001045810-24-000029",
         "0001045810-25-000023",
+    }
+
+
+def test_q08_nvidia_receivables_vs_revenue_growth_end_to_end_fixture():
+    question = (
+        "How did NVIDIA accounts receivable growth compare with revenue "
+        "growth from FY2024 to FY2025?"
+    )
+    plan = make_plan().model_copy(update={
+        "original_question": question,
+        "benchmark_id": "Q08",
+        "task_type": "comparison",
+        "operation": "growth_comparison",
+        "metrics": [
+            MetricRequest(
+                name="accounts_receivable",
+                role="primary",
+                sources=["xbrl"],
+            ),
+            MetricRequest(name="revenue", role="comparison", sources=["xbrl"]),
+        ],
+        "answer": AnswerRequirements(
+            include_formula=True,
+            expected_output="percentage_points",
+        ),
+    })
+
+    class Planner:
+        def plan(self, _question):
+            return plan
+
+    orchestrator = FinSpectOrchestrator(
+        planner=Planner(),
+        normalizer=normalize_query_plan,
+        period_resolver=lambda _cik, year: PERIODS[year],
+        fact_retriever=FixtureFactRetriever(),
+        company_resolver=FixtureCompanyResolver(),
+    )
+    result = orchestrator.run(question)
+
+    ar_growth = (
+        (Decimal("23065000000") - Decimal("9999000000"))
+        / Decimal("9999000000")
+        * Decimal("100")
+    )
+    revenue_growth = (
+        (Decimal("130497000000") - Decimal("60922000000"))
+        / Decimal("60922000000")
+        * Decimal("100")
+    )
+    assert result.answer.formula_id == "Q08"
+    assert result.answer.result_unit == "percentage_points"
+    assert Decimal(result.answer.result_value) == ar_growth - revenue_growth
+    assert len(result.answer.evidence) == 4
+    assert {item.label for item in result.answer.evidence} == {
+        "Revenue",
+        "Accounts receivable, net",
     }
 
 
@@ -344,7 +420,11 @@ def make_unsupported_benchmark_plan(question):
 
 @pytest.mark.parametrize(
     "question_id",
-    [f"Q{number:02d}" for number in range(2, 21) if number != 3],
+    [
+        f"Q{number:02d}"
+        for number in range(2, 21)
+        if number not in {3, 8}
+    ],
 )
 def test_other_benchmark_operations_are_explicitly_unsupported(question_id):
     benchmark = load_benchmark(BENCHMARK_PATH)

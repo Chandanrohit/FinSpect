@@ -684,8 +684,10 @@ def validate_growth_inputs(current: FinancialFact, prior: FinancialFact) -> None
     elif current.period.end_date <= prior.period.end_date:
         raise ValueError("Current instant must be later than prior instant.")
 
-    if prior.normalized_value == 0:
-        raise ValueError("Growth rate undefined: prior-period normalized value is zero.")
+    if prior.normalized_value <= 0:
+        raise ValueError(
+            "Growth rate undefined or misleading: prior-period amount must be positive."
+        )
 
 def validate_absolute_change_inputs(
     current: FinancialFact,
@@ -746,6 +748,39 @@ def validate_absolute_change_inputs(
 
     if not 300 <= prior_days <= 400:
         raise ValueError("Prior full-year period has an unexpected duration.")
+
+
+def validate_instant_growth_inputs(
+    current: FinancialFact,
+    prior: FinancialFact,
+) -> None:
+    """Validate comparable balance-sheet facts before calculating growth."""
+    require_compatible_facts(
+        current,
+        prior,
+        require_same_period=False,
+        require_same_scope=True,
+    )
+    if current.entity != prior.entity:
+        raise ValueError("Entity mismatch; both facts must belong to the same entity.")
+    if current.concept != prior.concept:
+        raise ValueError("Concept mismatch; both facts must represent the same metric.")
+    if current.period.role != PeriodRole.CURRENT:
+        raise ValueError("First input must be the current period.")
+    if prior.period.role != PeriodRole.COMPARABLE_PRIOR:
+        raise ValueError("Second input must be the comparable prior period.")
+    if not current.value.is_finite() or not prior.value.is_finite():
+        raise ValueError("Financial fact values must be finite.")
+    if current.period.kind != PeriodKind.INSTANT or prior.period.kind != PeriodKind.INSTANT:
+        raise ValueError("Balance-sheet growth requires instant facts.")
+    if current.period.end_date <= prior.period.end_date:
+        raise ValueError("Current balance-sheet date must follow the prior date.")
+    if current.unit.scale <= 0 or prior.unit.scale <= 0:
+        raise ValueError("Unit scale must be positive.")
+    if prior.normalized_value <= 0:
+        raise ValueError(
+            "Growth rate undefined or misleading: prior balance must be positive."
+        )
 
 def validate_currency_inputs(*facts: FinancialFact) -> None:
     if not facts:
