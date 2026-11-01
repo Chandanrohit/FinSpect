@@ -135,6 +135,16 @@ RECEIVABLE_FACTS = {
     },
 }
 
+NET_INCOME_FACTS = {
+    2024: {**FACTS[2024], "concept": "NetIncomeLoss", "label": "Net income", "value": 29_760_000_000},
+    2025: {**FACTS[2025], "concept": "NetIncomeLoss", "label": "Net income", "value": 72_880_000_000},
+}
+
+OPERATING_CASH_FLOW_FACTS = {
+    2024: {**FACTS[2024], "concept": "NetCashProvidedByUsedInOperatingActivities", "label": "Net cash provided by operating activities", "value": 28_090_000_000},
+    2025: {**FACTS[2025], "concept": "NetCashProvidedByUsedInOperatingActivities", "label": "Net cash provided by operating activities", "value": 64_089_000_000},
+}
+
 
 class FixtureFactRetriever:
     def get_fact(self, *, end_date, **kwargs):
@@ -143,6 +153,10 @@ class FixtureFactRetriever:
             if kwargs["concept"] == "OperatingIncomeLoss"
             else RECEIVABLE_FACTS
             if kwargs["concept"] == "AccountsReceivableNetCurrent"
+            else NET_INCOME_FACTS
+            if kwargs["concept"] == "NetIncomeLoss"
+            else OPERATING_CASH_FLOW_FACTS
+            if kwargs["concept"] == "NetCashProvidedByUsedInOperatingActivities"
             else FACTS
         )
         fact = next(fact for fact in source.values() if fact["end_date"] == end_date)
@@ -290,6 +304,92 @@ def test_q08_nvidia_receivables_vs_revenue_growth_end_to_end_fixture():
     }
 
 
+def test_q13_nvidia_cash_conversion_comparison_end_to_end_fixture():
+    question = (
+        "What percentage of NVIDIA net income was converted into operating "
+        "cash flow from FY2024 to FY2025, and how did it compare?"
+    )
+    plan = make_plan().model_copy(update={
+        "original_question": question,
+        "benchmark_id": "Q13",
+        "task_type": "comparison",
+        "operation": "cash_conversion",
+        "metrics": [
+            MetricRequest(name="net_income", role="primary", sources=["xbrl"]),
+            MetricRequest(name="operating_cash_flow", role="comparison", sources=["xbrl"]),
+        ],
+        "answer": AnswerRequirements(
+            include_formula=True,
+            expected_output="percentage",
+        ),
+    })
+
+    class Planner:
+        def plan(self, _question):
+            return plan
+
+    orchestrator = FinSpectOrchestrator(
+        planner=Planner(),
+        normalizer=normalize_query_plan,
+        period_resolver=lambda _cik, year: PERIODS[year],
+        fact_retriever=FixtureFactRetriever(),
+        company_resolver=FixtureCompanyResolver(),
+    )
+    result = orchestrator.run(question)
+    current_ratio = Decimal("64089000000") / Decimal("72880000000") * 100
+    prior_ratio = Decimal("28090000000") / Decimal("29760000000") * 100
+
+    assert result.answer.formula_id == "Q13"
+    assert result.answer.result_unit == "percent"
+    assert Decimal(result.answer.result_value) == current_ratio
+    assert f"{current_ratio.quantize(Decimal('0.01'))}%" in result.answer.text
+    assert f"{prior_ratio.quantize(Decimal('0.01'))}%" in result.answer.text
+    assert (
+        f"{abs(current_ratio - prior_ratio).quantize(Decimal('0.01'))} "
+        "percentage-point decrease"
+    ) in result.answer.text
+    assert len(result.answer.evidence) == 4
+    assert {item.label for item in result.answer.evidence} == {
+        "Net income",
+        "Net cash provided by operating activities",
+    }
+
+
+def test_q13_rejects_zero_net_income_denominator():
+    class ZeroNetIncomeRetriever(FixtureFactRetriever):
+        def get_fact(self, *, end_date, **kwargs):
+            fact = dict(super().get_fact(end_date=end_date, **kwargs))
+            if kwargs["concept"] == "NetIncomeLoss" and end_date == PERIODS[2025].end_date:
+                fact["value"] = 0
+            return fact
+
+    question = "Compare NVIDIA cash conversion from FY2024 to FY2025."
+    plan = make_plan().model_copy(update={
+        "original_question": question,
+        "benchmark_id": "Q13",
+        "task_type": "comparison",
+        "operation": "cash_conversion",
+        "metrics": [
+            MetricRequest(name="net_income", role="primary", sources=["xbrl"]),
+            MetricRequest(name="operating_cash_flow", role="comparison", sources=["xbrl"]),
+        ],
+    })
+
+    class Planner:
+        def plan(self, _question):
+            return plan
+
+    orchestrator = FinSpectOrchestrator(
+        planner=Planner(),
+        normalizer=normalize_query_plan,
+        period_resolver=lambda _cik, year: PERIODS[year],
+        fact_retriever=ZeroNetIncomeRetriever(),
+        company_resolver=FixtureCompanyResolver(),
+    )
+    with pytest.raises(ValueError, match="positive net income in both periods"):
+        orchestrator.run(question)
+
+
 def test_q01_rejects_fact_for_different_company():
     class WrongCompanyFactRetriever(FixtureFactRetriever):
         def get_fact(self, *, end_date, **kwargs):
@@ -423,7 +523,7 @@ def make_unsupported_benchmark_plan(question):
     [
         f"Q{number:02d}"
         for number in range(2, 21)
-        if number not in {3, 8}
+        if number not in {3, 8, 13}
     ],
 )
 def test_other_benchmark_operations_are_explicitly_unsupported(question_id):

@@ -71,11 +71,30 @@ def build_calculation_answer(
     value_text = _format_result(result.value, result.unit)
     unit_text = result.unit
 
+    if result.metrics and result.formula_id == "Q13":
+        current = result.metrics["current_conversion_percent"]
+        prior = result.metrics["prior_conversion_percent"]
+        change = result.metrics["change_percentage_points"]
+        if change > 0:
+            change_description = "increase"
+        elif change < 0:
+            change_description = "decrease"
+        else:
+            change_description = "no change"
+        result_line = (
+            f"Current period cash conversion was {_format_result(current, 'percent')}; "
+            f"the comparable prior period was {_format_result(prior, 'percent')}. "
+            f"That is a {abs(change).quantize(Decimal('0.01')):,.2f} "
+            f"percentage-point {change_description}."
+        )
+    else:
+        result_line = f"{company_name}'s result is {value_text}."
+
 
     lines = [
         f"Question: {question}",
         "",
-        f"Result: {company_name}'s result is {value_text}.",
+        f"Result: {result_line}",
         "",
         f"Formula: {result.expression}",
         f"Calculation ID: {result.formula_id}",

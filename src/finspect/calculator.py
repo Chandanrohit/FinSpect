@@ -203,6 +203,50 @@ def cash_conversion(operating_cash_flow: Decimal, net_income: Decimal) -> Calcul
                    FormulaSource.BENCHMARK)
 
 
+def cash_conversion_comparison(
+    *,
+    operating_cash_flow_current: Decimal,
+    net_income_current: Decimal,
+    operating_cash_flow_prior: Decimal,
+    net_income_prior: Decimal,
+) -> CalculationResult:
+    """Calculate current/prior cash conversion and its percentage-point change."""
+    c, n, pc, pn = map(
+        dec,
+        (
+            operating_cash_flow_current,
+            net_income_current,
+            operating_cash_flow_prior,
+            net_income_prior,
+        ),
+    )
+    current = _pct(c, n, label="current cash conversion")
+    prior = _pct(pc, pn, label="prior cash conversion")
+    return CalculationResult(
+        formula_id="Q13",
+        value=current,
+        unit="percent",
+        expression=(
+            "current_operating_cash_flow / current_net_income * 100; "
+            "prior_operating_cash_flow / prior_net_income * 100; "
+            "current_cash_conversion - prior_cash_conversion"
+        ),
+        inputs={
+            "current_operating_cash_flow": c,
+            "current_net_income": n,
+            "prior_operating_cash_flow": pc,
+            "prior_net_income": pn,
+        },
+        source=FormulaSource.BENCHMARK,
+        notes=("Comparison is expressed as a change in percentage points.",),
+        metrics={
+            "current_conversion_percent": current,
+            "prior_conversion_percent": prior,
+            "change_percentage_points": current - prior,
+        },
+    )
+
+
 def cash_allocation(share_repurchase: Decimal, dividends: Decimal, capex: Decimal,
                     operating_cash_flow: Decimal) -> CalculationResult:
     r, d, x, c = map(dec, (share_repurchase, dividends, capex, operating_cash_flow))

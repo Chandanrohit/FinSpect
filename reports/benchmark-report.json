@@ -7,12 +7,12 @@
   "question_count": 20,
   "aggregate_counts": {
     "PASS": 0,
-    "PARTIAL": 3,
-    "UNSUPPORTED": 17,
+    "PARTIAL": 4,
+    "UNSUPPORTED": 16,
     "FAIL": 0
   },
   "accuracy_percentage": null,
-  "accuracy_note": "No accuracy percentage is reported: the benchmark is company-agnostic, only Q01, Q03, and Q08 have checked-in filing snapshots, and the planner was not run live.",
+  "accuracy_note": "No accuracy percentage is reported: the benchmark is company-agnostic, only Q01, Q03, Q08, and Q13 have checked-in filing snapshots, and the planner was not run live.",
   "questions": [
     {
       "question_id": "Q01",
@@ -676,30 +676,169 @@
     },
     {
       "question_id": "Q13",
-      "question": "What percentage of net income was converted into operating cash flow during the reporting period, and how did this compare with the comparable prior-year period?",
-      "company": null,
-      "filings": [],
-      "reporting_periods": [],
+      "question": "What percentage of NVIDIA net income was converted into operating cash flow during FY2025, and how did this compare with FY2024?",
+      "company": {
+        "name": "NVIDIA Corporation",
+        "ticker": "NVDA",
+        "cik": "0001045810"
+      },
+      "filings": [
+        {
+          "form": "10-K",
+          "filing_date": "2024-02-21",
+          "accession_number": "0001045810-24-000029",
+          "url": "https://www.sec.gov/Archives/edgar/data/1045810/000104581024000029/nvda-20240128.htm"
+        },
+        {
+          "form": "10-K",
+          "filing_date": "2025-02-26",
+          "accession_number": "0001045810-25-000023",
+          "url": "https://www.sec.gov/Archives/edgar/data/1045810/000104581025000023/nvda-20250126.htm"
+        }
+      ],
+      "reporting_periods": [
+        {
+          "fiscal_year": 2024,
+          "start_date": "2023-01-29",
+          "end_date": "2024-01-28"
+        },
+        {
+          "fiscal_year": 2025,
+          "start_date": "2024-01-29",
+          "end_date": "2025-01-26"
+        }
+      ],
       "expected_concepts": [
         "net_income",
         "operating_cash_flow"
       ],
-      "retrieval_mode": "not_run",
-      "retrieved_inputs": [],
-      "selected_evidence": [],
-      "calculation_formula": "operating_cash_flow / net_income * 100",
-      "expected_answer": null,
-      "actual_answer": "I cannot answer this request reliably yet: No complete retrieval-to-answer path is implemented for Q13; calculator registration alone is not support.\n\nYour question: What percentage of net income was converted into operating cash flow during the reporting period, and how did this compare with the comparable prior-year period?",
-      "checks": {
-        "input_retrieval_correctness": null,
-        "period_correctness": null,
-        "unit_correctness": null,
-        "calculation_correctness": null,
-        "evidence_correctness": null,
-        "query_interpretation_correctness": null
+      "retrieval_mode": "checked_in_sec_snapshot_not_live_retrieval",
+      "retrieved_inputs": [
+        {
+          "concept": "NetIncomeLoss",
+          "value": "29760000000",
+          "unit": "USD",
+          "period_start": "2023-01-29",
+          "period_end": "2024-01-28",
+          "form": "10-K",
+          "filing_date": "2024-02-21",
+          "accession_number": "0001045810-24-000029",
+          "source_url": "https://www.sec.gov/Archives/edgar/data/1045810/000104581024000029/nvda-20240128.htm",
+          "metric": "net_income"
+        },
+        {
+          "concept": "NetCashProvidedByUsedInOperatingActivities",
+          "value": "28090000000",
+          "unit": "USD",
+          "period_start": "2023-01-29",
+          "period_end": "2024-01-28",
+          "form": "10-K",
+          "filing_date": "2024-02-21",
+          "accession_number": "0001045810-24-000029",
+          "source_url": "https://www.sec.gov/Archives/edgar/data/1045810/000104581024000029/nvda-20240128.htm",
+          "metric": "operating_cash_flow"
+        },
+        {
+          "concept": "NetIncomeLoss",
+          "value": "72880000000",
+          "unit": "USD",
+          "period_start": "2024-01-29",
+          "period_end": "2025-01-26",
+          "form": "10-K",
+          "filing_date": "2025-02-26",
+          "accession_number": "0001045810-25-000023",
+          "source_url": "https://www.sec.gov/Archives/edgar/data/1045810/000104581025000023/nvda-20250126.htm",
+          "metric": "net_income"
+        },
+        {
+          "concept": "NetCashProvidedByUsedInOperatingActivities",
+          "value": "64089000000",
+          "unit": "USD",
+          "period_start": "2024-01-29",
+          "period_end": "2025-01-26",
+          "form": "10-K",
+          "filing_date": "2025-02-26",
+          "accession_number": "0001045810-25-000023",
+          "source_url": "https://www.sec.gov/Archives/edgar/data/1045810/000104581025000023/nvda-20250126.htm",
+          "metric": "operating_cash_flow"
+        }
+      ],
+      "selected_evidence": [
+        {
+          "concept": "NetIncomeLoss",
+          "value": "29760000000",
+          "unit": "USD",
+          "period_start": "2023-01-29",
+          "period_end": "2024-01-28",
+          "form": "10-K",
+          "filing_date": "2024-02-21",
+          "accession_number": "0001045810-24-000029",
+          "source_url": "https://www.sec.gov/Archives/edgar/data/1045810/000104581024000029/nvda-20240128.htm",
+          "metric": "net_income"
+        },
+        {
+          "concept": "NetCashProvidedByUsedInOperatingActivities",
+          "value": "28090000000",
+          "unit": "USD",
+          "period_start": "2023-01-29",
+          "period_end": "2024-01-28",
+          "form": "10-K",
+          "filing_date": "2024-02-21",
+          "accession_number": "0001045810-24-000029",
+          "source_url": "https://www.sec.gov/Archives/edgar/data/1045810/000104581024000029/nvda-20240128.htm",
+          "metric": "operating_cash_flow"
+        },
+        {
+          "concept": "NetIncomeLoss",
+          "value": "72880000000",
+          "unit": "USD",
+          "period_start": "2024-01-29",
+          "period_end": "2025-01-26",
+          "form": "10-K",
+          "filing_date": "2025-02-26",
+          "accession_number": "0001045810-25-000023",
+          "source_url": "https://www.sec.gov/Archives/edgar/data/1045810/000104581025000023/nvda-20250126.htm",
+          "metric": "net_income"
+        },
+        {
+          "concept": "NetCashProvidedByUsedInOperatingActivities",
+          "value": "64089000000",
+          "unit": "USD",
+          "period_start": "2024-01-29",
+          "period_end": "2025-01-26",
+          "form": "10-K",
+          "filing_date": "2025-02-26",
+          "accession_number": "0001045810-25-000023",
+          "source_url": "https://www.sec.gov/Archives/edgar/data/1045810/000104581025000023/nvda-20250126.htm",
+          "metric": "operating_cash_flow"
+        }
+      ],
+      "calculation_formula": "current_operating_cash_flow / current_net_income * 100; prior_operating_cash_flow / prior_net_income * 100; current_cash_conversion - prior_cash_conversion",
+      "expected_answer": {
+        "current_conversion_percent": "87.93770581778265642151481888",
+        "prior_conversion_percent": "94.38844086021505376344086022",
+        "change_percentage_points": "-6.45073504243239734192604134"
       },
-      "overall_status": "UNSUPPORTED",
-      "failure_reason": "No complete retrieval-to-answer path is implemented for Q13; calculator registration alone is not support."
+      "actual_answer": {
+        "text": "Question: What percentage of NVIDIA net income was converted into operating cash flow during FY2025, and how did this compare with FY2024?\n\nResult: Current period cash conversion was 87.94%; the comparable prior period was 94.39%. That is a 6.45 percentage-point decrease.\n\nFormula: current_operating_cash_flow / current_net_income * 100; prior_operating_cash_flow / prior_net_income * 100; current_cash_conversion - prior_cash_conversion\nCalculation ID: Q13\nCalculation source: benchmark_json\n\nInputs:\n- current_operating_cash_flow: 64,089,000,000\n- current_net_income: 72,880,000,000\n- prior_operating_cash_flow: 28,090,000,000\n- prior_net_income: 29,760,000,000\n\nEvidence:\n- Net income: 29,760,000,000 USD; period FY2024 (2023-01-29 to 2024-01-28); filed 2024-02-21.\n  Source: https://www.sec.gov/Archives/edgar/data/1045810/000104581024000029/nvda-20240128.htm\n- Net cash provided by operating activities: 28,090,000,000 USD; period FY2024 (2023-01-29 to 2024-01-28); filed 2024-02-21.\n  Source: https://www.sec.gov/Archives/edgar/data/1045810/000104581024000029/nvda-20240128.htm\n- Net income: 72,880,000,000 USD; period FY2025 (2024-01-29 to 2025-01-26); filed 2025-02-26.\n  Source: https://www.sec.gov/Archives/edgar/data/1045810/000104581025000023/nvda-20250126.htm\n- Net cash provided by operating activities: 64,089,000,000 USD; period FY2025 (2024-01-29 to 2025-01-26); filed 2025-02-26.\n  Source: https://www.sec.gov/Archives/edgar/data/1045810/000104581025000023/nvda-20250126.htm\n\nCalculation notes:\n- Comparison is expressed as a change in percentage points.",
+        "result_value": "87.93770581778265642151481888",
+        "result_unit": "percent",
+        "metrics": {
+          "current_conversion_percent": "87.93770581778265642151481888",
+          "prior_conversion_percent": "94.38844086021505376344086022",
+          "change_percentage_points": "-6.45073504243239734192604134"
+        }
+      },
+      "checks": {
+        "input_retrieval_correctness": "not_evaluated_live_retrieval",
+        "period_correctness": true,
+        "unit_correctness": true,
+        "calculation_correctness": true,
+        "evidence_correctness": true,
+        "query_interpretation_correctness": "not_evaluated"
+      },
+      "overall_status": "PARTIAL",
+      "failure_reason": "Query interpretation and live SEC retrieval were not tested; the validated plan and filing facts came from deterministic fixtures."
     },
     {
       "question_id": "Q14",
