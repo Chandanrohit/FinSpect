@@ -1,10 +1,8 @@
-@
 # Python
 __pycache__/
 *.py[cod]
 *.pyd
 .python-version
-*.PRACTICE
 
 # Virtual environments
 .venv/
@@ -20,6 +18,7 @@ htmlcov/
 .env
 .env.*
 !.env.example
+.streamlit/secrets.toml
 
 # IDE and operating system files
 .vscode/
@@ -42,5 +41,3 @@ dist/
 
 # Optional local model artifacts
 models/
-"@ | Set-Content -Path .gitignore -Encoding utf8
-/src/finspect/PRACTICE.py

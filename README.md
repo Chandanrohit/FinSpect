@@ -25,20 +25,18 @@ Passing unit tests do not yet establish that every benchmark question is support
 
 ## Run locally
 
-Use Python 3.13 or another Python version supported by the installed dependencies.
+Use Python 3.11 or newer.
 
-Install the project's dependencies, then set the source path in PowerShell:
+Install the project and development dependencies from the repository root:
 
 ```powershell
-python -m pip install -r requirements.txt
-$env:PYTHONPATH = "src"
-python -m pytest tests/ -v
+python -m pip install -e ".[dev]"
+python -m pytest -q
 ```
 
 Launch Streamlit:
 
 ```powershell
-$env:PYTHONPATH = "src"
 python -m streamlit run src/finspect/app.py
 ```
 
