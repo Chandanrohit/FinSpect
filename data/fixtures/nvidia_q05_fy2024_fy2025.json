@@ -1,0 +1,66 @@
+{
+  "fixture_id": "nvda-q05-fy2024-fy2025-v1",
+  "description": "SEC 10-K operating-income and net-income snapshot for deterministic Q05 evaluation; not a live API response.",
+  "question_id": "Q05",
+  "question": "How much of the change in NVIDIA operating income from FY2024 to FY2025 was reflected in net income?",
+  "company": {
+    "name": "NVIDIA Corporation",
+    "ticker": "NVDA",
+    "cik": "0001045810"
+  },
+  "periods": [
+    {
+      "role": "comparable_prior",
+      "fiscal_year": 2024,
+      "start_date": "2023-01-29",
+      "end_date": "2024-01-28",
+      "form": "10-K",
+      "filing_date": "2024-02-21",
+      "accession_number": "0001045810-24-000029",
+      "source_url": "https://www.sec.gov/Archives/edgar/data/1045810/000104581024000029/nvda-20240128.htm",
+      "net_income": {
+        "taxonomy": "us-gaap",
+        "concept": "NetIncomeLoss",
+        "label": "Net income",
+        "value": "29760000000",
+        "unit": "USD"
+      },
+      "operating_income": {
+        "taxonomy": "us-gaap",
+        "concept": "OperatingIncomeLoss",
+        "label": "Operating income",
+        "value": "32972000000",
+        "unit": "USD"
+      }
+    },
+    {
+      "role": "current",
+      "fiscal_year": 2025,
+      "start_date": "2024-01-29",
+      "end_date": "2025-01-26",
+      "form": "10-K",
+      "filing_date": "2025-02-26",
+      "accession_number": "0001045810-25-000023",
+      "source_url": "https://www.sec.gov/Archives/edgar/data/1045810/000104581025000023/nvda-20250126.htm",
+      "net_income": {
+        "taxonomy": "us-gaap",
+        "concept": "NetIncomeLoss",
+        "label": "Net income",
+        "value": "72880000000",
+        "unit": "USD"
+      },
+      "operating_income": {
+        "taxonomy": "us-gaap",
+        "concept": "OperatingIncomeLoss",
+        "label": "Operating income",
+        "value": "81453000000",
+        "unit": "USD"
+      }
+    }
+  ],
+  "expected_percent": "88.94205977599471958086673130",
+  "references": [
+    "https://www.sec.gov/Archives/edgar/data/1045810/000104581024000029/nvda-20240128.htm",
+    "https://www.sec.gov/Archives/edgar/data/1045810/000104581025000023/nvda-20250126.htm"
+  ]
+}

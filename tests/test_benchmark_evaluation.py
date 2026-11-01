@@ -7,8 +7,8 @@ def test_benchmark_report_records_fixture_and_unsupported_questions():
     assert report["question_count"] == 20
     assert report["aggregate_counts"] == {
         "PASS": 0,
-        "PARTIAL": 4,
-        "UNSUPPORTED": 16,
+        "PARTIAL": 5,
+        "UNSUPPORTED": 15,
         "FAIL": 0,
     }
     assert report["accuracy_percentage"] is None
@@ -34,6 +34,13 @@ def test_benchmark_report_records_fixture_and_unsupported_questions():
     assert q03["checks"]["calculation_correctness"] is True
     assert len(q03["selected_evidence"]) == 4
 
+    q05 = questions["Q05"]
+    assert q05["overall_status"] == "PARTIAL"
+    assert q05["actual_answer"]["result_unit"] == "percent"
+    assert q05["expected_answer"]["percent"] == "88.94205977599471958086673130"
+    assert q05["checks"]["calculation_correctness"] is True
+    assert len(q05["selected_evidence"]) == 4
+
     q08 = questions["Q08"]
     assert q08["overall_status"] == "PARTIAL"
     assert q08["actual_answer"]["result_unit"] == "percentage_points"
@@ -55,7 +62,7 @@ def test_benchmark_report_records_fixture_and_unsupported_questions():
     for question_id in [
         f"Q{number:02d}"
         for number in range(2, 21)
-        if number not in {3, 8, 13}
+        if number not in {3, 5, 8, 13}
     ]:
         question = questions[question_id]
         assert question["overall_status"] == "UNSUPPORTED"

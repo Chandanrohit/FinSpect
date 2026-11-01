@@ -355,6 +355,55 @@ def test_q13_nvidia_cash_conversion_comparison_end_to_end_fixture():
     }
 
 
+def test_q05_nvidia_earnings_change_relationship_end_to_end_fixture():
+    question = (
+        "How much of NVIDIA's operating income change from FY2024 to FY2025 "
+        "was reflected in net income?"
+    )
+    plan = make_plan().model_copy(update={
+        "original_question": question,
+        "benchmark_id": "Q05",
+        "task_type": "comparison",
+        "operation": "change_relationship",
+        "metrics": [
+            MetricRequest(name="operating_income", role="primary", sources=["xbrl"]),
+            MetricRequest(name="net_income", role="comparison", sources=["xbrl"]),
+        ],
+        "answer": AnswerRequirements(
+            include_formula=True,
+            expected_output="percentage",
+        ),
+    })
+
+    class Planner:
+        def plan(self, _question):
+            return plan
+
+    orchestrator = FinSpectOrchestrator(
+        planner=Planner(),
+        normalizer=normalize_query_plan,
+        period_resolver=lambda _cik, year: PERIODS[year],
+        fact_retriever=FixtureFactRetriever(),
+        company_resolver=FixtureCompanyResolver(),
+    )
+    result = orchestrator.run(question)
+    expected = (
+        (Decimal("72880000000") - Decimal("29760000000"))
+        / (Decimal("81453000000") - Decimal("32972000000"))
+        * Decimal("100")
+    )
+
+    assert result.answer.formula_id == "Q05"
+    assert result.answer.result_unit == "percent"
+    assert Decimal(result.answer.result_value) == expected
+    assert "88.94%" in result.answer.text
+    assert len(result.answer.evidence) == 4
+    assert {item.label for item in result.answer.evidence} == {
+        "Net income",
+        "Operating income",
+    }
+
+
 def test_q13_rejects_zero_net_income_denominator():
     class ZeroNetIncomeRetriever(FixtureFactRetriever):
         def get_fact(self, *, end_date, **kwargs):
@@ -523,7 +572,7 @@ def make_unsupported_benchmark_plan(question):
     [
         f"Q{number:02d}"
         for number in range(2, 21)
-        if number not in {3, 8, 13}
+        if number not in {3, 5, 8, 13}
     ],
 )
 def test_other_benchmark_operations_are_explicitly_unsupported(question_id):

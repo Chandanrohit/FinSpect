@@ -17,6 +17,7 @@ from finspect.answer_builder import (
 from finspect.calculator import (
     absolute_change,
     cash_conversion_comparison,
+    earnings_change_relationship,
     growth_comparison,
     margin_change,
     revenue_growth,
@@ -128,9 +129,6 @@ class FinSpectOrchestrator:
             if metric.required
         }
         has_revenue = bool(metric_names & {"total revenue", "revenue"})
-        has_operating_income = bool(
-            metric_names & {"operating income", "operating income loss"}
-        )
         has_receivables = bool(
             metric_names
             & {"accounts receivable", "receivables", "accounts receivable net"}
@@ -139,6 +137,9 @@ class FinSpectOrchestrator:
         has_operating_cash_flow = bool(
             metric_names
             & {"operating cash flow", "net cash provided by operating activities"}
+        )
+        has_operating_income = bool(
+            metric_names & {"operating income", "operating income loss"}
         )
         is_supported_revenue_operation = (
             plan.operation in {"growth_rate", "absolute_change"}
@@ -180,12 +181,25 @@ class FinSpectOrchestrator:
                 "net cash provided by operating activities",
             }
         )
+        is_supported_earnings_change = (
+            plan.operation == "change_relationship"
+            and has_net_income
+            and has_operating_income
+            and metric_names
+            <= {
+                "net income",
+                "net income loss",
+                "operating income",
+                "operating income loss",
+            }
+        )
 
         if not (
             is_supported_revenue_operation
             or is_supported_margin_operation
             or is_supported_receivables_operation
             or is_supported_cash_conversion
+            or is_supported_earnings_change
         ):
             answer = build_unsupported_answer(
                 question=question,
@@ -193,7 +207,8 @@ class FinSpectOrchestrator:
                     "This FinSpect version supports annual revenue growth, "
                     "absolute annual revenue change, and operating margin "
                     "change, annual receivables/revenue growth comparison, and "
-                    "annual cash-conversion comparison."
+                    "annual cash-conversion comparison plus the net-income/"
+                    "operating-income change relationship."
                 ),
             )
             return PipelineResult(plan=plan, answer=answer)
@@ -266,7 +281,7 @@ class FinSpectOrchestrator:
         # retrieve each concept for the same verified annual periods.
         concept_specs = (
             {}
-            if is_supported_cash_conversion
+            if is_supported_cash_conversion or is_supported_earnings_change
             else {"revenue": (periods[0].concept, False)}
         )
         if is_supported_margin_operation:
@@ -282,6 +297,9 @@ class FinSpectOrchestrator:
                 "NetCashProvidedByUsedInOperatingActivities",
                 False,
             )
+        elif is_supported_earnings_change:
+            concept_specs["net_income"] = ("NetIncomeLoss", False)
+            concept_specs["operating_income"] = ("OperatingIncomeLoss", False)
 
         raw_by_metric: dict[str, tuple[dict[str, Any], ...]] = {}
         canonical_by_metric: dict[str, tuple[FinancialFact, ...]] = {}
@@ -448,6 +466,25 @@ class FinSpectOrchestrator:
                 net_income_current=net_income_current.normalized_value,
                 operating_cash_flow_prior=cash_flow_prior.normalized_value,
                 net_income_prior=net_income_prior.normalized_value,
+            )
+        elif is_supported_earnings_change:
+            net_income_prior, net_income_current = canonical_by_metric["net_income"]
+            income_prior, income_current = canonical_by_metric["operating_income"]
+            validate_absolute_change_inputs(net_income_current, net_income_prior)
+            validate_absolute_change_inputs(income_current, income_prior)
+            require_compatible_facts(net_income_current, income_current)
+            require_compatible_facts(net_income_prior, income_prior)
+            validate_currency_inputs(
+                net_income_current,
+                net_income_prior,
+                income_current,
+                income_prior,
+            )
+            calculation = earnings_change_relationship(
+                net_current=net_income_current.normalized_value,
+                net_prior=net_income_prior.normalized_value,
+                operating_current=income_current.normalized_value,
+                operating_prior=income_prior.normalized_value,
             )
 
         facts = tuple(
