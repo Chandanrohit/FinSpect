@@ -12,6 +12,7 @@ from finspect.answer_builder import (
     AnswerEvidence,
     build_calculation_answer,
     build_clarification_answer,
+    build_narrative_answer,
     build_unsupported_answer,
 )
 from finspect.calculator import (
@@ -345,6 +346,20 @@ class FinSpectOrchestrator:
             and plan.period.fiscal_year is not None
             and not plan.period.comparison_required
         )
+        is_supported_regulatory_risk = (
+            plan.operation == "regulatory_risk_analysis"
+            and bool(metric_names & {
+                "regulatory risk", "regulatory risks", "risk factors",
+                "export control risks", "trade policy risks",
+            })
+            and metric_names <= {
+                "regulatory risk", "regulatory risks", "risk factors",
+                "export control risks", "trade policy risks",
+            }
+            and plan.period.period_kind == "annual"
+            and plan.period.fiscal_year is not None
+            and not plan.period.comparison_required
+        )
 
         if not (
             is_supported_revenue_operation
@@ -359,6 +374,7 @@ class FinSpectOrchestrator:
             or is_supported_equity_allocation
             or is_supported_cash_allocation
             or is_supported_equity_rollforward
+            or is_supported_regulatory_risk
         ):
             answer = build_unsupported_answer(
                 question=question,
@@ -385,6 +401,7 @@ class FinSpectOrchestrator:
             or is_supported_equity_allocation
             or is_supported_cash_allocation
             or is_supported_equity_rollforward
+            or is_supported_regulatory_risk
         ):
             fiscal_years = (plan.period.fiscal_year,)
         if is_supported_equity_rollforward:
@@ -397,6 +414,8 @@ class FinSpectOrchestrator:
                     ),
                 )
             fiscal_years = (plan.period.fiscal_year - 1, plan.period.fiscal_year)
+        if is_supported_regulatory_risk:
+            fiscal_years = (plan.period.fiscal_year,)
         if fiscal_years is None:
             answer = build_unsupported_answer(
                 question=question,
@@ -798,6 +817,169 @@ class FinSpectOrchestrator:
                     "accession_number": current_period.accession_number,
                     "source_url": filing_url,
                 },),
+            )
+
+        if is_supported_regulatory_risk:
+            current_period = periods[0]
+            if not all((self.filing_retriever, self.filing_parser, self.narrative_retriever)):
+                return PipelineResult(
+                    plan=plan,
+                    answer=build_unsupported_answer(
+                        question,
+                        "Exact annual filing and narrative-section retrieval are required for regulatory-risk analysis.",
+                    ),
+                )
+            if not current_period.accession_number or not current_period.filing_date:
+                return PipelineResult(
+                    plan=plan,
+                    answer=build_unsupported_answer(
+                        question,
+                        "The requested fiscal year could not be tied to an exact 10-K accession and filing date.",
+                    ),
+                )
+            try:
+                filing = self.filing_retriever.get_filing(
+                    cik=cik,
+                    accession_number=current_period.accession_number,
+                    form="10-K",
+                )
+            except FilingRetrievalError as exc:
+                return PipelineResult(
+                    plan=plan,
+                    answer=build_unsupported_answer(
+                        question, f"Could not retrieve the exact annual filing: {exc}"
+                    ),
+                )
+            if (
+                filing.get("form") != "10-K"
+                or str(filing.get("cik", "")).zfill(10) != cik
+                or filing.get("accession_number") != current_period.accession_number
+                or filing.get("filing_date") != current_period.filing_date
+                or filing.get("report_date") != current_period.end_date
+                or not filing.get("html")
+                or not filing.get("primary_document")
+            ):
+                return PipelineResult(
+                    plan=plan,
+                    answer=build_unsupported_answer(
+                        question,
+                        "Retrieved filing metadata or content does not match the requested issuer and exact 10-K period.",
+                    ),
+                )
+            try:
+                parsed = self.filing_parser.parse(
+                    filing["html"], filing_metadata=filing
+                )
+            except ValueError as exc:
+                return PipelineResult(
+                    plan=plan,
+                    answer=build_unsupported_answer(
+                        question, f"The exact filing could not be parsed: {exc}"
+                    ),
+                )
+            selected_sections: dict[str, str] = {}
+            for section in parsed["sections"]:
+                heading = section["heading"].upper()
+                if heading.startswith("ITEM 1A"):
+                    selected_sections["risk_factors"] = (
+                        selected_sections.get("risk_factors", "")
+                        + "\n\n"
+                        + section["text"]
+                    )
+                elif heading.startswith("ITEM 1 "):
+                    selected_sections["business"] = (
+                        selected_sections.get("business", "")
+                        + "\n\n"
+                        + section["text"]
+                    )
+            if not selected_sections:
+                return PipelineResult(
+                    plan=plan,
+                    answer=build_unsupported_answer(
+                        question,
+                        "The exact 10-K did not expose readable Item 1 or Item 1A text for risk analysis.",
+                    ),
+                )
+            filing_url = self.filing_retriever.submissions.get_filing_url(
+                cik=cik,
+                accession_number=current_period.accession_number,
+                primary_document=filing["primary_document"],
+            )
+            query = (
+                "regulatory export control trade government policy tariff sanctions "
+                "risk and restrictions affecting products services markets customers "
+                "geographic exposure operations and supply chain"
+            )
+            passages = self.narrative_retriever.retrieve(
+                selected_sections,
+                query,
+                top_k=12,
+                accession_number=current_period.accession_number,
+                filing_url=filing_url,
+            )
+            risk_terms = (
+                "regulat", "export control", "trade", "tariff", "sanction",
+                "government polic", "restriction", "geopolit", "import control",
+            )
+            exposure_terms = (
+                "product", "service", "market", "customer", "supply chain",
+                "operation", "revenue", "sales", "business", "geographic",
+            )
+            relevant = []
+            seen_text: set[str] = set()
+            for passage in passages:
+                lowered = passage.text.casefold()
+                if (
+                    passage.accession_number != current_period.accession_number
+                    or passage.filing_url != filing_url
+                    or not any(term in lowered for term in risk_terms)
+                    or not any(term in lowered for term in exposure_terms)
+                    or passage.text in seen_text
+                ):
+                    continue
+                seen_text.add(passage.text)
+                relevant.append(passage)
+                if len(relevant) == 3:
+                    break
+            if not relevant:
+                return PipelineResult(
+                    plan=plan,
+                    answer=build_unsupported_answer(
+                        question,
+                        "No relevant regulatory, trade, or export-control passage was found in the exact filing’s Item 1 or Item 1A.",
+                    ),
+                )
+            evidence = tuple(
+                AnswerEvidence(
+                    label=f"Item {passage.section.replace('_', ' ')} disclosure",
+                    value=passage.text,
+                    unit="filing excerpt",
+                    period=f"FY{current_period.fiscal_year}",
+                    filing_date=current_period.filing_date,
+                    accession_number=current_period.accession_number,
+                    source_url=filing_url,
+                )
+                for passage in relevant
+            )
+            answer = build_narrative_answer(
+                company_name=resolved["name"],
+                question=question,
+                topic="regulatory, trade, and export-control risk",
+                evidence=evidence,
+                limitations=(
+                    "Keyword-ranked passages are selected excerpts, not an exhaustive legal or regulatory risk review.",
+                    "The filing describes potential effects; this answer does not infer a quantified financial exposure unless the excerpt states one.",
+                ),
+            )
+            return PipelineResult(
+                plan=plan,
+                answer=answer,
+                facts=tuple({
+                    "section": item.label,
+                    "excerpt": item.value,
+                    "accession_number": item.accession_number,
+                    "source_url": item.source_url,
+                } for item in evidence),
             )
 
         # 5. Resolve supported metrics to controlled SEC concepts, then

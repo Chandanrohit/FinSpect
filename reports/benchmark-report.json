@@ -7,12 +7,12 @@
   "question_count": 20,
   "aggregate_counts": {
     "PASS": 0,
-    "PARTIAL": 12,
-    "UNSUPPORTED": 8,
+    "PARTIAL": 13,
+    "UNSUPPORTED": 7,
     "FAIL": 0
   },
   "accuracy_percentage": null,
-  "accuracy_note": "No overall accuracy percentage is reported: Q01, Q03, Q05, Q07, Q08, Q09, Q06, Q10, Q11, Q12, Q13, and Q14 have fixture-backed checks; issuer matrix case counts and individual checks are reported per operation, but neither live SEC retrieval nor the planner was evaluated.",
+  "accuracy_note": "No overall accuracy percentage is reported: Q01, Q03, Q05, Q07, Q08, Q09, Q06, Q10, Q11, Q12, Q13, Q14, and Q16 have fixture-backed checks; issuer matrix case counts and individual checks are reported per operation, but neither live SEC retrieval nor the planner was evaluated.",
   "operation_reference_matrices": [
     {
       "matrix_id": "annual-revenue-growth-multi-issuer-v2-healthcare",
@@ -3786,6 +3786,181 @@
           "status": "PASS"
         }
       ]
+    },
+    {
+      "matrix_id": "annual-regulatory-risk-multi-issuer-v1",
+      "question_id": "Q16",
+      "evaluation_scope": "Offline SEC 10-K Item 1A reference excerpts; checks source identity, section, query retrieval, and affected-area evidence. Does not measure live retrieval, planner quality, or completeness of legal-risk analysis.",
+      "case_count": 6,
+      "pass_count": 6,
+      "fail_count": 0,
+      "issuers": [
+        "AAPL",
+        "MSFT",
+        "NVDA"
+      ],
+      "cases_per_issuer": {
+        "AAPL": 2,
+        "MSFT": 2,
+        "NVDA": 2
+      },
+      "minimum_gate_coverage_met": true,
+      "cases": [
+        {
+          "company": {
+            "name": "NVIDIA Corporation",
+            "ticker": "NVDA",
+            "cik": "0001045810"
+          },
+          "fiscal_year": 2024,
+          "section": "risk_factors",
+          "reference_excerpt": "Export controls targeting GPUs and semiconductors associated with AI would further restrict our ability to export our technology, products, or services.",
+          "required_topics": [
+            "export controls",
+            "products",
+            "services"
+          ],
+          "accession_number": "0001045810-24-000029",
+          "source_url": "https://www.sec.gov/Archives/edgar/data/1045810/000104581024000029/nvda-20240128.htm",
+          "checks": {
+            "annual_period_and_filing": true,
+            "source_provenance": true,
+            "risk_section_selected": true,
+            "required_topics_supported": true,
+            "reference_passage_retrieved_with_citation": true
+          },
+          "status": "PASS"
+        },
+        {
+          "company": {
+            "name": "NVIDIA Corporation",
+            "ticker": "NVDA",
+            "cik": "0001045810"
+          },
+          "fiscal_year": 2025,
+          "section": "risk_factors",
+          "reference_excerpt": "Export controls targeting GPUs and semiconductors associated with AI would further restrict our ability to export our technology, products, or services.",
+          "required_topics": [
+            "export controls",
+            "products",
+            "services"
+          ],
+          "accession_number": "0001045810-25-000023",
+          "source_url": "https://www.sec.gov/Archives/edgar/data/1045810/000104581025000023/nvda-20250126.htm",
+          "checks": {
+            "annual_period_and_filing": true,
+            "source_provenance": true,
+            "risk_section_selected": true,
+            "required_topics_supported": true,
+            "reference_passage_retrieved_with_citation": true
+          },
+          "status": "PASS"
+        },
+        {
+          "company": {
+            "name": "Microsoft Corporation",
+            "ticker": "MSFT",
+            "cik": "0000789019"
+          },
+          "fiscal_year": 2024,
+          "section": "risk_factors",
+          "reference_excerpt": "U.S. export controls restrict Microsoft from offering many of its products and services to certain entities in specified countries.",
+          "required_topics": [
+            "export controls",
+            "products",
+            "services",
+            "countries"
+          ],
+          "accession_number": "0000950170-24-087843",
+          "source_url": "https://www.sec.gov/Archives/edgar/data/789019/000095017024087843/msft-20240630.htm",
+          "checks": {
+            "annual_period_and_filing": true,
+            "source_provenance": true,
+            "risk_section_selected": true,
+            "required_topics_supported": true,
+            "reference_passage_retrieved_with_citation": true
+          },
+          "status": "PASS"
+        },
+        {
+          "company": {
+            "name": "Microsoft Corporation",
+            "ticker": "MSFT",
+            "cik": "0000789019"
+          },
+          "fiscal_year": 2025,
+          "section": "risk_factors",
+          "reference_excerpt": "U.S. export controls restrict Microsoft from offering many of its products and services to certain entities in specified countries.",
+          "required_topics": [
+            "export controls",
+            "products",
+            "services",
+            "countries"
+          ],
+          "accession_number": "0000950170-25-100235",
+          "source_url": "https://www.sec.gov/Archives/edgar/data/789019/000095017025100235/msft-20250630.htm",
+          "checks": {
+            "annual_period_and_filing": true,
+            "source_provenance": true,
+            "risk_section_selected": true,
+            "required_topics_supported": true,
+            "reference_passage_retrieved_with_citation": true
+          },
+          "status": "PASS"
+        },
+        {
+          "company": {
+            "name": "Apple Inc.",
+            "ticker": "AAPL",
+            "cik": "0000320193"
+          },
+          "fiscal_year": 2024,
+          "section": "risk_factors",
+          "reference_excerpt": "The Company is subject to changing regulations relating to the export and import of its products.",
+          "required_topics": [
+            "regulations",
+            "export",
+            "import",
+            "products"
+          ],
+          "accession_number": "0000320193-24-000123",
+          "source_url": "https://www.sec.gov/Archives/edgar/data/320193/000032019324000123/aapl-20240928.htm",
+          "checks": {
+            "annual_period_and_filing": true,
+            "source_provenance": true,
+            "risk_section_selected": true,
+            "required_topics_supported": true,
+            "reference_passage_retrieved_with_citation": true
+          },
+          "status": "PASS"
+        },
+        {
+          "company": {
+            "name": "Apple Inc.",
+            "ticker": "AAPL",
+            "cik": "0000320193"
+          },
+          "fiscal_year": 2025,
+          "section": "risk_factors",
+          "reference_excerpt": "The Company is subject to changing regulations relating to the export and import of its products.",
+          "required_topics": [
+            "regulations",
+            "export",
+            "import",
+            "products"
+          ],
+          "accession_number": "0000320193-25-000079",
+          "source_url": "https://www.sec.gov/Archives/edgar/data/320193/000032019325000079/aapl-20250927.htm",
+          "checks": {
+            "annual_period_and_filing": true,
+            "source_provenance": true,
+            "risk_section_selected": true,
+            "required_topics_supported": true,
+            "reference_passage_retrieved_with_citation": true
+          },
+          "status": "PASS"
+        }
+      ]
     }
   ],
   "questions": [
@@ -5843,25 +6018,259 @@
       "question_id": "Q16",
       "question": "What material regulatory, export-control, trade or government-policy risks does the filing identify, and which disclosed business activities, products, markets or geographic exposures could be affected?",
       "company": null,
-      "filings": [],
-      "reporting_periods": [],
+      "filings": [
+        {
+          "company": {
+            "name": "NVIDIA Corporation",
+            "ticker": "NVDA",
+            "cik": "0001045810"
+          },
+          "fiscal_year": 2024,
+          "accession_number": "0001045810-24-000029",
+          "source_url": "https://www.sec.gov/Archives/edgar/data/1045810/000104581024000029/nvda-20240128.htm"
+        },
+        {
+          "company": {
+            "name": "NVIDIA Corporation",
+            "ticker": "NVDA",
+            "cik": "0001045810"
+          },
+          "fiscal_year": 2025,
+          "accession_number": "0001045810-25-000023",
+          "source_url": "https://www.sec.gov/Archives/edgar/data/1045810/000104581025000023/nvda-20250126.htm"
+        },
+        {
+          "company": {
+            "name": "Microsoft Corporation",
+            "ticker": "MSFT",
+            "cik": "0000789019"
+          },
+          "fiscal_year": 2024,
+          "accession_number": "0000950170-24-087843",
+          "source_url": "https://www.sec.gov/Archives/edgar/data/789019/000095017024087843/msft-20240630.htm"
+        },
+        {
+          "company": {
+            "name": "Microsoft Corporation",
+            "ticker": "MSFT",
+            "cik": "0000789019"
+          },
+          "fiscal_year": 2025,
+          "accession_number": "0000950170-25-100235",
+          "source_url": "https://www.sec.gov/Archives/edgar/data/789019/000095017025100235/msft-20250630.htm"
+        },
+        {
+          "company": {
+            "name": "Apple Inc.",
+            "ticker": "AAPL",
+            "cik": "0000320193"
+          },
+          "fiscal_year": 2024,
+          "accession_number": "0000320193-24-000123",
+          "source_url": "https://www.sec.gov/Archives/edgar/data/320193/000032019324000123/aapl-20240928.htm"
+        },
+        {
+          "company": {
+            "name": "Apple Inc.",
+            "ticker": "AAPL",
+            "cik": "0000320193"
+          },
+          "fiscal_year": 2025,
+          "accession_number": "0000320193-25-000079",
+          "source_url": "https://www.sec.gov/Archives/edgar/data/320193/000032019325000079/aapl-20250927.htm"
+        }
+      ],
+      "reporting_periods": [
+        {
+          "company": {
+            "name": "NVIDIA Corporation",
+            "ticker": "NVDA",
+            "cik": "0001045810"
+          },
+          "fiscal_year": 2024
+        },
+        {
+          "company": {
+            "name": "NVIDIA Corporation",
+            "ticker": "NVDA",
+            "cik": "0001045810"
+          },
+          "fiscal_year": 2025
+        },
+        {
+          "company": {
+            "name": "Microsoft Corporation",
+            "ticker": "MSFT",
+            "cik": "0000789019"
+          },
+          "fiscal_year": 2024
+        },
+        {
+          "company": {
+            "name": "Microsoft Corporation",
+            "ticker": "MSFT",
+            "cik": "0000789019"
+          },
+          "fiscal_year": 2025
+        },
+        {
+          "company": {
+            "name": "Apple Inc.",
+            "ticker": "AAPL",
+            "cik": "0000320193"
+          },
+          "fiscal_year": 2024
+        },
+        {
+          "company": {
+            "name": "Apple Inc.",
+            "ticker": "AAPL",
+            "cik": "0000320193"
+          },
+          "fiscal_year": 2025
+        }
+      ],
       "expected_concepts": [],
-      "retrieval_mode": "not_run",
+      "retrieval_mode": "offline_SEC_risk_factor_reference_matrix_not_live_retrieval",
       "retrieved_inputs": [],
-      "selected_evidence": [],
+      "selected_evidence": [
+        {
+          "section": "risk_factors",
+          "excerpt": "Export controls targeting GPUs and semiconductors associated with AI would further restrict our ability to export our technology, products, or services.",
+          "accession_number": "0001045810-24-000029",
+          "source_url": "https://www.sec.gov/Archives/edgar/data/1045810/000104581024000029/nvda-20240128.htm"
+        },
+        {
+          "section": "risk_factors",
+          "excerpt": "Export controls targeting GPUs and semiconductors associated with AI would further restrict our ability to export our technology, products, or services.",
+          "accession_number": "0001045810-25-000023",
+          "source_url": "https://www.sec.gov/Archives/edgar/data/1045810/000104581025000023/nvda-20250126.htm"
+        },
+        {
+          "section": "risk_factors",
+          "excerpt": "U.S. export controls restrict Microsoft from offering many of its products and services to certain entities in specified countries.",
+          "accession_number": "0000950170-24-087843",
+          "source_url": "https://www.sec.gov/Archives/edgar/data/789019/000095017024087843/msft-20240630.htm"
+        },
+        {
+          "section": "risk_factors",
+          "excerpt": "U.S. export controls restrict Microsoft from offering many of its products and services to certain entities in specified countries.",
+          "accession_number": "0000950170-25-100235",
+          "source_url": "https://www.sec.gov/Archives/edgar/data/789019/000095017025100235/msft-20250630.htm"
+        },
+        {
+          "section": "risk_factors",
+          "excerpt": "The Company is subject to changing regulations relating to the export and import of its products.",
+          "accession_number": "0000320193-24-000123",
+          "source_url": "https://www.sec.gov/Archives/edgar/data/320193/000032019324000123/aapl-20240928.htm"
+        },
+        {
+          "section": "risk_factors",
+          "excerpt": "The Company is subject to changing regulations relating to the export and import of its products.",
+          "accession_number": "0000320193-25-000079",
+          "source_url": "https://www.sec.gov/Archives/edgar/data/320193/000032019325000079/aapl-20250927.htm"
+        }
+      ],
       "calculation_formula": null,
-      "expected_answer": null,
-      "actual_answer": "I cannot answer this request reliably yet: No complete retrieval-to-answer path is implemented for Q16; calculator registration alone is not support.\n\nYour question: What material regulatory, export-control, trade or government-policy risks does the filing identify, and which disclosed business activities, products, markets or geographic exposures could be affected?",
+      "expected_answer": [
+        {
+          "ticker": "NVDA",
+          "fiscal_year": 2024,
+          "required_topics": [
+            "export controls",
+            "products",
+            "services"
+          ]
+        },
+        {
+          "ticker": "NVDA",
+          "fiscal_year": 2025,
+          "required_topics": [
+            "export controls",
+            "products",
+            "services"
+          ]
+        },
+        {
+          "ticker": "MSFT",
+          "fiscal_year": 2024,
+          "required_topics": [
+            "export controls",
+            "products",
+            "services",
+            "countries"
+          ]
+        },
+        {
+          "ticker": "MSFT",
+          "fiscal_year": 2025,
+          "required_topics": [
+            "export controls",
+            "products",
+            "services",
+            "countries"
+          ]
+        },
+        {
+          "ticker": "AAPL",
+          "fiscal_year": 2024,
+          "required_topics": [
+            "regulations",
+            "export",
+            "import",
+            "products"
+          ]
+        },
+        {
+          "ticker": "AAPL",
+          "fiscal_year": 2025,
+          "required_topics": [
+            "regulations",
+            "export",
+            "import",
+            "products"
+          ]
+        }
+      ],
+      "actual_answer": [
+        {
+          "ticker": "NVDA",
+          "fiscal_year": 2024,
+          "excerpt": "Export controls targeting GPUs and semiconductors associated with AI would further restrict our ability to export our technology, products, or services."
+        },
+        {
+          "ticker": "NVDA",
+          "fiscal_year": 2025,
+          "excerpt": "Export controls targeting GPUs and semiconductors associated with AI would further restrict our ability to export our technology, products, or services."
+        },
+        {
+          "ticker": "MSFT",
+          "fiscal_year": 2024,
+          "excerpt": "U.S. export controls restrict Microsoft from offering many of its products and services to certain entities in specified countries."
+        },
+        {
+          "ticker": "MSFT",
+          "fiscal_year": 2025,
+          "excerpt": "U.S. export controls restrict Microsoft from offering many of its products and services to certain entities in specified countries."
+        },
+        {
+          "ticker": "AAPL",
+          "fiscal_year": 2024,
+          "excerpt": "The Company is subject to changing regulations relating to the export and import of its products."
+        },
+        {
+          "ticker": "AAPL",
+          "fiscal_year": 2025,
+          "excerpt": "The Company is subject to changing regulations relating to the export and import of its products."
+        }
+      ],
       "checks": {
-        "input_retrieval_correctness": null,
-        "period_correctness": null,
-        "unit_correctness": null,
-        "calculation_correctness": null,
-        "evidence_correctness": null,
-        "query_interpretation_correctness": null
+        "reference_matrix_cases_pass": true,
+        "live_retrieval": "not_evaluated",
+        "query_interpretation": "not_evaluated"
       },
-      "overall_status": "UNSUPPORTED",
-      "failure_reason": "No complete retrieval-to-answer path is implemented for Q16; calculator registration alone is not support."
+      "overall_status": "PARTIAL",
+      "failure_reason": "Offline source-excerpt retrieval only; live SEC retrieval and planner interpretation remain untested."
     },
     {
       "question_id": "Q17",

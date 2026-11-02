@@ -8,6 +8,7 @@ from finspect.orchestrator import AnnualPeriod, FinSpectOrchestrator
 from finspect.edgar.facts import FactRetrievalError
 from finspect.edgar.parser import FilingParser
 from finspect.plan_normalizer import normalize_query_plan
+from finspect.narrative_retriever import NarrativeRetriever
 from finspect.query_planner import (
     CompanyRequest,
     MetricRequest,
@@ -1808,6 +1809,180 @@ def test_q06_equity_rollforward_pipeline_matches_six_reference_cases():
         assert result.answer.result_value == reference["expected_equity_change"]
         assert result.answer.evidence[-1].accession_number == reference["accession_number"]
         assert result.answer.evidence[-1].value == Decimal(reference["ending_equity"])
+
+
+def test_q16_regulatory_risk_uses_item_1a_excerpt_from_exact_10k():
+    question = (
+        "What export-control and trade risks did NVIDIA identify in FY2025, "
+        "and which products or markets could be affected?"
+    )
+    plan = make_plan().model_copy(update={
+        "original_question": question,
+        "period": PeriodRequest(
+            period_label="FY2025",
+            period_kind="annual",
+            fiscal_year=2025,
+            comparison_required=False,
+        ),
+        "benchmark_id": "Q16",
+        "task_type": "disclosure_analysis",
+        "operation": "regulatory_risk_analysis",
+        "metrics": [
+            MetricRequest(
+                name="regulatory_risks", role="primary", sources=["risk_factors"]
+            )
+        ],
+        "retrieval": RetrievalRequirements(sources=["risk_factors"]),
+        "answer": AnswerRequirements(expected_output="text"),
+    })
+    html = """
+    <p>ITEM 1. BUSINESS</p>
+    <p>We develop and sell GPUs, networking products, and cloud services to customers around the world.</p>
+    <p>ITEM 1A. RISK FACTORS</p>
+    <p>Export controls targeting GPUs and semiconductors associated with AI may restrict our ability to export products and services, disrupt supply and distribution, and reduce demand in China and other markets.</p>
+    """
+
+    class Planner:
+        def plan(self, _question):
+            return plan
+
+    class FilingRetriever:
+        submissions = type("Submissions", (), {
+            "get_filing_url": staticmethod(lambda **_kwargs: "https://www.sec.gov/Archives/edgar/data/1045810/000104581025000023/nvda-20250126.htm")
+        })()
+
+        def get_filing(self, **_kwargs):
+            return {
+                "cik": CIK,
+                "form": "10-K",
+                "filing_date": PERIODS[2025].filing_date,
+                "report_date": PERIODS[2025].end_date,
+                "accession_number": PERIODS[2025].accession_number,
+                "primary_document": "nvda-20250126.htm",
+                "html": html,
+            }
+
+    result = FinSpectOrchestrator(
+        planner=Planner(),
+        normalizer=normalize_query_plan,
+        period_resolver=lambda _cik, year: PERIODS[year],
+        fact_retriever=FixtureFactRetriever(),
+        company_resolver=FixtureCompanyResolver(),
+        filing_retriever=FilingRetriever(),
+        filing_parser=FilingParser(),
+        narrative_retriever=NarrativeRetriever(),
+    ).run(question)
+
+    assert result.answer.formula_id is None
+    assert result.answer.result_value is None
+    assert result.answer.evidence
+    assert all(item.unit == "filing excerpt" for item in result.answer.evidence)
+    assert all(item.accession_number == PERIODS[2025].accession_number for item in result.answer.evidence)
+    assert "export controls" in result.answer.text.lower()
+    assert "supply and distribution" in result.answer.text.lower()
+    assert "nvda-20250126.htm" in result.answer.text
+
+
+def test_q16_exact_filing_pipeline_matches_six_issuer_period_references():
+    root = Path(__file__).parents[1]
+    references = json.loads(
+        (root / "data/fixtures/annual_regulatory_risk_reference_matrix.json")
+        .read_text(encoding="utf-8")
+    )["cases"]
+    period_rows = json.loads(
+        (root / "data/fixtures/annual_share_repurchase_reference_matrix.json")
+        .read_text(encoding="utf-8")
+    )["cases"]
+    periods_by_ticker = {}
+    for item in period_rows:
+        ticker = item["company"]["ticker"]
+        for row in item["periods"]:
+            periods_by_ticker.setdefault(ticker, {})[row["fiscal_year"]] = AnnualPeriod(
+                fiscal_year=row["fiscal_year"],
+                start_date=row["start_date"],
+                end_date=row["end_date"],
+                form="10-K",
+                concept="Revenues",
+                filing_date=row["filing_date"],
+                accession_number=row["accession_number"],
+            )
+
+    for reference in references:
+        company = reference["company"]
+        period = periods_by_ticker[company["ticker"]][reference["fiscal_year"]]
+        question = (
+            f"What regulatory, export-control, or trade risks did {company['name']} "
+            f"identify in FY{reference['fiscal_year']}, and what products or markets could be affected?"
+        )
+        plan = make_plan().model_copy(update={
+            "original_question": question,
+            "company": CompanyRequest(**company),
+            "period": PeriodRequest(
+                period_label=f"FY{reference['fiscal_year']}",
+                period_kind="annual",
+                fiscal_year=reference["fiscal_year"],
+                comparison_required=False,
+            ),
+            "benchmark_id": "Q16",
+            "task_type": "disclosure_analysis",
+            "operation": "regulatory_risk_analysis",
+            "metrics": [
+                MetricRequest(
+                    name="regulatory_risks", role="primary", sources=["risk_factors"]
+                )
+            ],
+            "retrieval": RetrievalRequirements(sources=["risk_factors"]),
+            "answer": AnswerRequirements(expected_output="text"),
+        })
+        html = (
+            "<p>ITEM 1A. RISK FACTORS</p><p>"
+            + reference["reference_excerpt"]
+            + "</p>"
+        )
+
+        class Planner:
+            def plan(self, _question):
+                return plan
+
+        class CompanyResolver:
+            def resolve(self, **_kwargs):
+                return company
+
+        class FilingRetriever:
+            submissions = type("Submissions", (), {
+                "get_filing_url": staticmethod(lambda **_kwargs: reference["source_url"])
+            })()
+
+            def get_filing(self, **_kwargs):
+                return {
+                    "cik": company["cik"],
+                    "form": "10-K",
+                    "filing_date": reference["filing_date"],
+                    "report_date": reference["end_date"],
+                    "accession_number": reference["accession_number"],
+                    "primary_document": reference["source_url"].rsplit("/", 1)[-1],
+                    "html": html,
+                }
+
+        result = FinSpectOrchestrator(
+            planner=Planner(),
+            normalizer=normalize_query_plan,
+            period_resolver=lambda _cik, _year: period,
+            fact_retriever=FixtureFactRetriever(),
+            company_resolver=CompanyResolver(),
+            filing_retriever=FilingRetriever(),
+            filing_parser=FilingParser(),
+            narrative_retriever=NarrativeRetriever(),
+        ).run(question)
+
+        assert result.answer.formula_id is None
+        assert result.answer.evidence
+        assert all(
+            item.accession_number == reference["accession_number"]
+            and item.source_url == reference["source_url"]
+            for item in result.answer.evidence
+        )
+        assert any(reference["reference_excerpt"] in str(item.value) for item in result.answer.evidence)
 
 
 def test_q03_nvidia_operating_margin_change_end_to_end_fixture():

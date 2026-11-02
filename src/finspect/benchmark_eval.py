@@ -29,6 +29,7 @@ from finspect.calculator import (
     share_repurchase_comparison,
 )
 from finspect.edgar.fact_adapter import sec_fact_to_financial_fact
+from finspect.narrative_retriever import NarrativeRetriever
 from finspect.schema import (
     PeriodRole,
     ReportingScope,
@@ -72,6 +73,86 @@ DEFAULT_CASH_ALLOCATION_MATRIX = (
 DEFAULT_EQUITY_ROLLFORWARD_MATRIX = (
     ROOT / "data" / "fixtures" / "annual_equity_rollforward_reference_matrix.json"
 )
+DEFAULT_REGULATORY_RISK_MATRIX = (
+    ROOT / "data" / "fixtures" / "annual_regulatory_risk_reference_matrix.json"
+)
+
+
+def evaluate_regulatory_risk_matrix(path: Path) -> dict[str, Any]:
+    """Validate Q16 source, section, and passage retrieval references."""
+    matrix = json.loads(path.read_text(encoding="utf-8"))
+    retriever = NarrativeRetriever()
+    cases = []
+    for reference in matrix["cases"]:
+        company = reference["company"]
+        start = date.fromisoformat(reference["start_date"])
+        end = date.fromisoformat(reference["end_date"])
+        filed = date.fromisoformat(reference["filing_date"])
+        passages = retriever.retrieve(
+            {reference["section"]: reference["reference_excerpt"]},
+            "regulatory export-control trade risks affecting products services markets",
+            top_k=3,
+            accession_number=reference["accession_number"],
+            filing_url=reference["source_url"],
+        )
+        retrieved = next(
+            (passage for passage in passages if passage.text == reference["reference_excerpt"]),
+            None,
+        )
+        lower = reference["reference_excerpt"].casefold()
+        checks = {
+            "annual_period_and_filing": (
+                start < end and 300 <= (end - start).days <= 400 and filed >= end
+            ),
+            "source_provenance": (
+                reference["accession_number"].replace("-", "")
+                in reference["source_url"]
+                and reference["source_url"].startswith(
+                    "https://www.sec.gov/Archives/edgar/data/"
+                )
+                and f"/{int(company['cik'])}/" in reference["source_url"]
+            ),
+            "risk_section_selected": reference["section"] == "risk_factors",
+            "required_topics_supported": all(
+                term.casefold() in lower for term in reference["required_topics"]
+            ),
+            "reference_passage_retrieved_with_citation": (
+                retrieved is not None
+                and retrieved.relevance_score > 0
+                and retrieved.accession_number == reference["accession_number"]
+                and retrieved.filing_url == reference["source_url"]
+            ),
+        }
+        cases.append({
+            "company": company,
+            "fiscal_year": reference["fiscal_year"],
+            "section": reference["section"],
+            "reference_excerpt": reference["reference_excerpt"],
+            "required_topics": reference["required_topics"],
+            "accession_number": reference["accession_number"],
+            "source_url": reference["source_url"],
+            "checks": checks,
+            "status": "PASS" if all(checks.values()) else "FAIL",
+        })
+    tickers = sorted({case["company"]["ticker"] for case in cases})
+    counts = {
+        ticker: sum(case["company"]["ticker"] == ticker for case in cases)
+        for ticker in tickers
+    }
+    return {
+        "matrix_id": matrix["matrix_id"],
+        "question_id": matrix["question_id"],
+        "evaluation_scope": matrix["evaluation_scope"],
+        "case_count": len(cases),
+        "pass_count": sum(case["status"] == "PASS" for case in cases),
+        "fail_count": sum(case["status"] == "FAIL" for case in cases),
+        "issuers": tickers,
+        "cases_per_issuer": counts,
+        "minimum_gate_coverage_met": len(tickers) >= 3 and all(
+            count >= 2 for count in counts.values()
+        ),
+        "cases": cases,
+    }
 
 
 def evaluate_equity_rollforward_matrix(path: Path) -> dict[str, Any]:
@@ -1903,6 +1984,9 @@ def evaluate_benchmark(
     equity_rollforward_matrix = evaluate_equity_rollforward_matrix(
         DEFAULT_EQUITY_ROLLFORWARD_MATRIX
     )
+    regulatory_risk_matrix = evaluate_regulatory_risk_matrix(
+        DEFAULT_REGULATORY_RISK_MATRIX
+    )
     inventory_reference = json.loads(inventory_matrix_path.read_text(encoding="utf-8"))
     questions = benchmark.question_map()
     if fixture.get("question_id") != "Q01" or "Q01" not in questions:
@@ -1987,6 +2071,69 @@ def evaluate_benchmark(
                 "overall_status": "PARTIAL" if matrix_pass else "FAIL",
                 "failure_reason": (
                     "Offline equity reference calculations only; live SEC retrieval and query interpretation remain untested."
+                ),
+            })
+            continue
+        if question_id == "Q16":
+            matrix_pass = (
+                regulatory_risk_matrix["minimum_gate_coverage_met"]
+                and regulatory_risk_matrix["pass_count"]
+                == regulatory_risk_matrix["case_count"]
+            )
+            report_questions.append({
+                "question_id": question_id,
+                "question": question.question_template,
+                "company": None,
+                "filings": [
+                    {
+                        "company": case["company"],
+                        "fiscal_year": case["fiscal_year"],
+                        "accession_number": case["accession_number"],
+                        "source_url": case["source_url"],
+                    }
+                    for case in regulatory_risk_matrix["cases"]
+                ],
+                "reporting_periods": [
+                    {"company": case["company"], "fiscal_year": case["fiscal_year"]}
+                    for case in regulatory_risk_matrix["cases"]
+                ],
+                "expected_concepts": [],
+                "retrieval_mode": "offline_SEC_risk_factor_reference_matrix_not_live_retrieval",
+                "retrieved_inputs": [],
+                "selected_evidence": [
+                    {
+                        "section": case["section"],
+                        "excerpt": case["reference_excerpt"],
+                        "accession_number": case["accession_number"],
+                        "source_url": case["source_url"],
+                    }
+                    for case in regulatory_risk_matrix["cases"]
+                ],
+                "calculation_formula": None,
+                "expected_answer": [
+                    {
+                        "ticker": case["company"]["ticker"],
+                        "fiscal_year": case["fiscal_year"],
+                        "required_topics": case["required_topics"],
+                    }
+                    for case in regulatory_risk_matrix["cases"]
+                ],
+                "actual_answer": [
+                    {
+                        "ticker": case["company"]["ticker"],
+                        "fiscal_year": case["fiscal_year"],
+                        "excerpt": case["reference_excerpt"],
+                    }
+                    for case in regulatory_risk_matrix["cases"]
+                ],
+                "checks": {
+                    "reference_matrix_cases_pass": matrix_pass,
+                    "live_retrieval": "not_evaluated",
+                    "query_interpretation": "not_evaluated",
+                },
+                "overall_status": "PARTIAL" if matrix_pass else "FAIL",
+                "failure_reason": (
+                    "Offline source-excerpt retrieval only; live SEC retrieval and planner interpretation remain untested."
                 ),
             })
             continue
@@ -2375,7 +2522,7 @@ def evaluate_benchmark(
         "accuracy_percentage": None,
         "accuracy_note": (
             "No overall accuracy percentage is reported: Q01, Q03, Q05, Q07, Q08, Q09, "
-            "Q06, Q10, Q11, Q12, Q13, and Q14 have fixture-backed checks; issuer matrix case counts and "
+            "Q06, Q10, Q11, Q12, Q13, Q14, and Q16 have fixture-backed checks; issuer matrix case counts and "
             "individual checks are reported per operation, but neither "
             "live SEC retrieval nor the planner was evaluated."
         ),
@@ -2392,6 +2539,7 @@ def evaluate_benchmark(
             equity_matrix,
             cash_allocation_matrix,
             equity_rollforward_matrix,
+            regulatory_risk_matrix,
         ],
         "questions": report_questions,
     }

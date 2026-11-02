@@ -7,8 +7,8 @@ def test_benchmark_report_records_fixture_and_unsupported_questions():
     assert report["question_count"] == 20
     assert report["aggregate_counts"] == {
         "PASS": 0,
-        "PARTIAL": 12,
-        "UNSUPPORTED": 8,
+        "PARTIAL": 13,
+        "UNSUPPORTED": 7,
         "FAIL": 0,
     }
     assert report["accuracy_percentage"] is None
@@ -132,6 +132,14 @@ def test_benchmark_report_records_fixture_and_unsupported_questions():
     assert equity_rollforward_matrix["minimum_gate_coverage_met"] is True
     assert set(equity_rollforward_matrix["cases_per_issuer"].values()) == {2}
 
+    regulatory_risk_matrix = report["operation_reference_matrices"][12]
+    assert regulatory_risk_matrix["question_id"] == "Q16"
+    assert regulatory_risk_matrix["case_count"] == regulatory_risk_matrix["pass_count"] == 6
+    assert regulatory_risk_matrix["fail_count"] == 0
+    assert regulatory_risk_matrix["issuers"] == ["AAPL", "MSFT", "NVDA"]
+    assert regulatory_risk_matrix["minimum_gate_coverage_met"] is True
+    assert set(regulatory_risk_matrix["cases_per_issuer"].values()) == {2}
+
     questions = {item["question_id"]: item for item in report["questions"]}
     q01 = questions["Q01"]
     assert q01["overall_status"] == "PARTIAL"
@@ -223,6 +231,12 @@ def test_benchmark_report_records_fixture_and_unsupported_questions():
     assert len(q06["actual_answer"]) == 6
     assert q06["actual_answer"][-1]["equity_change"] == "16783000000"
 
+    q16 = questions["Q16"]
+    assert q16["overall_status"] == "PARTIAL"
+    assert q16["checks"]["reference_matrix_cases_pass"] is True
+    assert len(q16["actual_answer"]) == 6
+    assert all(item["excerpt"] for item in q16["actual_answer"])
+
     q09 = questions["Q09"]
     assert q09["overall_status"] == "PARTIAL"
     assert q09["actual_answer"]["result_unit"] == "percentage_points"
@@ -232,7 +246,7 @@ def test_benchmark_report_records_fixture_and_unsupported_questions():
     for question_id in [
         f"Q{number:02d}"
         for number in range(2, 21)
-        if number not in {3, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14}
+        if number not in {3, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 16}
     ]:
         question = questions[question_id]
         assert question["overall_status"] == "UNSUPPORTED"

@@ -60,6 +60,10 @@ Rules:
     fiscal year and use operation "balance_change" with shareholders' equity
     and equity components. Do not mark it as a year-over-year comparison;
     the pipeline resolves the prior fiscal year-end as the opening balance.
+19. For Q16 regulatory, trade, sanctions, export-control, or government-policy
+    risks, require one explicit annual fiscal year and use operation
+    "regulatory_risk_analysis" with the single text metric "regulatory_risks"
+    from "risk_factors". Do not request a numeric calculation or comparison.
 """
 
 

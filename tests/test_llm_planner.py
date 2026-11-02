@@ -6,6 +6,7 @@ import requests
 from finspect.llm_planner import (
     OllamaQueryPlanner,
     QueryPlanningError,
+    SYSTEM_PROMPT,
 )
 
 
@@ -80,3 +81,10 @@ def test_request_uses_configured_model_and_schema(monkeypatch):
         .QueryPlan.model_json_schema()
     )
     assert captured["timeout"] == 45
+
+
+def test_system_prompt_routes_q16_to_annual_risk_factor_disclosures():
+    assert '"regulatory_risk_analysis"' in SYSTEM_PROMPT
+    assert '"regulatory_risks"' in SYSTEM_PROMPT
+    assert '"risk_factors"' in SYSTEM_PROMPT
+    assert "explicit annual fiscal year" in SYSTEM_PROMPT

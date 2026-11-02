@@ -12,7 +12,7 @@ class AnswerEvidence:
     """Source metadata attached to a retrieved input fact."""
 
     label: str
-    value: Decimal
+    value: Decimal | str
     unit: str
     period: str
     filing_date: str
@@ -172,6 +172,43 @@ def build_calculation_answer(
         formula_id=result.formula_id,
         result_value=str(result.value),
         result_unit=unit_text,
+        evidence=tuple(evidence),
+        limitations=tuple(limitations),
+    )
+
+
+def build_narrative_answer(
+    *,
+    company_name: str,
+    question: str,
+    topic: str,
+    evidence: Sequence[AnswerEvidence],
+    limitations: Sequence[str] = (),
+) -> Answer:
+    """Build a qualitative answer from cited, retrieved filing passages."""
+    if not evidence:
+        raise ValueError("A narrative answer requires filing evidence.")
+    lines = [
+        f"Question: {question}",
+        "",
+        f"Result: {company_name}'s filing contains {len(evidence)} relevant "
+        f"{topic} disclosure passage(s). The excerpts below describe risks "
+        "the company identifies; they are not predictions.",
+        "",
+        "Selected filing evidence:",
+    ]
+    for item in evidence:
+        excerpt = str(item.value).strip()
+        source = f" [SEC Form 10-K]({item.source_url})" if item.source_url else ""
+        lines.append(f"- **{item.label}:** “{excerpt}”{source}")
+    if limitations:
+        lines.extend(["", "Limitations:"])
+        lines.extend(f"- {item}" for item in limitations)
+    return Answer(
+        text="\n".join(lines),
+        formula_id=None,
+        result_value=None,
+        result_unit=None,
         evidence=tuple(evidence),
         limitations=tuple(limitations),
     )

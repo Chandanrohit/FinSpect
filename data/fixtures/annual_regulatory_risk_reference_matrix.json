@@ -1,0 +1,80 @@
+{
+  "matrix_id": "annual-regulatory-risk-multi-issuer-v1",
+  "question_id": "Q16",
+  "evaluation_scope": "Offline SEC 10-K Item 1A reference excerpts; checks source identity, section, query retrieval, and affected-area evidence. Does not measure live retrieval, planner quality, or completeness of legal-risk analysis.",
+  "form": "10-K",
+  "cases": [
+    {
+      "company": {"name": "NVIDIA Corporation", "ticker": "NVDA", "cik": "0001045810"},
+      "fiscal_year": 2024,
+      "start_date": "2023-01-30",
+      "end_date": "2024-01-28",
+      "filing_date": "2024-02-21",
+      "accession_number": "0001045810-24-000029",
+      "source_url": "https://www.sec.gov/Archives/edgar/data/1045810/000104581024000029/nvda-20240128.htm",
+      "section": "risk_factors",
+      "reference_excerpt": "Export controls targeting GPUs and semiconductors associated with AI would further restrict our ability to export our technology, products, or services.",
+      "required_topics": ["export controls", "products", "services"]
+    },
+    {
+      "company": {"name": "NVIDIA Corporation", "ticker": "NVDA", "cik": "0001045810"},
+      "fiscal_year": 2025,
+      "start_date": "2024-01-29",
+      "end_date": "2025-01-26",
+      "filing_date": "2025-02-26",
+      "accession_number": "0001045810-25-000023",
+      "source_url": "https://www.sec.gov/Archives/edgar/data/1045810/000104581025000023/nvda-20250126.htm",
+      "section": "risk_factors",
+      "reference_excerpt": "Export controls targeting GPUs and semiconductors associated with AI would further restrict our ability to export our technology, products, or services.",
+      "required_topics": ["export controls", "products", "services"]
+    },
+    {
+      "company": {"name": "Microsoft Corporation", "ticker": "MSFT", "cik": "0000789019"},
+      "fiscal_year": 2024,
+      "start_date": "2023-07-01",
+      "end_date": "2024-06-30",
+      "filing_date": "2024-07-30",
+      "accession_number": "0000950170-24-087843",
+      "source_url": "https://www.sec.gov/Archives/edgar/data/789019/000095017024087843/msft-20240630.htm",
+      "section": "risk_factors",
+      "reference_excerpt": "U.S. export controls restrict Microsoft from offering many of its products and services to certain entities in specified countries.",
+      "required_topics": ["export controls", "products", "services", "countries"]
+    },
+    {
+      "company": {"name": "Microsoft Corporation", "ticker": "MSFT", "cik": "0000789019"},
+      "fiscal_year": 2025,
+      "start_date": "2024-07-01",
+      "end_date": "2025-06-30",
+      "filing_date": "2025-07-30",
+      "accession_number": "0000950170-25-100235",
+      "source_url": "https://www.sec.gov/Archives/edgar/data/789019/000095017025100235/msft-20250630.htm",
+      "section": "risk_factors",
+      "reference_excerpt": "U.S. export controls restrict Microsoft from offering many of its products and services to certain entities in specified countries.",
+      "required_topics": ["export controls", "products", "services", "countries"]
+    },
+    {
+      "company": {"name": "Apple Inc.", "ticker": "AAPL", "cik": "0000320193"},
+      "fiscal_year": 2024,
+      "start_date": "2023-10-01",
+      "end_date": "2024-09-28",
+      "filing_date": "2024-11-01",
+      "accession_number": "0000320193-24-000123",
+      "source_url": "https://www.sec.gov/Archives/edgar/data/320193/000032019324000123/aapl-20240928.htm",
+      "section": "risk_factors",
+      "reference_excerpt": "The Company is subject to changing regulations relating to the export and import of its products.",
+      "required_topics": ["regulations", "export", "import", "products"]
+    },
+    {
+      "company": {"name": "Apple Inc.", "ticker": "AAPL", "cik": "0000320193"},
+      "fiscal_year": 2025,
+      "start_date": "2024-09-29",
+      "end_date": "2025-09-27",
+      "filing_date": "2025-10-31",
+      "accession_number": "0000320193-25-000079",
+      "source_url": "https://www.sec.gov/Archives/edgar/data/320193/000032019325000079/aapl-20250927.htm",
+      "section": "risk_factors",
+      "reference_excerpt": "The Company is subject to changing regulations relating to the export and import of its products.",
+      "required_topics": ["regulations", "export", "import", "products"]
+    }
+  ]
+}
