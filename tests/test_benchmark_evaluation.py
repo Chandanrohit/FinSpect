@@ -25,10 +25,10 @@ def test_benchmark_report_records_fixture_and_unsupported_questions():
 
     margin_matrix = report["operation_reference_matrices"][1]
     assert margin_matrix["question_id"] == "Q03"
-    assert margin_matrix["case_count"] == 6
-    assert margin_matrix["pass_count"] == 6
+    assert margin_matrix["case_count"] == 8
+    assert margin_matrix["pass_count"] == 8
     assert margin_matrix["fail_count"] == 0
-    assert margin_matrix["issuers"] == ["AAPL", "MSFT", "NVDA"]
+    assert margin_matrix["issuers"] == ["AAPL", "CVS", "MSFT", "NVDA"]
     assert set(margin_matrix["cases_per_issuer"].values()) == {2}
 
     earnings_matrix = report["operation_reference_matrices"][2]

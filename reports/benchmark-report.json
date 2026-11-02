@@ -317,19 +317,21 @@
       ]
     },
     {
-      "matrix_id": "annual-operating-margin-change-multi-issuer-v1",
+      "matrix_id": "annual-operating-margin-change-multi-issuer-v2-healthcare",
       "question_id": "Q03",
       "evaluation_scope": "offline reference cases from SEC 10-K statements; does not measure live SEC retrieval or query interpretation",
-      "case_count": 6,
-      "pass_count": 6,
+      "case_count": 8,
+      "pass_count": 8,
       "fail_count": 0,
       "issuers": [
         "AAPL",
+        "CVS",
         "MSFT",
         "NVDA"
       ],
       "cases_per_issuer": {
         "AAPL": 2,
+        "CVS": 2,
         "MSFT": 2,
         "NVDA": 2
       },
@@ -593,6 +595,96 @@
             {
               "accession_number": "0000320193-25-000079",
               "source_url": "https://www.sec.gov/Archives/edgar/data/320193/000032019325000079/0000320193-25-000079-index.htm"
+            }
+          ],
+          "checks": {
+            "two_ordered_annual_periods": true,
+            "fact_concepts_and_units": true,
+            "positive_statement_inputs": true,
+            "evidence_provenance": true,
+            "calculation_correctness": true
+          },
+          "status": "PASS"
+        },
+        {
+          "company": {
+            "name": "CVS Health Corporation",
+            "ticker": "CVS",
+            "cik": "0000064803"
+          },
+          "fiscal_years": [
+            2023,
+            2024
+          ],
+          "prior_inputs_usd": {
+            "revenue": "357776000000",
+            "operating_income": "13743000000"
+          },
+          "current_inputs_usd": {
+            "revenue": "372809000000",
+            "operating_income": "8516000000"
+          },
+          "taxonomy": "us-gaap",
+          "unit": "USD",
+          "concepts": {
+            "revenue": "Revenues",
+            "operating_income": "OperatingIncomeLoss"
+          },
+          "expected_margin_change_percentage_points": "-1.556950649269601391321742672",
+          "actual_margin_change_percentage_points": "-1.556950649269601391321742672",
+          "evidence": [
+            {
+              "accession_number": "0000064803-24-000007",
+              "source_url": "https://www.sec.gov/Archives/edgar/data/64803/000006480324000007/0000064803-24-000007-index.html"
+            },
+            {
+              "accession_number": "0000064803-25-000007",
+              "source_url": "https://www.sec.gov/Archives/edgar/data/64803/000006480325000007/0000064803-25-000007-index.html"
+            }
+          ],
+          "checks": {
+            "two_ordered_annual_periods": true,
+            "fact_concepts_and_units": true,
+            "positive_statement_inputs": true,
+            "evidence_provenance": true,
+            "calculation_correctness": true
+          },
+          "status": "PASS"
+        },
+        {
+          "company": {
+            "name": "CVS Health Corporation",
+            "ticker": "CVS",
+            "cik": "0000064803"
+          },
+          "fiscal_years": [
+            2024,
+            2025
+          ],
+          "prior_inputs_usd": {
+            "revenue": "372809000000",
+            "operating_income": "8516000000"
+          },
+          "current_inputs_usd": {
+            "revenue": "402067000000",
+            "operating_income": "4660000000"
+          },
+          "taxonomy": "us-gaap",
+          "unit": "USD",
+          "concepts": {
+            "revenue": "Revenues",
+            "operating_income": "OperatingIncomeLoss"
+          },
+          "expected_margin_change_percentage_points": "-1.125268806082194352377156394",
+          "actual_margin_change_percentage_points": "-1.125268806082194352377156394",
+          "evidence": [
+            {
+              "accession_number": "0000064803-25-000007",
+              "source_url": "https://www.sec.gov/Archives/edgar/data/64803/000006480325000007/0000064803-25-000007-index.html"
+            },
+            {
+              "accession_number": "0000064803-26-000010",
+              "source_url": "https://www.sec.gov/Archives/edgar/data/64803/000006480326000010/0000064803-26-000010-index.html"
             }
           ],
           "checks": {
