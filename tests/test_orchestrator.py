@@ -199,6 +199,65 @@ def test_q01_nvidia_fy2024_fy2025_end_to_end_fixture():
                for item in result.answer.evidence)
 
 
+def test_q11_nvidia_weighted_average_share_dilution_end_to_end_fixture():
+    question = "What percentage of basic weighted-average shares was represented by the dilutive effect of outstanding equity awards in FY2025?"
+    plan = make_plan().model_copy(update={
+        "original_question": question,
+        "period": PeriodRequest(
+            period_label="FY2025",
+            period_kind="annual",
+            fiscal_year=2025,
+        ),
+        "benchmark_id": "Q11",
+        "metrics": [
+            MetricRequest(name="basic_weighted_average_shares", role="primary", sources=["xbrl"]),
+            MetricRequest(name="dilutive_effect", role="supporting", sources=["xbrl"]),
+        ],
+        "operation": "dilution_ratio",
+        "answer": AnswerRequirements(expected_output="percentage"),
+    })
+
+    class Planner:
+        def plan(self, _question):
+            return plan
+
+    class ShareFactRetriever:
+        values = {
+            "WeightedAverageNumberOfSharesOutstandingBasic": ("Basic weighted average shares", "24555000000"),
+            "WeightedAverageNumberOfDilutedSharesOutstanding": ("Diluted weighted average shares", "24804000000"),
+        }
+
+        def get_fact(self, *, concept, **kwargs):
+            label, value = self.values[concept]
+            assert kwargs["unit"] == "shares"
+            return {
+                **FACTS[2025],
+                "concept": concept,
+                "label": label,
+                "value": value,
+                "unit": "shares",
+            }
+
+    result = FinSpectOrchestrator(
+        planner=Planner(),
+        normalizer=normalize_query_plan,
+        period_resolver=lambda _cik, year: PERIODS[year],
+        fact_retriever=ShareFactRetriever(),
+        company_resolver=FixtureCompanyResolver(),
+    ).run(question)
+
+    expected = Decimal("249000000") / Decimal("24555000000") * 100
+    assert result.answer.formula_id == "Q11"
+    assert result.answer.result_unit == "percent"
+    assert Decimal(result.answer.result_value) == expected
+    assert [item.value for item in result.answer.evidence] == [
+        Decimal("24555000000"),
+        Decimal("24804000000"),
+    ]
+    assert all(item.source_url and "sec.gov/Archives" in item.source_url
+               for item in result.answer.evidence)
+
+
 def test_q09_uses_matching_inventory_balances_and_exact_filing_narrative():
     question = "How did inventory change relative to revenue from FY2024 to FY2025, and what factors does management disclose?"
     plan = make_plan().model_copy(update={
@@ -1353,7 +1412,7 @@ def make_unsupported_benchmark_plan(question):
     [
         f"Q{number:02d}"
         for number in range(2, 21)
-        if number not in {3, 5, 7, 8, 9, 13}
+        if number not in {3, 5, 7, 8, 9, 11, 13}
     ],
 )
 def test_other_benchmark_operations_are_explicitly_unsupported(question_id):

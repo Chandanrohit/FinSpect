@@ -16,6 +16,7 @@ from finspect.answer_builder import (
 )
 from finspect.calculator import (
     cash_conversion_comparison,
+    dilution_ratio,
     earnings_change_relationship,
     growth_comparison,
     inventory_revenue_growth_comparison,
@@ -58,6 +59,7 @@ DEFAULT_RECEIVABLES_MATRIX = (
     ROOT / "data" / "fixtures" / "annual_receivables_reference_matrix.json"
 )
 DEFAULT_INVENTORY_MATRIX = ROOT / "data" / "fixtures" / "annual_inventory_reference_matrix.json"
+DEFAULT_DILUTION_MATRIX = ROOT / "data" / "fixtures" / "annual_share_dilution_reference_matrix.json"
 
 
 def evaluate_annual_revenue_matrix(path: Path) -> dict[str, Any]:
@@ -214,6 +216,82 @@ def evaluate_liquidity_reference_matrix(path: Path) -> dict[str, Any]:
                 "checks": checks,
                 "status": "PASS" if all(checks.values()) else "FAIL",
             })
+    tickers = sorted({item["company"]["ticker"] for item in cases})
+    return {
+        "matrix_id": matrix["matrix_id"],
+        "question_id": matrix["question_id"],
+        "evaluation_scope": matrix["evaluation_scope"],
+        "case_count": len(cases),
+        "pass_count": sum(item["status"] == "PASS" for item in cases),
+        "fail_count": sum(item["status"] == "FAIL" for item in cases),
+        "issuers": tickers,
+        "cases_per_issuer": {
+            ticker: sum(item["company"]["ticker"] == ticker for item in cases)
+            for ticker in tickers
+        },
+        "cases": cases,
+    }
+
+
+def evaluate_share_dilution_matrix(path: Path) -> dict[str, Any]:
+    """Check annual weighted-average share dilution against cited SEC cases."""
+    matrix = json.loads(path.read_text(encoding="utf-8"))
+    cases = []
+    for reference in matrix["cases"]:
+        company = reference["company"]
+        start = date.fromisoformat(reference["start_date"])
+        end = date.fromisoformat(reference["end_date"])
+        filing_date = date.fromisoformat(reference["filing_date"])
+        basic = Decimal(reference["basic_shares"])
+        diluted = Decimal(reference["diluted_shares"])
+        result = dilution_ratio(basic, diluted)
+        checks = {
+            "annual_duration": 300 <= (end - start).days <= 400,
+            "filing_after_period": filing_date >= end,
+            "us_gaap_share_inputs": (
+                matrix["taxonomy"] == "us-gaap"
+                and matrix["unit"] == "shares"
+                and matrix["basic_concept"]
+                == "WeightedAverageNumberOfSharesOutstandingBasic"
+                and matrix["diluted_concept"]
+                == "WeightedAverageNumberOfDilutedSharesOutstanding"
+                and basic > 0
+                and diluted >= basic
+            ),
+            "evidence_provenance": (
+                reference["accession_number"].replace("-", "")
+                in reference["source_url"]
+                and reference["source_url"].startswith(
+                    "https://www.sec.gov/Archives/edgar/data/"
+                )
+                and f"/{int(company['cik'])}/" in reference["source_url"]
+            ),
+            "dilutive_effect_correctness": (
+                diluted - basic
+                == Decimal(reference["expected_dilutive_effect_shares"])
+            ),
+            "calculation_correctness": (
+                result.value == Decimal(reference["expected_ratio_percent"])
+            ),
+        }
+        passed = all(checks.values())
+        cases.append({
+            "company": company,
+            "fiscal_year": reference["fiscal_year"],
+            "inputs_shares": {
+                "basic": str(basic),
+                "diluted": str(diluted),
+                "dilutive_effect": str(diluted - basic),
+            },
+            "expected_ratio_percent": reference["expected_ratio_percent"],
+            "actual_ratio_percent": str(result.value),
+            "evidence": [{
+                "accession_number": reference["accession_number"],
+                "source_url": reference["source_url"],
+            }],
+            "checks": checks,
+            "status": "PASS" if passed else "FAIL",
+        })
     tickers = sorted({item["company"]["ticker"] for item in cases})
     return {
         "matrix_id": matrix["matrix_id"],
@@ -1477,6 +1555,7 @@ def evaluate_benchmark(
     )
     receivables_matrix = evaluate_receivables_matrix(DEFAULT_RECEIVABLES_MATRIX)
     inventory_matrix = evaluate_inventory_matrix(inventory_matrix_path)
+    dilution_matrix = evaluate_share_dilution_matrix(DEFAULT_DILUTION_MATRIX)
     inventory_reference = json.loads(inventory_matrix_path.read_text(encoding="utf-8"))
     questions = benchmark.question_map()
     if fixture.get("question_id") != "Q01" or "Q01" not in questions:
@@ -1568,6 +1647,64 @@ def evaluate_benchmark(
         if question_id == "Q13":
             report_questions.append(_evaluate_q13(question, q13_fixture))
             continue
+        if question_id == "Q11":
+            dilution_reference = json.loads(
+                DEFAULT_DILUTION_MATRIX.read_text(encoding="utf-8")
+            )
+            reference = next(
+                item for item in dilution_reference["cases"]
+                if item["company"]["ticker"] == "NVDA"
+                and item["fiscal_year"] == 2025
+            )
+            result = dilution_ratio(
+                Decimal(reference["basic_shares"]),
+                Decimal(reference["diluted_shares"]),
+            )
+            evidence = [{
+                "fiscal_year": reference["fiscal_year"],
+                "basic_weighted_average_shares": reference["basic_shares"],
+                "diluted_weighted_average_shares": reference["diluted_shares"],
+                "dilutive_effect_shares": reference["expected_dilutive_effect_shares"],
+                "unit": "shares",
+                "accession_number": reference["accession_number"],
+                "source_url": reference["source_url"],
+            }]
+            matrix_pass = dilution_matrix["pass_count"] == dilution_matrix["case_count"]
+            report_questions.append({
+                "question_id": question_id,
+                "question": question.question_template,
+                "company": reference["company"],
+                "filings": evidence,
+                "reporting_periods": [{
+                    "fiscal_year": reference["fiscal_year"],
+                    "end_date": reference["end_date"],
+                }],
+                "expected_concepts": question.required_concepts,
+                "retrieval_mode": "offline_SEC_reference_matrix_not_live_retrieval",
+                "retrieved_inputs": evidence,
+                "selected_evidence": evidence,
+                "calculation_formula": result.expression,
+                "expected_answer": {
+                    "dilutive_effect_shares": reference["expected_dilutive_effect_shares"],
+                    "share_dilution_percent": reference["expected_ratio_percent"],
+                },
+                "actual_answer": {
+                    "result_value": str(result.value),
+                    "result_unit": result.unit,
+                    "display": f"{result.value.quantize(Decimal('0.01'))}%",
+                },
+                "checks": {
+                    "reference_matrix_cases_pass": matrix_pass,
+                    "live_retrieval": "not_evaluated",
+                    "query_interpretation": "not_evaluated",
+                },
+                "overall_status": "PARTIAL" if matrix_pass else "FAIL",
+                "failure_reason": (
+                    "Offline filing reference checks only; live SEC retrieval "
+                    "and query interpretation remain untested."
+                ),
+            })
+            continue
 
         reason = (
             "No complete retrieval-to-answer path is implemented for "
@@ -1620,7 +1757,7 @@ def evaluate_benchmark(
         "accuracy_percentage": None,
         "accuracy_note": (
             "No overall accuracy percentage is reported: Q01, Q03, Q05, Q07, Q08, Q09, "
-            "and Q13 have fixture-backed checks; issuer matrix case counts and "
+            "Q11, and Q13 have fixture-backed checks; issuer matrix case counts and "
             "individual checks are reported per operation, but neither "
             "live SEC retrieval nor the planner was evaluated."
         ),
@@ -1632,6 +1769,7 @@ def evaluate_benchmark(
             cash_conversion_matrix,
             receivables_matrix,
             inventory_matrix,
+            dilution_matrix,
         ],
         "questions": report_questions,
     }

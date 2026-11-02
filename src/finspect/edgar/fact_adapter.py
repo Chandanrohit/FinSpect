@@ -112,17 +112,22 @@ def sec_fact_to_financial_fact(
         )
 
     raw_unit = str(raw["unit"]).strip()
-    if not re.fullmatch(r"[A-Z]{3}", raw_unit):
-        raise ValueError(
-            f"Unsupported currency unit {raw_unit!r}; expected a three-letter currency code."
+    if re.fullmatch(r"[A-Z]{3}", raw_unit):
+        unit_kind = UnitKind.CURRENCY
+        currency = (
+            Currency.USD
+            if raw_unit == "USD"
+            else Currency.INR
+            if raw_unit == "INR"
+            else Currency.OTHER
         )
-    currency = (
-        Currency.USD
-        if raw_unit == "USD"
-        else Currency.INR
-        if raw_unit == "INR"
-        else Currency.OTHER
-    )
+    elif raw_unit == "shares":
+        unit_kind = UnitKind.SHARES
+        currency = Currency.NOT_APPLICABLE
+    else:
+        raise ValueError(
+            f"Unsupported SEC unit {raw_unit!r}; expected a currency code or shares."
+        )
 
     cik = str(raw["cik"]).strip().lstrip("0")
     accession = str(raw["accession_number"]).strip()
@@ -173,7 +178,7 @@ def sec_fact_to_financial_fact(
         concept=concept,
         value=value,
         unit=Unit(
-            kind=UnitKind.CURRENCY,
+            kind=unit_kind,
             currency=currency,
             scale=Decimal("1"),
             label=raw_unit,

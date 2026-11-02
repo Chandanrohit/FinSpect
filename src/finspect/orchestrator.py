@@ -17,6 +17,7 @@ from finspect.answer_builder import (
 from finspect.calculator import (
     absolute_change,
     cash_conversion_comparison,
+    dilution_ratio,
     earnings_change_relationship,
     growth_comparison,
     liquid_asset_contribution,
@@ -39,6 +40,7 @@ from finspect.schema import (
     PeriodRole,
     ReportingScope,
     FinancialFact,
+    UnitKind,
     require_compatible_facts,
     validate_absolute_change_inputs,
     validate_currency_inputs,
@@ -166,6 +168,17 @@ class FinSpectOrchestrator:
             }
         )
         has_total_assets = bool(metric_names & {"assets", "total assets"})
+        has_basic_shares = bool(
+            metric_names & {"basic weighted average shares", "basic shares"}
+        )
+        has_diluted_shares = bool(
+            metric_names
+            & {
+                "diluted weighted average shares",
+                "dilutive effect",
+                "dilutive effect of outstanding equity awards",
+            }
+        )
         is_supported_revenue_operation = (
             plan.operation in {"growth_rate", "absolute_change"}
             and has_revenue
@@ -239,6 +252,21 @@ class FinSpectOrchestrator:
                 "total assets",
             }
         )
+        is_supported_dilution = (
+            plan.operation == "dilution_ratio"
+            and has_basic_shares
+            and has_diluted_shares
+            and metric_names
+            <= {
+                "basic weighted average shares",
+                "basic shares",
+                "diluted weighted average shares",
+                "dilutive effect",
+                "dilutive effect of outstanding equity awards",
+            }
+            and plan.period.period_kind == "annual"
+            and plan.period.fiscal_year is not None
+        )
 
         if not (
             is_supported_revenue_operation
@@ -248,6 +276,7 @@ class FinSpectOrchestrator:
             or is_supported_cash_conversion
             or is_supported_earnings_change
             or is_supported_liquidity
+            or is_supported_dilution
         ):
             answer = build_unsupported_answer(
                 question=question,
@@ -257,19 +286,23 @@ class FinSpectOrchestrator:
                     "change, annual receivables/revenue growth comparison, and "
                     "annual cash-conversion comparison plus the net-income/"
                     "operating-income change relationship, and annual liquid-"
-                    "asset contribution to total asset change."
+                    "asset contribution to total asset change plus annual "
+                    "weighted-average share dilution."
                 ),
             )
             return PipelineResult(plan=plan, answer=answer)
 
     
         fiscal_years = self._get_two_annual_years(plan)
+        if is_supported_dilution:
+            fiscal_years = (plan.period.fiscal_year,)
         if fiscal_years is None:
             answer = build_unsupported_answer(
                 question=question,
                 reason=(
-                    "Two explicit fiscal years are required for this "
-                    "annual comparison calculation."
+                    "An explicit fiscal year is required for annual share "
+                    "dilution; two explicit fiscal years are required for "
+                    "annual comparison calculations."
                 ),
             )
             return PipelineResult(plan=plan, answer=answer)
@@ -321,9 +354,9 @@ class FinSpectOrchestrator:
         ]
         for period, requested_year in zip(periods, fiscal_years, strict=True):
             self._validate_annual_period(period, requested_year)
-        if date.fromisoformat(periods[1].start_date) <= date.fromisoformat(
-            periods[0].end_date
-        ):
+        if not is_supported_dilution and date.fromisoformat(
+            periods[1].start_date
+        ) <= date.fromisoformat(periods[0].end_date):
             raise ValueError("Comparable annual periods must not overlap.")
 
         # 5. Resolve supported metrics to controlled SEC concepts, then
@@ -334,6 +367,7 @@ class FinSpectOrchestrator:
                 is_supported_cash_conversion
                 or is_supported_earnings_change
                 or is_supported_liquidity
+                or is_supported_dilution
             )
             else {"revenue": (periods[0].concept, False)}
         )
@@ -372,10 +406,23 @@ class FinSpectOrchestrator:
                 True,
             )
             concept_specs["total_assets"] = (("Assets",), True)
+        elif is_supported_dilution:
+            concept_specs["basic_weighted_average_shares"] = (
+                ("WeightedAverageNumberOfSharesOutstandingBasic",),
+                False,
+            )
+            concept_specs["diluted_weighted_average_shares"] = (
+                ("WeightedAverageNumberOfDilutedSharesOutstanding",),
+                False,
+            )
 
         raw_by_metric: dict[str, tuple[dict[str, Any], ...]] = {}
         canonical_by_metric: dict[str, tuple[FinancialFact, ...]] = {}
-        roles = (PeriodRole.COMPARABLE_PRIOR, PeriodRole.CURRENT)
+        roles = (
+            (PeriodRole.CURRENT,)
+            if is_supported_dilution
+            else (PeriodRole.COMPARABLE_PRIOR, PeriodRole.CURRENT)
+        )
 
         for metric_name, (concept_options, is_instant) in concept_specs.items():
             concepts = (
@@ -395,7 +442,7 @@ class FinSpectOrchestrator:
                             start_date=None if is_instant else period.start_date,
                             end_date=period.end_date,
                             form=period.form,
-                            unit=period.currency,
+                            unit=("shares" if is_supported_dilution else period.currency),
                             filed_on_or_before=period.filing_date,
                             accession_number=period.accession_number,
                         )
@@ -448,9 +495,10 @@ class FinSpectOrchestrator:
                     raise ValueError("Retrieved fact has an unexpected start date.")
                 if raw_fact.get("end_date") != period.end_date:
                     raise ValueError("Retrieved fact has an unexpected end date.")
-                if raw_fact.get("unit") != "USD":
+                expected_unit = "shares" if is_supported_dilution else "USD"
+                if raw_fact.get("unit") != expected_unit:
                     raise ValueError(
-                        f"{metric_name} facts must use {period.currency}."
+                        f"{metric_name} facts must use {expected_unit}."
                     )
                 if raw_fact.get("form") != period.form:
                     raise ValueError("Retrieved fact has an unexpected filing form.")
@@ -655,6 +703,18 @@ class FinSpectOrchestrator:
                 ),
                 assets_end=assets_current.normalized_value,
                 assets_begin=assets_prior.normalized_value,
+            )
+        elif is_supported_dilution:
+            (basic,) = canonical_by_metric["basic_weighted_average_shares"]
+            (diluted,) = canonical_by_metric["diluted_weighted_average_shares"]
+            if basic.period.kind != "duration" or diluted.period.kind != "duration":
+                raise ValueError("Q11 inputs must be weighted-average duration facts.")
+            require_compatible_facts(basic, diluted)
+            if basic.unit.kind != UnitKind.SHARES or diluted.unit.kind != UnitKind.SHARES:
+                raise ValueError("Q11 inputs must use share-count units.")
+            calculation = dilution_ratio(
+                basic.normalized_value,
+                diluted.normalized_value,
             )
 
         facts = tuple(

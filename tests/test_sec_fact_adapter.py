@@ -90,14 +90,14 @@ def test_adapter_rejects_non_numeric_value(raw_sec_fact):
         )
 
 
-def test_adapter_rejects_unsupported_unit(raw_sec_fact):
+def test_adapter_accepts_share_unit(raw_sec_fact):
     raw_sec_fact["unit"] = "shares"
 
-    with pytest.raises(ValueError, match="Unsupported currency unit"):
-        sec_fact_to_financial_fact(
-            raw_sec_fact,
-            period_role=PeriodRole.CURRENT,
-        )
+    fact = sec_fact_to_financial_fact(
+        raw_sec_fact,
+        period_role=PeriodRole.CURRENT,
+    )
+    assert fact.unit.kind == "shares"
 
 
 def test_evidence_rejects_missing_quote_and_structured_source():

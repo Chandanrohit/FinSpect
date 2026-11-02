@@ -7,12 +7,12 @@
   "question_count": 20,
   "aggregate_counts": {
     "PASS": 0,
-    "PARTIAL": 7,
-    "UNSUPPORTED": 13,
+    "PARTIAL": 8,
+    "UNSUPPORTED": 12,
     "FAIL": 0
   },
   "accuracy_percentage": null,
-  "accuracy_note": "No overall accuracy percentage is reported: Q01, Q03, Q05, Q07, Q08, Q09, and Q13 have fixture-backed checks; issuer matrix case counts and individual checks are reported per operation, but neither live SEC retrieval nor the planner was evaluated.",
+  "accuracy_note": "No overall accuracy percentage is reported: Q01, Q03, Q05, Q07, Q08, Q09, Q11, and Q13 have fixture-backed checks; issuer matrix case counts and individual checks are reported per operation, but neither live SEC retrieval nor the planner was evaluated.",
   "operation_reference_matrices": [
     {
       "matrix_id": "annual-revenue-growth-multi-issuer-v2-healthcare",
@@ -2139,6 +2139,296 @@
           "status": "PASS"
         }
       ]
+    },
+    {
+      "matrix_id": "annual-weighted-average-share-dilution-multi-issuer-v1",
+      "question_id": "Q11",
+      "evaluation_scope": "offline annual SEC 10-K reference cases; calculations use weighted-average shares and do not measure live retrieval or interpretation",
+      "case_count": 9,
+      "pass_count": 9,
+      "fail_count": 0,
+      "issuers": [
+        "AAPL",
+        "MSFT",
+        "NVDA"
+      ],
+      "cases_per_issuer": {
+        "AAPL": 3,
+        "MSFT": 3,
+        "NVDA": 3
+      },
+      "cases": [
+        {
+          "company": {
+            "name": "NVIDIA Corporation",
+            "ticker": "NVDA",
+            "cik": "0001045810"
+          },
+          "fiscal_year": 2023,
+          "inputs_shares": {
+            "basic": "24870000000",
+            "diluted": "25070000000",
+            "dilutive_effect": "200000000"
+          },
+          "expected_ratio_percent": "0.8041817450743868114193807801",
+          "actual_ratio_percent": "0.8041817450743868114193807801",
+          "evidence": [
+            {
+              "accession_number": "0001045810-23-000017",
+              "source_url": "https://www.sec.gov/Archives/edgar/data/1045810/000104581023000017/0001045810-23-000017-index.htm"
+            }
+          ],
+          "checks": {
+            "annual_duration": true,
+            "filing_after_period": true,
+            "us_gaap_share_inputs": true,
+            "evidence_provenance": true,
+            "dilutive_effect_correctness": true,
+            "calculation_correctness": true
+          },
+          "status": "PASS"
+        },
+        {
+          "company": {
+            "name": "NVIDIA Corporation",
+            "ticker": "NVDA",
+            "cik": "0001045810"
+          },
+          "fiscal_year": 2024,
+          "inputs_shares": {
+            "basic": "24690000000",
+            "diluted": "24940000000",
+            "dilutive_effect": "250000000"
+          },
+          "expected_ratio_percent": "1.012555690562980963953017416",
+          "actual_ratio_percent": "1.012555690562980963953017416",
+          "evidence": [
+            {
+              "accession_number": "0001045810-24-000029",
+              "source_url": "https://www.sec.gov/Archives/edgar/data/1045810/000104581024000029/0001045810-24-000029-index.htm"
+            }
+          ],
+          "checks": {
+            "annual_duration": true,
+            "filing_after_period": true,
+            "us_gaap_share_inputs": true,
+            "evidence_provenance": true,
+            "dilutive_effect_correctness": true,
+            "calculation_correctness": true
+          },
+          "status": "PASS"
+        },
+        {
+          "company": {
+            "name": "NVIDIA Corporation",
+            "ticker": "NVDA",
+            "cik": "0001045810"
+          },
+          "fiscal_year": 2025,
+          "inputs_shares": {
+            "basic": "24555000000",
+            "diluted": "24804000000",
+            "dilutive_effect": "249000000"
+          },
+          "expected_ratio_percent": "1.014050091631032376298106292",
+          "actual_ratio_percent": "1.014050091631032376298106292",
+          "evidence": [
+            {
+              "accession_number": "0001045810-25-000023",
+              "source_url": "https://www.sec.gov/Archives/edgar/data/1045810/000104581025000023/0001045810-25-000023-index.htm"
+            }
+          ],
+          "checks": {
+            "annual_duration": true,
+            "filing_after_period": true,
+            "us_gaap_share_inputs": true,
+            "evidence_provenance": true,
+            "dilutive_effect_correctness": true,
+            "calculation_correctness": true
+          },
+          "status": "PASS"
+        },
+        {
+          "company": {
+            "name": "Microsoft Corporation",
+            "ticker": "MSFT",
+            "cik": "0000789019"
+          },
+          "fiscal_year": 2023,
+          "inputs_shares": {
+            "basic": "7446000000",
+            "diluted": "7472000000",
+            "dilutive_effect": "26000000"
+          },
+          "expected_ratio_percent": "0.3491807681976900349180768198",
+          "actual_ratio_percent": "0.3491807681976900349180768198",
+          "evidence": [
+            {
+              "accession_number": "0000950170-23-035122",
+              "source_url": "https://www.sec.gov/Archives/edgar/data/789019/000095017023035122/0000950170-23-035122-index.htm"
+            }
+          ],
+          "checks": {
+            "annual_duration": true,
+            "filing_after_period": true,
+            "us_gaap_share_inputs": true,
+            "evidence_provenance": true,
+            "dilutive_effect_correctness": true,
+            "calculation_correctness": true
+          },
+          "status": "PASS"
+        },
+        {
+          "company": {
+            "name": "Microsoft Corporation",
+            "ticker": "MSFT",
+            "cik": "0000789019"
+          },
+          "fiscal_year": 2024,
+          "inputs_shares": {
+            "basic": "7431000000",
+            "diluted": "7469000000",
+            "dilutive_effect": "38000000"
+          },
+          "expected_ratio_percent": "0.5113712824653478670434665590",
+          "actual_ratio_percent": "0.5113712824653478670434665590",
+          "evidence": [
+            {
+              "accession_number": "0000950170-24-087843",
+              "source_url": "https://www.sec.gov/Archives/edgar/data/789019/000095017024087843/0000950170-24-087843-index.htm"
+            }
+          ],
+          "checks": {
+            "annual_duration": true,
+            "filing_after_period": true,
+            "us_gaap_share_inputs": true,
+            "evidence_provenance": true,
+            "dilutive_effect_correctness": true,
+            "calculation_correctness": true
+          },
+          "status": "PASS"
+        },
+        {
+          "company": {
+            "name": "Microsoft Corporation",
+            "ticker": "MSFT",
+            "cik": "0000789019"
+          },
+          "fiscal_year": 2025,
+          "inputs_shares": {
+            "basic": "7433000000",
+            "diluted": "7465000000",
+            "dilutive_effect": "32000000"
+          },
+          "expected_ratio_percent": "0.4305125790394188080182967846",
+          "actual_ratio_percent": "0.4305125790394188080182967846",
+          "evidence": [
+            {
+              "accession_number": "0000950170-25-100235",
+              "source_url": "https://www.sec.gov/Archives/edgar/data/789019/000095017025100235/0000950170-25-100235-index.htm"
+            }
+          ],
+          "checks": {
+            "annual_duration": true,
+            "filing_after_period": true,
+            "us_gaap_share_inputs": true,
+            "evidence_provenance": true,
+            "dilutive_effect_correctness": true,
+            "calculation_correctness": true
+          },
+          "status": "PASS"
+        },
+        {
+          "company": {
+            "name": "Apple Inc.",
+            "ticker": "AAPL",
+            "cik": "0000320193"
+          },
+          "fiscal_year": 2023,
+          "inputs_shares": {
+            "basic": "15744231000",
+            "diluted": "15812547000",
+            "dilutive_effect": "68316000"
+          },
+          "expected_ratio_percent": "0.4339113164688704071986748670",
+          "actual_ratio_percent": "0.4339113164688704071986748670",
+          "evidence": [
+            {
+              "accession_number": "0000320193-23-000106",
+              "source_url": "https://www.sec.gov/Archives/edgar/data/320193/000032019323000106/0000320193-23-000106-index.htm"
+            }
+          ],
+          "checks": {
+            "annual_duration": true,
+            "filing_after_period": true,
+            "us_gaap_share_inputs": true,
+            "evidence_provenance": true,
+            "dilutive_effect_correctness": true,
+            "calculation_correctness": true
+          },
+          "status": "PASS"
+        },
+        {
+          "company": {
+            "name": "Apple Inc.",
+            "ticker": "AAPL",
+            "cik": "0000320193"
+          },
+          "fiscal_year": 2024,
+          "inputs_shares": {
+            "basic": "15343783000",
+            "diluted": "15408095000",
+            "dilutive_effect": "64312000"
+          },
+          "expected_ratio_percent": "0.4191404427447911639522013574",
+          "actual_ratio_percent": "0.4191404427447911639522013574",
+          "evidence": [
+            {
+              "accession_number": "0000320193-24-000123",
+              "source_url": "https://www.sec.gov/Archives/edgar/data/320193/000032019324000123/0000320193-24-000123-index.htm"
+            }
+          ],
+          "checks": {
+            "annual_duration": true,
+            "filing_after_period": true,
+            "us_gaap_share_inputs": true,
+            "evidence_provenance": true,
+            "dilutive_effect_correctness": true,
+            "calculation_correctness": true
+          },
+          "status": "PASS"
+        },
+        {
+          "company": {
+            "name": "Apple Inc.",
+            "ticker": "AAPL",
+            "cik": "0000320193"
+          },
+          "fiscal_year": 2025,
+          "inputs_shares": {
+            "basic": "14948500000",
+            "diluted": "15004697000",
+            "dilutive_effect": "56197000"
+          },
+          "expected_ratio_percent": "0.3759373850219085526975950764",
+          "actual_ratio_percent": "0.3759373850219085526975950764",
+          "evidence": [
+            {
+              "accession_number": "0000320193-25-000079",
+              "source_url": "https://www.sec.gov/Archives/edgar/data/320193/000032019325000079/0000320193-25-000079-index.htm"
+            }
+          ],
+          "checks": {
+            "annual_duration": true,
+            "filing_after_period": true,
+            "us_gaap_share_inputs": true,
+            "evidence_provenance": true,
+            "dilutive_effect_correctness": true,
+            "calculation_correctness": true
+          },
+          "status": "PASS"
+        }
+      ]
     }
   ],
   "questions": [
@@ -2989,29 +3279,72 @@
     {
       "question_id": "Q11",
       "question": "What percentage of basic weighted-average shares was represented by the dilutive effect of outstanding equity awards?",
-      "company": null,
-      "filings": [],
-      "reporting_periods": [],
+      "company": {
+        "name": "NVIDIA Corporation",
+        "ticker": "NVDA",
+        "cik": "0001045810"
+      },
+      "filings": [
+        {
+          "fiscal_year": 2025,
+          "basic_weighted_average_shares": "24555000000",
+          "diluted_weighted_average_shares": "24804000000",
+          "dilutive_effect_shares": "249000000",
+          "unit": "shares",
+          "accession_number": "0001045810-25-000023",
+          "source_url": "https://www.sec.gov/Archives/edgar/data/1045810/000104581025000023/0001045810-25-000023-index.htm"
+        }
+      ],
+      "reporting_periods": [
+        {
+          "fiscal_year": 2025,
+          "end_date": "2025-01-26"
+        }
+      ],
       "expected_concepts": [
         "basic_weighted_average_shares",
         "dilutive_effect"
       ],
-      "retrieval_mode": "not_run",
-      "retrieved_inputs": [],
-      "selected_evidence": [],
-      "calculation_formula": "dilutive_effect / basic_weighted_average_shares * 100",
-      "expected_answer": null,
-      "actual_answer": "I cannot answer this request reliably yet: No complete retrieval-to-answer path is implemented for Q11; calculator registration alone is not support.\n\nYour question: What percentage of basic weighted-average shares was represented by the dilutive effect of outstanding equity awards?",
-      "checks": {
-        "input_retrieval_correctness": null,
-        "period_correctness": null,
-        "unit_correctness": null,
-        "calculation_correctness": null,
-        "evidence_correctness": null,
-        "query_interpretation_correctness": null
+      "retrieval_mode": "offline_SEC_reference_matrix_not_live_retrieval",
+      "retrieved_inputs": [
+        {
+          "fiscal_year": 2025,
+          "basic_weighted_average_shares": "24555000000",
+          "diluted_weighted_average_shares": "24804000000",
+          "dilutive_effect_shares": "249000000",
+          "unit": "shares",
+          "accession_number": "0001045810-25-000023",
+          "source_url": "https://www.sec.gov/Archives/edgar/data/1045810/000104581025000023/0001045810-25-000023-index.htm"
+        }
+      ],
+      "selected_evidence": [
+        {
+          "fiscal_year": 2025,
+          "basic_weighted_average_shares": "24555000000",
+          "diluted_weighted_average_shares": "24804000000",
+          "dilutive_effect_shares": "249000000",
+          "unit": "shares",
+          "accession_number": "0001045810-25-000023",
+          "source_url": "https://www.sec.gov/Archives/edgar/data/1045810/000104581025000023/0001045810-25-000023-index.htm"
+        }
+      ],
+      "calculation_formula": "(diluted_weighted_average_shares-basic_weighted_average_shares)/basic_weighted_average_shares*100",
+      "expected_answer": {
+        "dilutive_effect_shares": "249000000",
+        "share_dilution_percent": "1.014050091631032376298106292"
       },
-      "overall_status": "UNSUPPORTED",
-      "failure_reason": "No complete retrieval-to-answer path is implemented for Q11; calculator registration alone is not support."
+      "actual_answer": {
+        "result_value": "1.014050091631032376298106292",
+        "result_unit": "percent",
+        "display": "1.01%"
+      },
+      "checks": {
+        "reference_matrix_cases_pass": true,
+        "live_retrieval": "not_evaluated",
+        "query_interpretation": "not_evaluated"
+      },
+      "overall_status": "PARTIAL",
+      "failure_reason": "Offline filing reference checks only; live SEC retrieval and query interpretation remain untested."
     },
     {
       "question_id": "Q12",

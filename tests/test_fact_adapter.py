@@ -79,14 +79,23 @@ def test_rejects_non_finite_value(raw_fact):
         )
 
 
-def test_rejects_unsupported_unit(raw_fact):
+def test_converts_share_unit(raw_fact):
     raw_fact["unit"] = "shares"
 
-    with pytest.raises(ValueError, match="Unsupported currency unit"):
-        sec_fact_to_financial_fact(
-            raw_fact,
-            period_role=PeriodRole.CURRENT,
-        )
+    fact = sec_fact_to_financial_fact(
+        raw_fact,
+        period_role=PeriodRole.CURRENT,
+    )
+
+    assert fact.unit.kind == "shares"
+    assert fact.unit.currency == Currency.NOT_APPLICABLE
+
+
+def test_rejects_unknown_sec_unit(raw_fact):
+    raw_fact["unit"] = "widgets"
+
+    with pytest.raises(ValueError, match="Unsupported SEC unit"):
+        sec_fact_to_financial_fact(raw_fact, period_role=PeriodRole.CURRENT)
 
 
 def test_preserves_other_reported_currencies_without_converting(raw_fact):
