@@ -106,6 +106,26 @@ def build_calculation_answer(
             f"${allocated:,.0f}, equal to {_format_result(result.value, 'percent')} "
             "of operating cash flow for share repurchases, dividends, and capital expenditure."
         )
+    elif result.formula_id == "Q06":
+        change = result.value or Decimal(0)
+        direction = "increased" if change > 0 else "decreased" if change < 0 else "was unchanged"
+        disclosed_rows = sorted(
+            (
+                item for item in evidence
+                if item.label not in {
+                    "Beginning shareholders’ equity", "Ending shareholders’ equity"
+                }
+            ),
+            key=lambda item: abs(item.value),
+            reverse=True,
+        )[:3]
+        row_summary = "; principal disclosed changes include " + ", ".join(
+            f"{item.label} (${item.value:,.0f})" for item in disclosed_rows
+        ) if disclosed_rows else ""
+        result_line = (
+            f"{company_name}'s shareholders’ equity {direction} by "
+            f"${abs(change):,.0f}{row_summary}."
+        )
     else:
         result_line = f"{company_name}'s result is {value_text}."
 

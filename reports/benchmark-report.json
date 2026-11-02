@@ -7,12 +7,12 @@
   "question_count": 20,
   "aggregate_counts": {
     "PASS": 0,
-    "PARTIAL": 11,
-    "UNSUPPORTED": 9,
+    "PARTIAL": 12,
+    "UNSUPPORTED": 8,
     "FAIL": 0
   },
   "accuracy_percentage": null,
-  "accuracy_note": "No overall accuracy percentage is reported: Q01, Q03, Q05, Q07, Q08, Q09, Q10, Q11, Q12, Q13, and Q14 have fixture-backed checks; issuer matrix case counts and individual checks are reported per operation, but neither live SEC retrieval nor the planner was evaluated.",
+  "accuracy_note": "No overall accuracy percentage is reported: Q01, Q03, Q05, Q07, Q08, Q09, Q06, Q10, Q11, Q12, Q13, and Q14 have fixture-backed checks; issuer matrix case counts and individual checks are reported per operation, but neither live SEC retrieval nor the planner was evaluated.",
   "operation_reference_matrices": [
     {
       "matrix_id": "annual-revenue-growth-multi-issuer-v2-healthcare",
@@ -3443,6 +3443,349 @@
           "status": "PASS"
         }
       ]
+    },
+    {
+      "matrix_id": "annual-equity-rollforward-multi-issuer-v1",
+      "question_id": "Q06",
+      "evaluation_scope": "Offline annual SEC 10-K statement-of-equity and balance-sheet references; no live retrieval or query interpretation.",
+      "case_count": 6,
+      "pass_count": 6,
+      "fail_count": 0,
+      "issuers": [
+        "AAPL",
+        "MSFT",
+        "NVDA"
+      ],
+      "cases_per_issuer": {
+        "AAPL": 2,
+        "MSFT": 2,
+        "NVDA": 2
+      },
+      "minimum_gate_coverage_met": true,
+      "cases": [
+        {
+          "company": {
+            "name": "NVIDIA Corporation",
+            "ticker": "NVDA",
+            "cik": "0001045810"
+          },
+          "fiscal_year": 2024,
+          "beginning_equity": "22101000000",
+          "ending_equity": "42978000000",
+          "expected_equity_change": "20877000000",
+          "actual_equity_change": "20877000000",
+          "disclosed_change_rows": [
+            {
+              "label": "Net income",
+              "value": "29760"
+            },
+            {
+              "label": "Other comprehensive income",
+              "value": "70"
+            },
+            {
+              "label": "Issuance of common stock from stock plans",
+              "value": "403"
+            },
+            {
+              "label": "Tax withholding related to vesting of restricted stock units",
+              "value": "-2783"
+            },
+            {
+              "label": "Shares repurchased",
+              "value": "-9746"
+            },
+            {
+              "label": "Cash dividends declared and paid",
+              "value": "-395"
+            },
+            {
+              "label": "Stock-based compensation",
+              "value": "3568"
+            }
+          ],
+          "accession_number": "0001045810-24-000029",
+          "source_url": "https://www.sec.gov/Archives/edgar/data/1045810/000104581024000029/0001045810-24-000029-index.htm",
+          "checks": {
+            "annual_period_and_filing": true,
+            "source_provenance": true,
+            "equity_change_calculation_correct": true,
+            "statement_change_rows_available": true
+          },
+          "status": "PASS"
+        },
+        {
+          "company": {
+            "name": "NVIDIA Corporation",
+            "ticker": "NVDA",
+            "cik": "0001045810"
+          },
+          "fiscal_year": 2025,
+          "beginning_equity": "42978000000",
+          "ending_equity": "79327000000",
+          "expected_equity_change": "36349000000",
+          "actual_equity_change": "36349000000",
+          "disclosed_change_rows": [
+            {
+              "label": "Net income",
+              "value": "72880"
+            },
+            {
+              "label": "Other comprehensive income",
+              "value": "1"
+            },
+            {
+              "label": "Issuance of common stock from stock plans",
+              "value": "490"
+            },
+            {
+              "label": "Tax withholding related to vesting of restricted stock units",
+              "value": "-6930"
+            },
+            {
+              "label": "Shares repurchased",
+              "value": "-34015"
+            },
+            {
+              "label": "Cash dividends declared and paid",
+              "value": "-834"
+            },
+            {
+              "label": "Stock-based compensation",
+              "value": "4757"
+            }
+          ],
+          "accession_number": "0001045810-25-000023",
+          "source_url": "https://www.sec.gov/Archives/edgar/data/1045810/000104581025000023/0001045810-25-000023-index.htm",
+          "checks": {
+            "annual_period_and_filing": true,
+            "source_provenance": true,
+            "equity_change_calculation_correct": true,
+            "statement_change_rows_available": true
+          },
+          "status": "PASS"
+        },
+        {
+          "company": {
+            "name": "Microsoft Corporation",
+            "ticker": "MSFT",
+            "cik": "0000789019"
+          },
+          "fiscal_year": 2024,
+          "beginning_equity": "206223000000",
+          "ending_equity": "268477000000",
+          "expected_equity_change": "62254000000",
+          "actual_equity_change": "62254000000",
+          "disclosed_change_rows": [
+            {
+              "label": "Net income",
+              "value": "88136"
+            },
+            {
+              "label": "Common stock issued",
+              "value": "2002"
+            },
+            {
+              "label": "Common stock repurchased from paid-in capital",
+              "value": "-5712"
+            },
+            {
+              "label": "Stock-based compensation expense",
+              "value": "10734"
+            },
+            {
+              "label": "Other, net",
+              "value": "181"
+            },
+            {
+              "label": "Common stock cash dividends",
+              "value": "-22293"
+            },
+            {
+              "label": "Common stock repurchased from retained earnings",
+              "value": "-11547"
+            },
+            {
+              "label": "Other comprehensive income",
+              "value": "753"
+            }
+          ],
+          "accession_number": "0000950170-24-087843",
+          "source_url": "https://www.sec.gov/Archives/edgar/data/789019/000095017024087843/0000950170-24-087843-index.htm",
+          "checks": {
+            "annual_period_and_filing": true,
+            "source_provenance": true,
+            "equity_change_calculation_correct": true,
+            "statement_change_rows_available": true
+          },
+          "status": "PASS"
+        },
+        {
+          "company": {
+            "name": "Microsoft Corporation",
+            "ticker": "MSFT",
+            "cik": "0000789019"
+          },
+          "fiscal_year": 2025,
+          "beginning_equity": "268477000000",
+          "ending_equity": "343479000000",
+          "expected_equity_change": "75002000000",
+          "actual_equity_change": "75002000000",
+          "disclosed_change_rows": [
+            {
+              "label": "Net income",
+              "value": "101832"
+            },
+            {
+              "label": "Common stock issued",
+              "value": "2056"
+            },
+            {
+              "label": "Common stock repurchased from paid-in capital",
+              "value": "-5856"
+            },
+            {
+              "label": "Stock-based compensation expense",
+              "value": "11974"
+            },
+            {
+              "label": "Other, net",
+              "value": "-2"
+            },
+            {
+              "label": "Common stock cash dividends",
+              "value": "-24677"
+            },
+            {
+              "label": "Common stock repurchased from retained earnings",
+              "value": "-12568"
+            },
+            {
+              "label": "Other comprehensive income",
+              "value": "2243"
+            }
+          ],
+          "accession_number": "0000950170-25-100235",
+          "source_url": "https://www.sec.gov/Archives/edgar/data/789019/000095017025100235/0000950170-25-100235-index.htm",
+          "checks": {
+            "annual_period_and_filing": true,
+            "source_provenance": true,
+            "equity_change_calculation_correct": true,
+            "statement_change_rows_available": true
+          },
+          "status": "PASS"
+        },
+        {
+          "company": {
+            "name": "Apple Inc.",
+            "ticker": "AAPL",
+            "cik": "0000320193"
+          },
+          "fiscal_year": 2024,
+          "beginning_equity": "62146000000",
+          "ending_equity": "56950000000",
+          "expected_equity_change": "-5196000000",
+          "actual_equity_change": "-5196000000",
+          "disclosed_change_rows": [
+            {
+              "label": "Net income",
+              "value": "93736"
+            },
+            {
+              "label": "Common stock issued",
+              "value": "1423"
+            },
+            {
+              "label": "Common stock withheld related to net share settlement of equity awards - paid-in capital",
+              "value": "-3993"
+            },
+            {
+              "label": "Share-based compensation",
+              "value": "12034"
+            },
+            {
+              "label": "Dividends and dividend equivalents declared",
+              "value": "-15218"
+            },
+            {
+              "label": "Common stock withheld related to net share settlement of equity awards - accumulated deficit",
+              "value": "-1612"
+            },
+            {
+              "label": "Common stock repurchased",
+              "value": "-95846"
+            },
+            {
+              "label": "Other comprehensive income",
+              "value": "4280"
+            }
+          ],
+          "accession_number": "0000320193-24-000123",
+          "source_url": "https://www.sec.gov/Archives/edgar/data/320193/000032019324000123/0000320193-24-000123-index.htm",
+          "checks": {
+            "annual_period_and_filing": true,
+            "source_provenance": true,
+            "equity_change_calculation_correct": true,
+            "statement_change_rows_available": true
+          },
+          "status": "PASS"
+        },
+        {
+          "company": {
+            "name": "Apple Inc.",
+            "ticker": "AAPL",
+            "cik": "0000320193"
+          },
+          "fiscal_year": 2025,
+          "beginning_equity": "56950000000",
+          "ending_equity": "73733000000",
+          "expected_equity_change": "16783000000",
+          "actual_equity_change": "16783000000",
+          "disclosed_change_rows": [
+            {
+              "label": "Net income",
+              "value": "112010"
+            },
+            {
+              "label": "Common stock issued",
+              "value": "1498"
+            },
+            {
+              "label": "Common stock withheld related to net share settlement of equity awards - paid-in capital",
+              "value": "-4452"
+            },
+            {
+              "label": "Share-based compensation",
+              "value": "13246"
+            },
+            {
+              "label": "Dividends and dividend equivalents declared",
+              "value": "-15413"
+            },
+            {
+              "label": "Common stock withheld related to net share settlement of equity awards - accumulated deficit",
+              "value": "-1655"
+            },
+            {
+              "label": "Common stock repurchased",
+              "value": "-90052"
+            },
+            {
+              "label": "Other comprehensive income",
+              "value": "1601"
+            }
+          ],
+          "accession_number": "0000320193-25-000079",
+          "source_url": "https://www.sec.gov/Archives/edgar/data/320193/000032019325000079/0000320193-25-000079-index.htm",
+          "checks": {
+            "annual_period_and_filing": true,
+            "source_provenance": true,
+            "equity_change_calculation_correct": true,
+            "statement_change_rows_available": true
+          },
+          "status": "PASS"
+        }
+      ]
     }
   ],
   "questions": [
@@ -3920,27 +4263,442 @@
       "question_id": "Q06",
       "question": "How did shareholders' equity change between the beginning and end of the reporting period, and what were the principal disclosed components of that change?",
       "company": null,
-      "filings": [],
-      "reporting_periods": [],
+      "filings": [
+        {
+          "company": {
+            "name": "NVIDIA Corporation",
+            "ticker": "NVDA",
+            "cik": "0001045810"
+          },
+          "fiscal_year": 2024,
+          "accession_number": "0001045810-24-000029",
+          "source_url": "https://www.sec.gov/Archives/edgar/data/1045810/000104581024000029/0001045810-24-000029-index.htm"
+        },
+        {
+          "company": {
+            "name": "NVIDIA Corporation",
+            "ticker": "NVDA",
+            "cik": "0001045810"
+          },
+          "fiscal_year": 2025,
+          "accession_number": "0001045810-25-000023",
+          "source_url": "https://www.sec.gov/Archives/edgar/data/1045810/000104581025000023/0001045810-25-000023-index.htm"
+        },
+        {
+          "company": {
+            "name": "Microsoft Corporation",
+            "ticker": "MSFT",
+            "cik": "0000789019"
+          },
+          "fiscal_year": 2024,
+          "accession_number": "0000950170-24-087843",
+          "source_url": "https://www.sec.gov/Archives/edgar/data/789019/000095017024087843/0000950170-24-087843-index.htm"
+        },
+        {
+          "company": {
+            "name": "Microsoft Corporation",
+            "ticker": "MSFT",
+            "cik": "0000789019"
+          },
+          "fiscal_year": 2025,
+          "accession_number": "0000950170-25-100235",
+          "source_url": "https://www.sec.gov/Archives/edgar/data/789019/000095017025100235/0000950170-25-100235-index.htm"
+        },
+        {
+          "company": {
+            "name": "Apple Inc.",
+            "ticker": "AAPL",
+            "cik": "0000320193"
+          },
+          "fiscal_year": 2024,
+          "accession_number": "0000320193-24-000123",
+          "source_url": "https://www.sec.gov/Archives/edgar/data/320193/000032019324000123/0000320193-24-000123-index.htm"
+        },
+        {
+          "company": {
+            "name": "Apple Inc.",
+            "ticker": "AAPL",
+            "cik": "0000320193"
+          },
+          "fiscal_year": 2025,
+          "accession_number": "0000320193-25-000079",
+          "source_url": "https://www.sec.gov/Archives/edgar/data/320193/000032019325000079/0000320193-25-000079-index.htm"
+        }
+      ],
+      "reporting_periods": [
+        {
+          "company": {
+            "name": "NVIDIA Corporation",
+            "ticker": "NVDA",
+            "cik": "0001045810"
+          },
+          "fiscal_year": 2024
+        },
+        {
+          "company": {
+            "name": "NVIDIA Corporation",
+            "ticker": "NVDA",
+            "cik": "0001045810"
+          },
+          "fiscal_year": 2025
+        },
+        {
+          "company": {
+            "name": "Microsoft Corporation",
+            "ticker": "MSFT",
+            "cik": "0000789019"
+          },
+          "fiscal_year": 2024
+        },
+        {
+          "company": {
+            "name": "Microsoft Corporation",
+            "ticker": "MSFT",
+            "cik": "0000789019"
+          },
+          "fiscal_year": 2025
+        },
+        {
+          "company": {
+            "name": "Apple Inc.",
+            "ticker": "AAPL",
+            "cik": "0000320193"
+          },
+          "fiscal_year": 2024
+        },
+        {
+          "company": {
+            "name": "Apple Inc.",
+            "ticker": "AAPL",
+            "cik": "0000320193"
+          },
+          "fiscal_year": 2025
+        }
+      ],
       "expected_concepts": [
         "shareholders_equity"
       ],
-      "retrieval_mode": "not_run",
-      "retrieved_inputs": [],
-      "selected_evidence": [],
-      "calculation_formula": "ending_equity - beginning_equity",
-      "expected_answer": null,
-      "actual_answer": "I cannot answer this request reliably yet: No complete retrieval-to-answer path is implemented for Q06; calculator registration alone is not support.\n\nYour question: How did shareholders' equity change between the beginning and end of the reporting period, and what were the principal disclosed components of that change?",
+      "retrieval_mode": "offline_SEC_equity_rollforward_reference_matrix_not_live_retrieval",
+      "retrieved_inputs": [
+        {
+          "beginning_equity": "22101000000",
+          "ending_equity": "42978000000"
+        },
+        {
+          "beginning_equity": "42978000000",
+          "ending_equity": "79327000000"
+        },
+        {
+          "beginning_equity": "206223000000",
+          "ending_equity": "268477000000"
+        },
+        {
+          "beginning_equity": "268477000000",
+          "ending_equity": "343479000000"
+        },
+        {
+          "beginning_equity": "62146000000",
+          "ending_equity": "56950000000"
+        },
+        {
+          "beginning_equity": "56950000000",
+          "ending_equity": "73733000000"
+        }
+      ],
+      "selected_evidence": [
+        {
+          "accession_number": "0001045810-24-000029",
+          "source_url": "https://www.sec.gov/Archives/edgar/data/1045810/000104581024000029/0001045810-24-000029-index.htm",
+          "principal_change_rows": [
+            {
+              "label": "Net income",
+              "value": "29760"
+            },
+            {
+              "label": "Other comprehensive income",
+              "value": "70"
+            },
+            {
+              "label": "Issuance of common stock from stock plans",
+              "value": "403"
+            },
+            {
+              "label": "Tax withholding related to vesting of restricted stock units",
+              "value": "-2783"
+            },
+            {
+              "label": "Shares repurchased",
+              "value": "-9746"
+            },
+            {
+              "label": "Cash dividends declared and paid",
+              "value": "-395"
+            },
+            {
+              "label": "Stock-based compensation",
+              "value": "3568"
+            }
+          ]
+        },
+        {
+          "accession_number": "0001045810-25-000023",
+          "source_url": "https://www.sec.gov/Archives/edgar/data/1045810/000104581025000023/0001045810-25-000023-index.htm",
+          "principal_change_rows": [
+            {
+              "label": "Net income",
+              "value": "72880"
+            },
+            {
+              "label": "Other comprehensive income",
+              "value": "1"
+            },
+            {
+              "label": "Issuance of common stock from stock plans",
+              "value": "490"
+            },
+            {
+              "label": "Tax withholding related to vesting of restricted stock units",
+              "value": "-6930"
+            },
+            {
+              "label": "Shares repurchased",
+              "value": "-34015"
+            },
+            {
+              "label": "Cash dividends declared and paid",
+              "value": "-834"
+            },
+            {
+              "label": "Stock-based compensation",
+              "value": "4757"
+            }
+          ]
+        },
+        {
+          "accession_number": "0000950170-24-087843",
+          "source_url": "https://www.sec.gov/Archives/edgar/data/789019/000095017024087843/0000950170-24-087843-index.htm",
+          "principal_change_rows": [
+            {
+              "label": "Net income",
+              "value": "88136"
+            },
+            {
+              "label": "Common stock issued",
+              "value": "2002"
+            },
+            {
+              "label": "Common stock repurchased from paid-in capital",
+              "value": "-5712"
+            },
+            {
+              "label": "Stock-based compensation expense",
+              "value": "10734"
+            },
+            {
+              "label": "Other, net",
+              "value": "181"
+            },
+            {
+              "label": "Common stock cash dividends",
+              "value": "-22293"
+            },
+            {
+              "label": "Common stock repurchased from retained earnings",
+              "value": "-11547"
+            },
+            {
+              "label": "Other comprehensive income",
+              "value": "753"
+            }
+          ]
+        },
+        {
+          "accession_number": "0000950170-25-100235",
+          "source_url": "https://www.sec.gov/Archives/edgar/data/789019/000095017025100235/0000950170-25-100235-index.htm",
+          "principal_change_rows": [
+            {
+              "label": "Net income",
+              "value": "101832"
+            },
+            {
+              "label": "Common stock issued",
+              "value": "2056"
+            },
+            {
+              "label": "Common stock repurchased from paid-in capital",
+              "value": "-5856"
+            },
+            {
+              "label": "Stock-based compensation expense",
+              "value": "11974"
+            },
+            {
+              "label": "Other, net",
+              "value": "-2"
+            },
+            {
+              "label": "Common stock cash dividends",
+              "value": "-24677"
+            },
+            {
+              "label": "Common stock repurchased from retained earnings",
+              "value": "-12568"
+            },
+            {
+              "label": "Other comprehensive income",
+              "value": "2243"
+            }
+          ]
+        },
+        {
+          "accession_number": "0000320193-24-000123",
+          "source_url": "https://www.sec.gov/Archives/edgar/data/320193/000032019324000123/0000320193-24-000123-index.htm",
+          "principal_change_rows": [
+            {
+              "label": "Net income",
+              "value": "93736"
+            },
+            {
+              "label": "Common stock issued",
+              "value": "1423"
+            },
+            {
+              "label": "Common stock withheld related to net share settlement of equity awards - paid-in capital",
+              "value": "-3993"
+            },
+            {
+              "label": "Share-based compensation",
+              "value": "12034"
+            },
+            {
+              "label": "Dividends and dividend equivalents declared",
+              "value": "-15218"
+            },
+            {
+              "label": "Common stock withheld related to net share settlement of equity awards - accumulated deficit",
+              "value": "-1612"
+            },
+            {
+              "label": "Common stock repurchased",
+              "value": "-95846"
+            },
+            {
+              "label": "Other comprehensive income",
+              "value": "4280"
+            }
+          ]
+        },
+        {
+          "accession_number": "0000320193-25-000079",
+          "source_url": "https://www.sec.gov/Archives/edgar/data/320193/000032019325000079/0000320193-25-000079-index.htm",
+          "principal_change_rows": [
+            {
+              "label": "Net income",
+              "value": "112010"
+            },
+            {
+              "label": "Common stock issued",
+              "value": "1498"
+            },
+            {
+              "label": "Common stock withheld related to net share settlement of equity awards - paid-in capital",
+              "value": "-4452"
+            },
+            {
+              "label": "Share-based compensation",
+              "value": "13246"
+            },
+            {
+              "label": "Dividends and dividend equivalents declared",
+              "value": "-15413"
+            },
+            {
+              "label": "Common stock withheld related to net share settlement of equity awards - accumulated deficit",
+              "value": "-1655"
+            },
+            {
+              "label": "Common stock repurchased",
+              "value": "-90052"
+            },
+            {
+              "label": "Other comprehensive income",
+              "value": "1601"
+            }
+          ]
+        }
+      ],
+      "calculation_formula": "ending_shareholders_equity - beginning_shareholders_equity",
+      "expected_answer": [
+        {
+          "ticker": "NVDA",
+          "fiscal_year": 2024,
+          "equity_change": "20877000000"
+        },
+        {
+          "ticker": "NVDA",
+          "fiscal_year": 2025,
+          "equity_change": "36349000000"
+        },
+        {
+          "ticker": "MSFT",
+          "fiscal_year": 2024,
+          "equity_change": "62254000000"
+        },
+        {
+          "ticker": "MSFT",
+          "fiscal_year": 2025,
+          "equity_change": "75002000000"
+        },
+        {
+          "ticker": "AAPL",
+          "fiscal_year": 2024,
+          "equity_change": "-5196000000"
+        },
+        {
+          "ticker": "AAPL",
+          "fiscal_year": 2025,
+          "equity_change": "16783000000"
+        }
+      ],
+      "actual_answer": [
+        {
+          "ticker": "NVDA",
+          "fiscal_year": 2024,
+          "equity_change": "20877000000"
+        },
+        {
+          "ticker": "NVDA",
+          "fiscal_year": 2025,
+          "equity_change": "36349000000"
+        },
+        {
+          "ticker": "MSFT",
+          "fiscal_year": 2024,
+          "equity_change": "62254000000"
+        },
+        {
+          "ticker": "MSFT",
+          "fiscal_year": 2025,
+          "equity_change": "75002000000"
+        },
+        {
+          "ticker": "AAPL",
+          "fiscal_year": 2024,
+          "equity_change": "-5196000000"
+        },
+        {
+          "ticker": "AAPL",
+          "fiscal_year": 2025,
+          "equity_change": "16783000000"
+        }
+      ],
       "checks": {
-        "input_retrieval_correctness": null,
-        "period_correctness": null,
-        "unit_correctness": null,
-        "calculation_correctness": null,
-        "evidence_correctness": null,
-        "query_interpretation_correctness": null
+        "reference_matrix_cases_pass": true,
+        "live_retrieval": "not_evaluated",
+        "query_interpretation": "not_evaluated"
       },
-      "overall_status": "UNSUPPORTED",
-      "failure_reason": "No complete retrieval-to-answer path is implemented for Q06; calculator registration alone is not support."
+      "overall_status": "PARTIAL",
+      "failure_reason": "Offline equity reference calculations only; live SEC retrieval and query interpretation remain untested."
     },
     {
       "question_id": "Q07",

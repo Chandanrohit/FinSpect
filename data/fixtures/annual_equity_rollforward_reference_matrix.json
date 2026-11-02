@@ -1,0 +1,81 @@
+{
+  "matrix_id": "annual-equity-rollforward-multi-issuer-v1",
+  "question_id": "Q06",
+  "evaluation_scope": "Offline annual SEC 10-K statement-of-equity and balance-sheet references; no live retrieval or query interpretation.",
+  "form": "10-K",
+  "unit": "USD",
+  "cases": [
+    {
+      "company": {"name": "NVIDIA Corporation", "ticker": "NVDA", "cik": "0001045810"},
+      "fiscal_year": 2024,
+      "start_date": "2023-01-30",
+      "end_date": "2024-01-28",
+      "filing_date": "2024-02-21",
+      "accession_number": "0001045810-24-000029",
+      "source_url": "https://www.sec.gov/Archives/edgar/data/1045810/000104581024000029/0001045810-24-000029-index.htm",
+      "beginning_equity": "22101000000",
+      "ending_equity": "42978000000",
+      "expected_equity_change": "20877000000"
+    },
+    {
+      "company": {"name": "NVIDIA Corporation", "ticker": "NVDA", "cik": "0001045810"},
+      "fiscal_year": 2025,
+      "start_date": "2024-01-29",
+      "end_date": "2025-01-26",
+      "filing_date": "2025-02-26",
+      "accession_number": "0001045810-25-000023",
+      "source_url": "https://www.sec.gov/Archives/edgar/data/1045810/000104581025000023/0001045810-25-000023-index.htm",
+      "beginning_equity": "42978000000",
+      "ending_equity": "79327000000",
+      "expected_equity_change": "36349000000"
+    },
+    {
+      "company": {"name": "Microsoft Corporation", "ticker": "MSFT", "cik": "0000789019"},
+      "fiscal_year": 2024,
+      "start_date": "2023-07-01",
+      "end_date": "2024-06-30",
+      "filing_date": "2024-07-30",
+      "accession_number": "0000950170-24-087843",
+      "source_url": "https://www.sec.gov/Archives/edgar/data/789019/000095017024087843/0000950170-24-087843-index.htm",
+      "beginning_equity": "206223000000",
+      "ending_equity": "268477000000",
+      "expected_equity_change": "62254000000"
+    },
+    {
+      "company": {"name": "Microsoft Corporation", "ticker": "MSFT", "cik": "0000789019"},
+      "fiscal_year": 2025,
+      "start_date": "2024-07-01",
+      "end_date": "2025-06-30",
+      "filing_date": "2025-07-30",
+      "accession_number": "0000950170-25-100235",
+      "source_url": "https://www.sec.gov/Archives/edgar/data/789019/000095017025100235/0000950170-25-100235-index.htm",
+      "beginning_equity": "268477000000",
+      "ending_equity": "343479000000",
+      "expected_equity_change": "75002000000"
+    },
+    {
+      "company": {"name": "Apple Inc.", "ticker": "AAPL", "cik": "0000320193"},
+      "fiscal_year": 2024,
+      "start_date": "2023-10-01",
+      "end_date": "2024-09-28",
+      "filing_date": "2024-11-01",
+      "accession_number": "0000320193-24-000123",
+      "source_url": "https://www.sec.gov/Archives/edgar/data/320193/000032019324000123/0000320193-24-000123-index.htm",
+      "beginning_equity": "62146000000",
+      "ending_equity": "56950000000",
+      "expected_equity_change": "-5196000000"
+    },
+    {
+      "company": {"name": "Apple Inc.", "ticker": "AAPL", "cik": "0000320193"},
+      "fiscal_year": 2025,
+      "start_date": "2024-09-29",
+      "end_date": "2025-09-27",
+      "filing_date": "2025-10-31",
+      "accession_number": "0000320193-25-000079",
+      "source_url": "https://www.sec.gov/Archives/edgar/data/320193/000032019325000079/0000320193-25-000079-index.htm",
+      "beginning_equity": "56950000000",
+      "ending_equity": "73733000000",
+      "expected_equity_change": "16783000000"
+    }
+  ]
+}

@@ -16,6 +16,7 @@ from finspect.answer_builder import (
 )
 from finspect.calculator import (
     absolute_change,
+    balance_change,
     cash_conversion_comparison,
     cash_allocation,
     dilution_ratio,
@@ -328,6 +329,22 @@ class FinSpectOrchestrator:
             and plan.period.fiscal_year is not None
             and not plan.period.comparison_required
         )
+        is_supported_equity_rollforward = (
+            plan.operation == "balance_change"
+            and bool(metric_names & {
+                "shareholders equity", "stockholders equity", "equity balance"
+            })
+            and bool(metric_names & {
+                "equity components", "equity changes", "changes in equity"
+            })
+            and metric_names <= {
+                "shareholders equity", "stockholders equity", "equity balance",
+                "equity components", "equity changes", "changes in equity",
+            }
+            and plan.period.period_kind == "annual"
+            and plan.period.fiscal_year is not None
+            and not plan.period.comparison_required
+        )
 
         if not (
             is_supported_revenue_operation
@@ -341,6 +358,7 @@ class FinSpectOrchestrator:
             or is_supported_share_repurchase
             or is_supported_equity_allocation
             or is_supported_cash_allocation
+            or is_supported_equity_rollforward
         ):
             answer = build_unsupported_answer(
                 question=question,
@@ -366,8 +384,19 @@ class FinSpectOrchestrator:
             is_supported_dilution
             or is_supported_equity_allocation
             or is_supported_cash_allocation
+            or is_supported_equity_rollforward
         ):
             fiscal_years = (plan.period.fiscal_year,)
+        if is_supported_equity_rollforward:
+            if plan.period.fiscal_year <= 1900:
+                return PipelineResult(
+                    plan=plan,
+                    answer=build_unsupported_answer(
+                        question,
+                        "The fiscal-year beginning equity period could not be determined.",
+                    ),
+                )
+            fiscal_years = (plan.period.fiscal_year - 1, plan.period.fiscal_year)
         if fiscal_years is None:
             answer = build_unsupported_answer(
                 question=question,
@@ -559,6 +588,214 @@ class FinSpectOrchestrator:
                     },
                     "ending_equity": str(statement.ending_equity),
                     "unit": "USD",
+                    "source_url": filing_url,
+                },),
+            )
+
+        if is_supported_equity_rollforward:
+            prior_period, current_period = periods
+            if not self.filing_retriever or not self.fact_retriever:
+                return PipelineResult(
+                    plan=plan,
+                    answer=build_unsupported_answer(
+                        question,
+                        "Exact SEC filing and equity-balance retrieval are required for an equity roll-forward.",
+                    ),
+                )
+            if not current_period.accession_number or not current_period.filing_date:
+                return PipelineResult(
+                    plan=plan,
+                    answer=build_unsupported_answer(
+                        question,
+                        "The current annual period could not be tied to an exact 10-K accession and filing date.",
+                    ),
+                )
+            try:
+                filing = self.filing_retriever.get_filing(
+                    cik=cik,
+                    accession_number=current_period.accession_number,
+                    form="10-K",
+                )
+            except FilingRetrievalError as exc:
+                return PipelineResult(
+                    plan=plan,
+                    answer=build_unsupported_answer(
+                        question, f"Could not retrieve the exact annual filing: {exc}"
+                    ),
+                )
+            if (
+                filing.get("form") != "10-K"
+                or str(filing.get("cik", "")).zfill(10) != cik
+                or filing.get("accession_number") != current_period.accession_number
+                or filing.get("filing_date") != current_period.filing_date
+                or filing.get("report_date") != current_period.end_date
+                or not filing.get("html")
+                or not filing.get("primary_document")
+            ):
+                return PipelineResult(
+                    plan=plan,
+                    answer=build_unsupported_answer(
+                        question,
+                        "Retrieved filing metadata or content does not match the requested issuer and exact 10-K period.",
+                    ),
+                )
+            try:
+                statement = EquityStatementExtractor().extract(
+                    filing["html"],
+                    fiscal_year=current_period.fiscal_year,
+                    period_end=current_period.end_date,
+                )
+            except (EquityStatementError, ValueError) as exc:
+                return PipelineResult(
+                    plan=plan,
+                    answer=build_unsupported_answer(
+                        question,
+                        f"The exact 10-K did not yield an unambiguous statement of equity: {exc}",
+                    ),
+                )
+
+            equity_facts: list[FinancialFact] = []
+            for period, role in (
+                (prior_period, PeriodRole.COMPARABLE_PRIOR),
+                (current_period, PeriodRole.CURRENT),
+            ):
+                try:
+                    raw_fact = self.fact_retriever.get_fact(
+                        cik=cik,
+                        taxonomy="us-gaap",
+                        concept="StockholdersEquity",
+                        start_date=None,
+                        end_date=period.end_date,
+                        form="10-K",
+                        unit=period.currency,
+                        filed_on_or_before=period.filing_date,
+                        accession_number=period.accession_number,
+                    )
+                except FactRetrievalError as exc:
+                    return PipelineResult(
+                        plan=plan,
+                        answer=build_unsupported_answer(
+                            question,
+                            f"Could not retrieve a period-matched shareholders’ equity balance: {exc}",
+                        ),
+                    )
+                if (
+                    raw_fact.get("cik", "").zfill(10) != cik
+                    or raw_fact.get("accession_number") != period.accession_number
+                    or raw_fact.get("end_date") != period.end_date
+                    or raw_fact.get("start_date") is not None
+                ):
+                    return PipelineResult(
+                        plan=plan,
+                        answer=build_unsupported_answer(
+                            question,
+                            "A retrieved equity balance does not match the requested issuer, instant, and exact 10-K accession.",
+                        ),
+                    )
+                equity_facts.append(
+                    sec_fact_to_financial_fact(
+                        raw_fact,
+                        period_role=role,
+                        reporting_scope=ReportingScope.CONSOLIDATED,
+                    )
+                )
+            beginning_fact, ending_fact = equity_facts
+            if (
+                beginning_fact.period.kind != "instant"
+                or ending_fact.period.kind != "instant"
+                or ending_fact.period.end_date != date.fromisoformat(current_period.end_date)
+                or beginning_fact.period.end_date != date.fromisoformat(prior_period.end_date)
+            ):
+                return PipelineResult(
+                    plan=plan,
+                    answer=build_unsupported_answer(
+                        question,
+                        "The balance-sheet facts do not match the fiscal-year start and end dates.",
+                    ),
+                )
+            require_compatible_facts(
+                beginning_fact, ending_fact, require_same_period=False
+            )
+            validate_currency_inputs(beginning_fact, ending_fact)
+            if ending_fact.normalized_value != statement.ending_equity:
+                return PipelineResult(
+                    plan=plan,
+                    answer=build_unsupported_answer(
+                        question,
+                        "The balance-sheet equity fact conflicts with the statement-of-equity ending balance.",
+                    ),
+                )
+            calculation = balance_change(
+                ending=statement.ending_equity,
+                beginning=beginning_fact.normalized_value,
+                formula_id="Q06",
+            )
+            filing_url = self.filing_retriever.submissions.get_filing_url(
+                cik=cik,
+                accession_number=current_period.accession_number,
+                primary_document=filing["primary_document"],
+            )
+            evidence = [
+                AnswerEvidence(
+                    label=label,
+                    value=value,
+                    unit="USD",
+                    period=f"FY{current_period.fiscal_year} change",
+                    filing_date=current_period.filing_date,
+                    accession_number=current_period.accession_number,
+                    source_url=filing_url,
+                )
+                for label, value in statement.components.items()
+            ]
+            evidence.extend((
+                AnswerEvidence(
+                    label="Beginning shareholders’ equity",
+                    value=beginning_fact.normalized_value,
+                    unit="USD",
+                    period=f"As of {prior_period.end_date}",
+                    filing_date=prior_period.filing_date,
+                    accession_number=prior_period.accession_number,
+                    source_url=self._filing_url({
+                        "cik": cik,
+                        "accession_number": prior_period.accession_number,
+                    }),
+                ),
+                AnswerEvidence(
+                    label="Ending shareholders’ equity",
+                    value=statement.ending_equity,
+                    unit="USD",
+                    period=f"As of {current_period.end_date}",
+                    filing_date=current_period.filing_date,
+                    accession_number=current_period.accession_number,
+                    source_url=filing_url,
+                ),
+            ))
+            answer = build_calculation_answer(
+                company_name=resolved["name"],
+                question=question,
+                result=calculation,
+                evidence=evidence,
+                limitations=(
+                    "The displayed principal changes are individual disclosed rows; they are not aggregated and may not sum to the full balance change.",
+                    f"Statement amounts reported in {statement.unit} were normalized to USD.",
+                ),
+            )
+            return PipelineResult(
+                plan=plan,
+                answer=answer,
+                facts=({
+                    "company": resolved["name"],
+                    "ticker": resolved.get("ticker"),
+                    "cik": cik,
+                    "fiscal_year": current_period.fiscal_year,
+                    "beginning_equity": str(beginning_fact.normalized_value),
+                    "ending_equity": str(statement.ending_equity),
+                    "equity_change": str(calculation.value),
+                    "equity_components": {
+                        label: str(value)
+                        for label, value in statement.components.items()
+                    },
+                    "accession_number": current_period.accession_number,
                     "source_url": filing_url,
                 },),
             )

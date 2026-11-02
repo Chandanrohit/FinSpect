@@ -1576,6 +1576,240 @@ def test_q14_cash_allocation_pipeline_matches_six_annual_references():
         }
 
 
+def test_q06_equity_rollforward_matches_period_balances_and_current_statement():
+    question = (
+        "How did NVIDIA's shareholders' equity change during FY2025, "
+        "and what were the principal disclosed components?"
+    )
+    plan = make_plan().model_copy(update={
+        "original_question": question,
+        "period": PeriodRequest(
+            period_label="FY2025",
+            period_kind="annual",
+            fiscal_year=2025,
+            comparison_required=False,
+        ),
+        "benchmark_id": "Q06",
+        "operation": "balance_change",
+        "metrics": [
+            MetricRequest(name="shareholders_equity", role="primary", sources=["financial_table"]),
+            MetricRequest(name="equity_components", role="supporting", sources=["financial_table"]),
+        ],
+    })
+    equity_values = {
+        "2024-01-28": (42_978_000_000, PERIODS[2024]),
+        "2025-01-26": (79_327_000_000, PERIODS[2025]),
+    }
+    html = """
+    <p>(In millions)</p><table>
+      <tr><td>Balances as of Jan 28, 2024</td><td>42,978</td></tr>
+      <tr><td>Net income</td><td>72,880</td></tr>
+      <tr><td>Other comprehensive income</td><td>1</td></tr>
+      <tr><td>Shares repurchased</td><td>(34,015)</td></tr>
+      <tr><td>Cash dividends declared and paid</td><td>(834)</td></tr>
+      <tr><td>Stock-based compensation</td><td>4,757</td></tr>
+      <tr><td>Balances as of Jan 26, 2025</td><td>79,327</td></tr>
+    </table>
+    """
+
+    class Planner:
+        def plan(self, _question):
+            return plan
+
+    class FilingRetriever:
+        submissions = type("Submissions", (), {
+            "get_filing_url": staticmethod(lambda **_kwargs: "https://www.sec.gov/Archives/edgar/data/1045810/current.htm")
+        })()
+
+        def get_filing(self, **_kwargs):
+            return {
+                "cik": CIK,
+                "form": "10-K",
+                "filing_date": PERIODS[2025].filing_date,
+                "report_date": PERIODS[2025].end_date,
+                "accession_number": PERIODS[2025].accession_number,
+                "primary_document": "nvda-20250126.htm",
+                "html": html,
+            }
+
+    class EquityFactRetriever:
+        def get_fact(self, *, end_date, **kwargs):
+            assert kwargs["concept"] == "StockholdersEquity"
+            value, source_period = equity_values[end_date]
+            assert kwargs["accession_number"] == source_period.accession_number
+            return {
+                "cik": CIK,
+                "company": "NVIDIA Corporation",
+                "taxonomy": "us-gaap",
+                "concept": "StockholdersEquity",
+                "label": "Stockholders’ equity",
+                "value": value,
+                "unit": "USD",
+                "start_date": None,
+                "end_date": end_date,
+                "fiscal_year": source_period.fiscal_year,
+                "form": "10-K",
+                "filing_date": source_period.filing_date,
+                "accession_number": source_period.accession_number,
+            }
+
+    result = FinSpectOrchestrator(
+        planner=Planner(),
+        normalizer=normalize_query_plan,
+        period_resolver=lambda _cik, year: PERIODS[year],
+        fact_retriever=EquityFactRetriever(),
+        company_resolver=FixtureCompanyResolver(),
+        filing_retriever=FilingRetriever(),
+    ).run(question)
+
+    assert result.answer.formula_id == "Q06"
+    assert Decimal(result.answer.result_value) == Decimal("36349000000")
+    assert "increased by $36,349,000,000" in result.answer.text
+    assert "Net income" in result.answer.text
+    assert len(result.answer.evidence) == 7
+
+
+def test_q06_equity_rollforward_pipeline_matches_six_reference_cases():
+    root = Path(__file__).parents[1]
+    references = json.loads(
+        (root / "data/fixtures/annual_equity_rollforward_reference_matrix.json")
+        .read_text(encoding="utf-8")
+    )["cases"]
+    equity_references = json.loads(
+        (root / "data/fixtures/annual_equity_allocation_reference_matrix.json")
+        .read_text(encoding="utf-8")
+    )["cases"]
+    period_rows = json.loads(
+        (root / "data/fixtures/annual_share_repurchase_reference_matrix.json")
+        .read_text(encoding="utf-8")
+    )["cases"]
+    periods_by_ticker = {}
+    for item in period_rows:
+        ticker = item["company"]["ticker"]
+        for row in item["periods"]:
+            periods_by_ticker.setdefault(ticker, {})[row["fiscal_year"]] = AnnualPeriod(
+                fiscal_year=row["fiscal_year"],
+                start_date=row["start_date"],
+                end_date=row["end_date"],
+                form="10-K",
+                concept="Revenues",
+                filing_date=row["filing_date"],
+                accession_number=row["accession_number"],
+            )
+
+    for reference in references:
+        company = reference["company"]
+        ticker = company["ticker"]
+        year = reference["fiscal_year"]
+        period_map = periods_by_ticker[ticker]
+        prior_period = period_map[year - 1]
+        current_period = period_map[year]
+        q12_reference = next(
+            row for row in equity_references
+            if row["company"]["ticker"] == ticker and row["fiscal_year"] == year
+        )
+        component_rows = "".join(
+            f"<tr><td>{row['label']}</td><td>{row['value']}</td></tr>"
+            for row in q12_reference["components"]
+        )
+        html = f"""
+        <p>Statement of Shareholders’ Equity</p><p>(In millions)</p>
+        <table>
+          <tr><td>Fiscal Year</td><td>{year}</td></tr>
+          {component_rows}
+          <tr><td>Total shareholders’ equity, ending balances</td>
+              <td>{q12_reference['ending_equity']}</td></tr>
+        </table>
+        """
+        periods_by_end = {
+            prior_period.end_date: (
+                Decimal(reference["beginning_equity"]), prior_period
+            ),
+            current_period.end_date: (
+                Decimal(reference["ending_equity"]), current_period
+            ),
+        }
+        question = (
+            f"How did {company['name']}'s shareholders' equity change during FY{year}, "
+            "and what were the principal disclosed components?"
+        )
+        plan = make_plan().model_copy(update={
+            "original_question": question,
+            "company": CompanyRequest(**company),
+            "period": PeriodRequest(
+                period_label=f"FY{year}",
+                period_kind="annual",
+                fiscal_year=year,
+                comparison_required=False,
+            ),
+            "benchmark_id": "Q06",
+            "operation": "balance_change",
+            "metrics": [
+                MetricRequest(name="shareholders_equity", role="primary", sources=["financial_table"]),
+                MetricRequest(name="equity_components", role="supporting", sources=["financial_table"]),
+            ],
+        })
+
+        class Planner:
+            def plan(self, _question):
+                return plan
+
+        class CompanyResolver:
+            def resolve(self, **_kwargs):
+                return company
+
+        class FilingRetriever:
+            submissions = type("Submissions", (), {
+                "get_filing_url": staticmethod(lambda **_kwargs: reference["source_url"])
+            })()
+
+            def get_filing(self, **_kwargs):
+                return {
+                    "cik": company["cik"],
+                    "form": "10-K",
+                    "filing_date": reference["filing_date"],
+                    "report_date": reference["end_date"],
+                    "accession_number": reference["accession_number"],
+                    "primary_document": "reference-filing.htm",
+                    "html": html,
+                }
+
+        class FactRetriever:
+            def get_fact(self, *, end_date, **kwargs):
+                assert kwargs["concept"] == "StockholdersEquity"
+                value, source_period = periods_by_end[end_date]
+                assert kwargs["accession_number"] == source_period.accession_number
+                return {
+                    "cik": company["cik"],
+                    "company": company["name"],
+                    "taxonomy": "us-gaap",
+                    "concept": "StockholdersEquity",
+                    "label": "Stockholders’ equity",
+                    "value": value,
+                    "unit": "USD",
+                    "start_date": None,
+                    "end_date": end_date,
+                    "fiscal_year": source_period.fiscal_year,
+                    "form": "10-K",
+                    "filing_date": source_period.filing_date,
+                    "accession_number": source_period.accession_number,
+                }
+
+        result = FinSpectOrchestrator(
+            planner=Planner(),
+            normalizer=normalize_query_plan,
+            period_resolver=lambda _cik, fiscal_year: period_map[fiscal_year],
+            fact_retriever=FactRetriever(),
+            company_resolver=CompanyResolver(),
+            filing_retriever=FilingRetriever(),
+        ).run(question)
+
+        assert result.answer.formula_id == "Q06"
+        assert result.answer.result_value == reference["expected_equity_change"]
+        assert result.answer.evidence[-1].accession_number == reference["accession_number"]
+        assert result.answer.evidence[-1].value == Decimal(reference["ending_equity"])
+
+
 def test_q03_nvidia_operating_margin_change_end_to_end_fixture():
     question = (
         "How did NVIDIA's operating margin change from FY2024 to FY2025?"

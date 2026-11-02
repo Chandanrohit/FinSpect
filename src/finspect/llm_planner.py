@@ -56,6 +56,10 @@ Rules:
 17. Treat share repurchases, cash dividends, and capital expenditure as
     cash outflow magnitudes in the calculation; keep operating cash flow
     as reported and request clarification if the fiscal year is missing.
+18. For Q06 equity roll-forward questions, require one explicit annual
+    fiscal year and use operation "balance_change" with shareholders' equity
+    and equity components. Do not mark it as a year-over-year comparison;
+    the pipeline resolves the prior fiscal year-end as the opening balance.
 """
 
 
