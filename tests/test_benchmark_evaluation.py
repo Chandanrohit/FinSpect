@@ -49,10 +49,10 @@ def test_benchmark_report_records_fixture_and_unsupported_questions():
 
     cash_conversion_matrix = report["operation_reference_matrices"][4]
     assert cash_conversion_matrix["question_id"] == "Q13"
-    assert cash_conversion_matrix["case_count"] == 6
-    assert cash_conversion_matrix["pass_count"] == 6
+    assert cash_conversion_matrix["case_count"] == 8
+    assert cash_conversion_matrix["pass_count"] == 8
     assert cash_conversion_matrix["fail_count"] == 0
-    assert cash_conversion_matrix["issuers"] == ["AAPL", "MSFT", "NVDA"]
+    assert cash_conversion_matrix["issuers"] == ["AAPL", "CVS", "MSFT", "NVDA"]
     assert set(cash_conversion_matrix["cases_per_issuer"].values()) == {2}
 
     receivables_matrix = report["operation_reference_matrices"][5]

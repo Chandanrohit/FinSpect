@@ -1341,19 +1341,21 @@
       ]
     },
     {
-      "matrix_id": "annual-net-income-cash-conversion-multi-issuer-v1",
+      "matrix_id": "annual-net-income-cash-conversion-multi-issuer-v2-healthcare",
       "question_id": "Q13",
       "evaluation_scope": "offline reference cases from SEC 10-K statements; does not measure live SEC retrieval or query interpretation",
-      "case_count": 6,
-      "pass_count": 6,
+      "case_count": 8,
+      "pass_count": 8,
       "fail_count": 0,
       "issuers": [
         "AAPL",
+        "CVS",
         "MSFT",
         "NVDA"
       ],
       "cases_per_issuer": {
         "AAPL": 2,
+        "CVS": 2,
         "MSFT": 2,
         "NVDA": 2
       },
@@ -1634,6 +1636,102 @@
             {
               "accession_number": "0000320193-25-000079",
               "source_url": "https://www.sec.gov/Archives/edgar/data/320193/000032019325000079/0000320193-25-000079-index.htm"
+            }
+          ],
+          "checks": {
+            "two_ordered_annual_periods": true,
+            "positive_net_income_inputs": true,
+            "evidence_provenance": true,
+            "prior_conversion_percent_correctness": true,
+            "current_conversion_percent_correctness": true,
+            "change_percentage_points_correctness": true
+          },
+          "status": "PASS"
+        },
+        {
+          "company": {
+            "name": "CVS Health Corporation",
+            "ticker": "CVS",
+            "cik": "0000064803"
+          },
+          "fiscal_years": [
+            2023,
+            2024
+          ],
+          "prior_inputs_usd": {
+            "net_income": "8368000000",
+            "operating_cash_flow": "13426000000"
+          },
+          "current_inputs_usd": {
+            "net_income": "4586000000",
+            "operating_cash_flow": "9107000000"
+          },
+          "expected_metrics": {
+            "prior_conversion_percent": "160.4445506692160611854684512",
+            "current_conversion_percent": "198.5826428259921500218054950",
+            "change_percentage_points": "38.1380921567760888363370438"
+          },
+          "actual_metrics": {
+            "current_conversion_percent": "198.5826428259921500218054950",
+            "prior_conversion_percent": "160.4445506692160611854684512",
+            "change_percentage_points": "38.1380921567760888363370438"
+          },
+          "evidence": [
+            {
+              "accession_number": "0000064803-24-000007",
+              "source_url": "https://www.sec.gov/Archives/edgar/data/64803/000006480324000007/0000064803-24-000007-index.html"
+            },
+            {
+              "accession_number": "0000064803-25-000007",
+              "source_url": "https://www.sec.gov/Archives/edgar/data/64803/000006480325000007/0000064803-25-000007-index.html"
+            }
+          ],
+          "checks": {
+            "two_ordered_annual_periods": true,
+            "positive_net_income_inputs": true,
+            "evidence_provenance": true,
+            "prior_conversion_percent_correctness": true,
+            "current_conversion_percent_correctness": true,
+            "change_percentage_points_correctness": true
+          },
+          "status": "PASS"
+        },
+        {
+          "company": {
+            "name": "CVS Health Corporation",
+            "ticker": "CVS",
+            "cik": "0000064803"
+          },
+          "fiscal_years": [
+            2024,
+            2025
+          ],
+          "prior_inputs_usd": {
+            "net_income": "4586000000",
+            "operating_cash_flow": "9107000000"
+          },
+          "current_inputs_usd": {
+            "net_income": "1728000000",
+            "operating_cash_flow": "10639000000"
+          },
+          "expected_metrics": {
+            "prior_conversion_percent": "198.5826428259921500218054950",
+            "current_conversion_percent": "615.6828703703703703703703704",
+            "change_percentage_points": "417.1002275443782203485648754"
+          },
+          "actual_metrics": {
+            "current_conversion_percent": "615.6828703703703703703703704",
+            "prior_conversion_percent": "198.5826428259921500218054950",
+            "change_percentage_points": "417.1002275443782203485648754"
+          },
+          "evidence": [
+            {
+              "accession_number": "0000064803-25-000007",
+              "source_url": "https://www.sec.gov/Archives/edgar/data/64803/000006480325000007/0000064803-25-000007-index.html"
+            },
+            {
+              "accession_number": "0000064803-26-000010",
+              "source_url": "https://www.sec.gov/Archives/edgar/data/64803/000006480326000010/0000064803-26-000010-index.html"
             }
           ],
           "checks": {
