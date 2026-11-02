@@ -175,6 +175,55 @@ def capital_allocation_ratio(amount: Decimal, operating_cash_flow: Decimal, *, f
                    {input_name: a, "operating_cash_flow": c}, FormulaSource.BENCHMARK)
 
 
+def share_repurchase_comparison(
+    current_amount: Decimal,
+    prior_amount: Decimal,
+    current_operating_cash_flow: Decimal,
+) -> CalculationResult:
+    """Calculate buyback cash as a share of OCF and compare annual amounts."""
+    current, prior, cash_flow = map(
+        dec, (current_amount, prior_amount, current_operating_cash_flow)
+    )
+    if current < ZERO or prior < ZERO:
+        raise FormulaError("Share repurchase amounts must be non-negative magnitudes.")
+    if cash_flow <= ZERO:
+        raise FormulaError(
+            "Share repurchase ratio requires positive current-period operating cash flow."
+        )
+    metrics: dict[str, Decimal] = {
+        "current_repurchase_amount": current,
+        "prior_repurchase_amount": prior,
+        "change_in_repurchase_amount": current - prior,
+        "current_repurchase_as_percent_of_operating_cash_flow": _pct(
+            current, cash_flow, label="share repurchase / operating cash flow"
+        ),
+    }
+    notes = []
+    if prior > ZERO:
+        metrics["change_in_repurchase_percent"] = _pct(
+            current - prior, prior, label="share repurchase change"
+        )
+    else:
+        notes.append(
+            "The prior-year amount was zero, so a percentage change is undefined; "
+            "the absolute change is reported."
+        )
+    return CalculationResult(
+        formula_id="Q10",
+        value=metrics["current_repurchase_as_percent_of_operating_cash_flow"],
+        unit="percent",
+        expression="current_share_repurchase_cash / current_operating_cash_flow * 100",
+        inputs={
+            "current_share_repurchase_cash": current,
+            "prior_share_repurchase_cash": prior,
+            "current_operating_cash_flow": cash_flow,
+        },
+        source=FormulaSource.BENCHMARK,
+        notes=tuple(notes),
+        metrics=metrics,
+    )
+
+
 def dilution_ratio(basic_shares: Decimal, diluted_shares: Decimal) -> CalculationResult:
     b, d = dec(basic_shares), dec(diluted_shares)
     effect = d-b

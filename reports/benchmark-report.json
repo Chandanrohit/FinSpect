@@ -7,12 +7,12 @@
   "question_count": 20,
   "aggregate_counts": {
     "PASS": 0,
-    "PARTIAL": 8,
-    "UNSUPPORTED": 12,
+    "PARTIAL": 9,
+    "UNSUPPORTED": 11,
     "FAIL": 0
   },
   "accuracy_percentage": null,
-  "accuracy_note": "No overall accuracy percentage is reported: Q01, Q03, Q05, Q07, Q08, Q09, Q11, and Q13 have fixture-backed checks; issuer matrix case counts and individual checks are reported per operation, but neither live SEC retrieval nor the planner was evaluated.",
+  "accuracy_note": "No overall accuracy percentage is reported: Q01, Q03, Q05, Q07, Q08, Q09, Q10, Q11, and Q13 have fixture-backed checks; issuer matrix case counts and individual checks are reported per operation, but neither live SEC retrieval nor the planner was evaluated.",
   "operation_reference_matrices": [
     {
       "matrix_id": "annual-revenue-growth-multi-issuer-v2-healthcare",
@@ -2429,6 +2429,266 @@
           "status": "PASS"
         }
       ]
+    },
+    {
+      "matrix_id": "annual-share-repurchase-to-cash-flow-multi-issuer-v1",
+      "question_id": "Q10",
+      "evaluation_scope": "offline annual SEC 10-K references; share repurchase cash amounts use the standard cash-flow tag magnitude and do not measure live retrieval or interpretation",
+      "case_count": 6,
+      "pass_count": 6,
+      "fail_count": 0,
+      "issuers": [
+        "AAPL",
+        "MSFT",
+        "NVDA"
+      ],
+      "cases_per_issuer": {
+        "AAPL": 2,
+        "MSFT": 2,
+        "NVDA": 2
+      },
+      "cases": [
+        {
+          "company": {
+            "name": "NVIDIA Corporation",
+            "ticker": "NVDA",
+            "cik": "0001045810"
+          },
+          "fiscal_years": [
+            2023,
+            2024
+          ],
+          "inputs_usd": {
+            "prior_share_repurchase_cash": "10039000000",
+            "current_share_repurchase_cash": "9533000000",
+            "current_operating_cash_flow": "28090000000"
+          },
+          "expected_current_ratio_percent": "33.93734425062299750800996796",
+          "actual_current_ratio_percent": "33.93734425062299750800996796",
+          "expected_change_amount": "-506000000",
+          "actual_change_amount": "-506000000",
+          "evidence": [
+            {
+              "fiscal_year": 2023,
+              "accession_number": "0001045810-23-000017",
+              "source_url": "https://www.sec.gov/Archives/edgar/data/1045810/000104581023000017/0001045810-23-000017-index.htm"
+            },
+            {
+              "fiscal_year": 2024,
+              "accession_number": "0001045810-24-000029",
+              "source_url": "https://www.sec.gov/Archives/edgar/data/1045810/000104581024000029/0001045810-24-000029-index.htm"
+            }
+          ],
+          "checks": {
+            "ordered_annual_periods": true,
+            "us_gaap_currency_facts": true,
+            "filing_dates_and_provenance": true,
+            "current_ratio_correctness": true,
+            "spend_change_correctness": true
+          },
+          "status": "PASS"
+        },
+        {
+          "company": {
+            "name": "NVIDIA Corporation",
+            "ticker": "NVDA",
+            "cik": "0001045810"
+          },
+          "fiscal_years": [
+            2024,
+            2025
+          ],
+          "inputs_usd": {
+            "prior_share_repurchase_cash": "9533000000",
+            "current_share_repurchase_cash": "33706000000",
+            "current_operating_cash_flow": "64089000000"
+          },
+          "expected_current_ratio_percent": "52.59248857058153505281717611",
+          "actual_current_ratio_percent": "52.59248857058153505281717611",
+          "expected_change_amount": "24173000000",
+          "actual_change_amount": "24173000000",
+          "evidence": [
+            {
+              "fiscal_year": 2024,
+              "accession_number": "0001045810-24-000029",
+              "source_url": "https://www.sec.gov/Archives/edgar/data/1045810/000104581024000029/0001045810-24-000029-index.htm"
+            },
+            {
+              "fiscal_year": 2025,
+              "accession_number": "0001045810-25-000023",
+              "source_url": "https://www.sec.gov/Archives/edgar/data/1045810/000104581025000023/0001045810-25-000023-index.htm"
+            }
+          ],
+          "checks": {
+            "ordered_annual_periods": true,
+            "us_gaap_currency_facts": true,
+            "filing_dates_and_provenance": true,
+            "current_ratio_correctness": true,
+            "spend_change_correctness": true
+          },
+          "status": "PASS"
+        },
+        {
+          "company": {
+            "name": "Microsoft Corporation",
+            "ticker": "MSFT",
+            "cik": "0000789019"
+          },
+          "fiscal_years": [
+            2023,
+            2024
+          ],
+          "inputs_usd": {
+            "prior_share_repurchase_cash": "22245000000",
+            "current_share_repurchase_cash": "17254000000",
+            "current_operating_cash_flow": "118548000000"
+          },
+          "expected_current_ratio_percent": "14.55444208253197017241961062",
+          "actual_current_ratio_percent": "14.55444208253197017241961062",
+          "expected_change_amount": "-4991000000",
+          "actual_change_amount": "-4991000000",
+          "evidence": [
+            {
+              "fiscal_year": 2023,
+              "accession_number": "0000950170-23-035122",
+              "source_url": "https://www.sec.gov/Archives/edgar/data/789019/000095017023035122/0000950170-23-035122-index.htm"
+            },
+            {
+              "fiscal_year": 2024,
+              "accession_number": "0000950170-24-087843",
+              "source_url": "https://www.sec.gov/Archives/edgar/data/789019/000095017024087843/0000950170-24-087843-index.htm"
+            }
+          ],
+          "checks": {
+            "ordered_annual_periods": true,
+            "us_gaap_currency_facts": true,
+            "filing_dates_and_provenance": true,
+            "current_ratio_correctness": true,
+            "spend_change_correctness": true
+          },
+          "status": "PASS"
+        },
+        {
+          "company": {
+            "name": "Microsoft Corporation",
+            "ticker": "MSFT",
+            "cik": "0000789019"
+          },
+          "fiscal_years": [
+            2024,
+            2025
+          ],
+          "inputs_usd": {
+            "prior_share_repurchase_cash": "17254000000",
+            "current_share_repurchase_cash": "18420000000",
+            "current_operating_cash_flow": "136162000000"
+          },
+          "expected_current_ratio_percent": "13.52800340770552723961163908",
+          "actual_current_ratio_percent": "13.52800340770552723961163908",
+          "expected_change_amount": "1166000000",
+          "actual_change_amount": "1166000000",
+          "evidence": [
+            {
+              "fiscal_year": 2024,
+              "accession_number": "0000950170-24-087843",
+              "source_url": "https://www.sec.gov/Archives/edgar/data/789019/000095017024087843/0000950170-24-087843-index.htm"
+            },
+            {
+              "fiscal_year": 2025,
+              "accession_number": "0000950170-25-100235",
+              "source_url": "https://www.sec.gov/Archives/edgar/data/789019/000095017025100235/0000950170-25-100235-index.htm"
+            }
+          ],
+          "checks": {
+            "ordered_annual_periods": true,
+            "us_gaap_currency_facts": true,
+            "filing_dates_and_provenance": true,
+            "current_ratio_correctness": true,
+            "spend_change_correctness": true
+          },
+          "status": "PASS"
+        },
+        {
+          "company": {
+            "name": "Apple Inc.",
+            "ticker": "AAPL",
+            "cik": "0000320193"
+          },
+          "fiscal_years": [
+            2023,
+            2024
+          ],
+          "inputs_usd": {
+            "prior_share_repurchase_cash": "77550000000",
+            "current_share_repurchase_cash": "94949000000",
+            "current_operating_cash_flow": "118254000000"
+          },
+          "expected_current_ratio_percent": "80.29242139800767838720043297",
+          "actual_current_ratio_percent": "80.29242139800767838720043297",
+          "expected_change_amount": "17399000000",
+          "actual_change_amount": "17399000000",
+          "evidence": [
+            {
+              "fiscal_year": 2023,
+              "accession_number": "0000320193-23-000106",
+              "source_url": "https://www.sec.gov/Archives/edgar/data/320193/000032019323000106/0000320193-23-000106-index.htm"
+            },
+            {
+              "fiscal_year": 2024,
+              "accession_number": "0000320193-24-000123",
+              "source_url": "https://www.sec.gov/Archives/edgar/data/320193/000032019324000123/0000320193-24-000123-index.htm"
+            }
+          ],
+          "checks": {
+            "ordered_annual_periods": true,
+            "us_gaap_currency_facts": true,
+            "filing_dates_and_provenance": true,
+            "current_ratio_correctness": true,
+            "spend_change_correctness": true
+          },
+          "status": "PASS"
+        },
+        {
+          "company": {
+            "name": "Apple Inc.",
+            "ticker": "AAPL",
+            "cik": "0000320193"
+          },
+          "fiscal_years": [
+            2024,
+            2025
+          ],
+          "inputs_usd": {
+            "prior_share_repurchase_cash": "94949000000",
+            "current_share_repurchase_cash": "90711000000",
+            "current_operating_cash_flow": "111482000000"
+          },
+          "expected_current_ratio_percent": "81.36829263917044904110080551",
+          "actual_current_ratio_percent": "81.36829263917044904110080551",
+          "expected_change_amount": "-4238000000",
+          "actual_change_amount": "-4238000000",
+          "evidence": [
+            {
+              "fiscal_year": 2024,
+              "accession_number": "0000320193-24-000123",
+              "source_url": "https://www.sec.gov/Archives/edgar/data/320193/000032019324000123/0000320193-24-000123-index.htm"
+            },
+            {
+              "fiscal_year": 2025,
+              "accession_number": "0000320193-25-000079",
+              "source_url": "https://www.sec.gov/Archives/edgar/data/320193/000032019325000079/0000320193-25-000079-index.htm"
+            }
+          ],
+          "checks": {
+            "ordered_annual_periods": true,
+            "us_gaap_currency_facts": true,
+            "filing_dates_and_provenance": true,
+            "current_ratio_correctness": true,
+            "spend_change_correctness": true
+          },
+          "status": "PASS"
+        }
+      ]
     }
   ],
   "questions": [
@@ -3252,29 +3512,106 @@
     {
       "question_id": "Q10",
       "question": "What amount did the company spend on share repurchases during the reporting period, what percentage of operating cash flow did this represent, and how did the amount compare with the comparable prior-year period?",
-      "company": null,
-      "filings": [],
-      "reporting_periods": [],
+      "company": {
+        "name": "NVIDIA Corporation",
+        "ticker": "NVDA",
+        "cik": "0001045810"
+      },
+      "filings": [
+        {
+          "fiscal_year": 2024,
+          "share_repurchase_cash": "9533000000",
+          "operating_cash_flow": "28090000000",
+          "unit": "USD",
+          "accession_number": "0001045810-24-000029",
+          "source_url": "https://www.sec.gov/Archives/edgar/data/1045810/000104581024000029/0001045810-24-000029-index.htm"
+        },
+        {
+          "fiscal_year": 2025,
+          "share_repurchase_cash": "33706000000",
+          "operating_cash_flow": "64089000000",
+          "unit": "USD",
+          "accession_number": "0001045810-25-000023",
+          "source_url": "https://www.sec.gov/Archives/edgar/data/1045810/000104581025000023/0001045810-25-000023-index.htm"
+        }
+      ],
+      "reporting_periods": [
+        {
+          "fiscal_year": 2024,
+          "end_date": "2024-01-28"
+        },
+        {
+          "fiscal_year": 2025,
+          "end_date": "2025-01-26"
+        }
+      ],
       "expected_concepts": [
         "share_repurchase_cash",
         "operating_cash_flow"
       ],
-      "retrieval_mode": "not_run",
-      "retrieved_inputs": [],
-      "selected_evidence": [],
-      "calculation_formula": "share_repurchase_cash / operating_cash_flow * 100",
-      "expected_answer": null,
-      "actual_answer": "I cannot answer this request reliably yet: No complete retrieval-to-answer path is implemented for Q10; calculator registration alone is not support.\n\nYour question: What amount did the company spend on share repurchases during the reporting period, what percentage of operating cash flow did this represent, and how did the amount compare with the comparable prior-year period?",
-      "checks": {
-        "input_retrieval_correctness": null,
-        "period_correctness": null,
-        "unit_correctness": null,
-        "calculation_correctness": null,
-        "evidence_correctness": null,
-        "query_interpretation_correctness": null
+      "retrieval_mode": "offline_SEC_reference_matrix_not_live_retrieval",
+      "retrieved_inputs": [
+        {
+          "fiscal_year": 2024,
+          "share_repurchase_cash": "9533000000",
+          "operating_cash_flow": "28090000000",
+          "unit": "USD",
+          "accession_number": "0001045810-24-000029",
+          "source_url": "https://www.sec.gov/Archives/edgar/data/1045810/000104581024000029/0001045810-24-000029-index.htm"
+        },
+        {
+          "fiscal_year": 2025,
+          "share_repurchase_cash": "33706000000",
+          "operating_cash_flow": "64089000000",
+          "unit": "USD",
+          "accession_number": "0001045810-25-000023",
+          "source_url": "https://www.sec.gov/Archives/edgar/data/1045810/000104581025000023/0001045810-25-000023-index.htm"
+        }
+      ],
+      "selected_evidence": [
+        {
+          "fiscal_year": 2024,
+          "share_repurchase_cash": "9533000000",
+          "operating_cash_flow": "28090000000",
+          "unit": "USD",
+          "accession_number": "0001045810-24-000029",
+          "source_url": "https://www.sec.gov/Archives/edgar/data/1045810/000104581024000029/0001045810-24-000029-index.htm"
+        },
+        {
+          "fiscal_year": 2025,
+          "share_repurchase_cash": "33706000000",
+          "operating_cash_flow": "64089000000",
+          "unit": "USD",
+          "accession_number": "0001045810-25-000023",
+          "source_url": "https://www.sec.gov/Archives/edgar/data/1045810/000104581025000023/0001045810-25-000023-index.htm"
+        }
+      ],
+      "calculation_formula": "current_share_repurchase_cash / current_operating_cash_flow * 100",
+      "expected_answer": {
+        "share_repurchase_amount": "33706000000",
+        "share_repurchase_as_percent_of_operating_cash_flow": "52.59248857058153505281717611",
+        "prior_year_amount": "9533000000",
+        "year_over_year_amount_change": "24173000000",
+        "year_over_year_change_percent": "253.5718032099024441414035456"
       },
-      "overall_status": "UNSUPPORTED",
-      "failure_reason": "No complete retrieval-to-answer path is implemented for Q10; calculator registration alone is not support."
+      "actual_answer": {
+        "result_value": "52.59248857058153505281717611",
+        "result_unit": "percent",
+        "metrics": {
+          "current_repurchase_amount": "33706000000",
+          "prior_repurchase_amount": "9533000000",
+          "change_in_repurchase_amount": "24173000000",
+          "current_repurchase_as_percent_of_operating_cash_flow": "52.59248857058153505281717611",
+          "change_in_repurchase_percent": "253.5718032099024441414035456"
+        }
+      },
+      "checks": {
+        "reference_matrix_cases_pass": true,
+        "live_retrieval": "not_evaluated",
+        "query_interpretation": "not_evaluated"
+      },
+      "overall_status": "PARTIAL",
+      "failure_reason": "Offline filing reference checks only; live SEC retrieval and query interpretation remain untested."
     },
     {
       "question_id": "Q11",

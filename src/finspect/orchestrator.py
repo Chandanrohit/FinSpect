@@ -24,6 +24,7 @@ from finspect.calculator import (
     margin_change,
     revenue_growth,
     inventory_revenue_growth_comparison,
+    share_repurchase_comparison,
 )
 from finspect.edgar.client import EdgarClient
 from finspect.edgar.facts import FactRetrievalError, FinancialFactRetriever
@@ -168,6 +169,10 @@ class FinSpectOrchestrator:
             }
         )
         has_total_assets = bool(metric_names & {"assets", "total assets"})
+        has_share_repurchase = bool(
+            metric_names
+            & {"share repurchase cash", "share repurchases", "share repurchase"}
+        )
         has_basic_shares = bool(
             metric_names & {"basic weighted average shares", "basic shares"}
         )
@@ -267,6 +272,19 @@ class FinSpectOrchestrator:
             and plan.period.period_kind == "annual"
             and plan.period.fiscal_year is not None
         )
+        is_supported_share_repurchase = (
+            plan.operation == "capital_allocation_ratio"
+            and has_share_repurchase
+            and has_operating_cash_flow
+            and metric_names
+            <= {
+                "share repurchase cash",
+                "share repurchases",
+                "share repurchase",
+                "operating cash flow",
+                "net cash provided by operating activities",
+            }
+        )
 
         if not (
             is_supported_revenue_operation
@@ -277,6 +295,7 @@ class FinSpectOrchestrator:
             or is_supported_earnings_change
             or is_supported_liquidity
             or is_supported_dilution
+            or is_supported_share_repurchase
         ):
             answer = build_unsupported_answer(
                 question=question,
@@ -287,7 +306,8 @@ class FinSpectOrchestrator:
                     "annual cash-conversion comparison plus the net-income/"
                     "operating-income change relationship, and annual liquid-"
                     "asset contribution to total asset change plus annual "
-                    "weighted-average share dilution."
+                    "weighted-average share dilution and annual share "
+                    "repurchase analysis."
                 ),
             )
             return PipelineResult(plan=plan, answer=answer)
@@ -368,6 +388,7 @@ class FinSpectOrchestrator:
                 or is_supported_earnings_change
                 or is_supported_liquidity
                 or is_supported_dilution
+                or is_supported_share_repurchase
             )
             else {"revenue": (periods[0].concept, False)}
         )
@@ -413,6 +434,15 @@ class FinSpectOrchestrator:
             )
             concept_specs["diluted_weighted_average_shares"] = (
                 ("WeightedAverageNumberOfDilutedSharesOutstanding",),
+                False,
+            )
+        elif is_supported_share_repurchase:
+            concept_specs["share_repurchase_cash"] = (
+                ("PaymentsForRepurchaseOfCommonStock",),
+                False,
+            )
+            concept_specs["operating_cash_flow"] = (
+                ("NetCashProvidedByUsedInOperatingActivities",),
                 False,
             )
 
@@ -716,6 +746,31 @@ class FinSpectOrchestrator:
                 basic.normalized_value,
                 diluted.normalized_value,
             )
+        elif is_supported_share_repurchase:
+            repurchase_prior, repurchase_current = canonical_by_metric[
+                "share_repurchase_cash"
+            ]
+            cash_flow_prior, cash_flow_current = canonical_by_metric[
+                "operating_cash_flow"
+            ]
+            validate_absolute_change_inputs(repurchase_current, repurchase_prior)
+            validate_absolute_change_inputs(cash_flow_current, cash_flow_prior)
+            for repurchase_fact, cash_flow_fact in (
+                (repurchase_prior, cash_flow_prior),
+                (repurchase_current, cash_flow_current),
+            ):
+                require_compatible_facts(repurchase_fact, cash_flow_fact)
+            validate_currency_inputs(
+                repurchase_prior,
+                repurchase_current,
+                cash_flow_prior,
+                cash_flow_current,
+            )
+            calculation = share_repurchase_comparison(
+                current_amount=abs(repurchase_current.normalized_value),
+                prior_amount=abs(repurchase_prior.normalized_value),
+                current_operating_cash_flow=cash_flow_current.normalized_value,
+            )
 
         facts = tuple(
             fact
@@ -754,6 +809,33 @@ class FinSpectOrchestrator:
                 if is_supported_liquidity else ()
             ),
         )
+
+        if is_supported_share_repurchase:
+            metrics = calculation.metrics or {}
+            current_amount = metrics["current_repurchase_amount"]
+            prior_amount = metrics["prior_repurchase_amount"]
+            amount_change = metrics["change_in_repurchase_amount"]
+            change_text = (
+                f"increased by ${amount_change:,.0f}"
+                if amount_change > 0
+                else f"decreased by ${abs(amount_change):,.0f}"
+                if amount_change < 0
+                else "was unchanged"
+            )
+            amount_summary = (
+                f"\n\nShare repurchases were ${current_amount:,.0f} in FY{periods[1].fiscal_year} "
+                f"and ${prior_amount:,.0f} in FY{periods[0].fiscal_year}; the amount "
+                f"{change_text}. The FY{periods[1].fiscal_year} amount was "
+                f"{metrics['current_repurchase_as_percent_of_operating_cash_flow']:.2f}% "
+                "of operating cash flow. Negative cash-flow outflows are shown as "
+                "positive spend magnitudes in this comparison."
+            )
+            if "change_in_repurchase_percent" in metrics:
+                amount_summary += (
+                    f" This was a {metrics['change_in_repurchase_percent']:.2f}% "
+                    "change from the prior year."
+                )
+            answer = replace(answer, text=answer.text + amount_summary)
 
         if is_supported_inventory_operation:
             if not all((self.filing_retriever, self.filing_parser, self.narrative_retriever)):

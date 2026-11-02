@@ -258,6 +258,118 @@ def test_q11_nvidia_weighted_average_share_dilution_end_to_end_fixture():
                for item in result.answer.evidence)
 
 
+_REPURCHASE_CASES = json.loads(
+    (
+        Path(__file__).resolve().parents[1]
+        / "data"
+        / "fixtures"
+        / "annual_share_repurchase_reference_matrix.json"
+    ).read_text(encoding="utf-8")
+)["cases"]
+
+
+@pytest.mark.parametrize(
+    "reference_case",
+    _REPURCHASE_CASES,
+    ids=lambda case: (
+        f"{case['company']['ticker']}-FY{case['periods'][0]['fiscal_year']}"
+        f"-FY{case['periods'][1]['fiscal_year']}"
+    ),
+)
+def test_q10_share_repurchase_reference_matrix_runs_through_orchestrator(reference_case):
+    company = reference_case["company"]
+    prior, current = reference_case["periods"]
+    periods = {row["fiscal_year"]: row for row in (prior, current)}
+    question = (
+        f"What amount did {company['name']} spend on share repurchases in "
+        f"FY{current['fiscal_year']}, what percentage of operating cash flow "
+        f"did that represent, and how did it compare with FY{prior['fiscal_year']}?"
+    )
+    plan = make_plan().model_copy(update={
+        "original_question": question,
+        "company": CompanyRequest(**company),
+        "period": PeriodRequest(
+            period_label=f"FY{current['fiscal_year']}",
+            period_kind="annual",
+            fiscal_year=current["fiscal_year"],
+            comparison_required=True,
+            comparison_period=f"FY{prior['fiscal_year']}",
+        ),
+        "benchmark_id": "Q10",
+        "operation": "capital_allocation_ratio",
+        "metrics": [
+            MetricRequest(name="share_repurchase_cash", role="primary", sources=["xbrl"]),
+            MetricRequest(name="operating_cash_flow", role="denominator", sources=["xbrl"]),
+        ],
+    })
+
+    class Planner:
+        def plan(self, _question):
+            return plan
+
+    class CompanyResolver:
+        def resolve(self, **_kwargs):
+            return company
+
+    class PeriodResolver:
+        def __call__(self, _cik, year):
+            row = periods[year]
+            return AnnualPeriod(
+                fiscal_year=year,
+                start_date=row["start_date"],
+                end_date=row["end_date"],
+                form="10-K",
+                concept="RevenueFromContractWithCustomerExcludingAssessedTax",
+                filing_date=row["filing_date"],
+                accession_number=row["accession_number"],
+            )
+
+    class FactRetriever:
+        def get_fact(self, *, concept, end_date, **kwargs):
+            row = next(item for item in (prior, current) if item["end_date"] == end_date)
+            is_repurchase = concept == "PaymentsForRepurchaseOfCommonStock"
+            assert concept in {
+                "PaymentsForRepurchaseOfCommonStock",
+                "NetCashProvidedByUsedInOperatingActivities",
+            }
+            assert kwargs["unit"] == "USD"
+            amount = row["share_repurchase_cash"] if is_repurchase else row["operating_cash_flow"]
+            if is_repurchase:
+                amount = str(-int(amount))  # Cash-flow statement outflow sign.
+            return {
+                "cik": company["cik"],
+                "company": company["name"],
+                "taxonomy": "us-gaap",
+                "concept": concept,
+                "label": "Payments for repurchases of common stock" if is_repurchase else "Net cash provided by operating activities",
+                "value": amount,
+                "unit": "USD",
+                "start_date": row["start_date"],
+                "end_date": row["end_date"],
+                "fiscal_year": row["fiscal_year"],
+                "form": "10-K",
+                "filing_date": row["filing_date"],
+                "accession_number": row["accession_number"],
+            }
+
+    result = FinSpectOrchestrator(
+        planner=Planner(),
+        normalizer=normalize_query_plan,
+        period_resolver=PeriodResolver(),
+        fact_retriever=FactRetriever(),
+        company_resolver=CompanyResolver(),
+    ).run(question)
+
+    assert result.answer.formula_id == "Q10"
+    assert Decimal(result.answer.result_value) == Decimal(
+        reference_case["expected_current_ratio_percent"]
+    )
+    assert f"${int(current['share_repurchase_cash']):,}" in result.answer.text
+    assert f"${int(prior['share_repurchase_cash']):,}" in result.answer.text
+    assert "increased" in result.answer.text or "decreased" in result.answer.text or "unchanged" in result.answer.text
+    assert len(result.answer.evidence) == 4
+
+
 def test_q09_uses_matching_inventory_balances_and_exact_filing_narrative():
     question = "How did inventory change relative to revenue from FY2024 to FY2025, and what factors does management disclose?"
     plan = make_plan().model_copy(update={
@@ -1412,7 +1524,7 @@ def make_unsupported_benchmark_plan(question):
     [
         f"Q{number:02d}"
         for number in range(2, 21)
-        if number not in {3, 5, 7, 8, 9, 11, 13}
+        if number not in {3, 5, 7, 8, 9, 10, 11, 13}
     ],
 )
 def test_other_benchmark_operations_are_explicitly_unsupported(question_id):

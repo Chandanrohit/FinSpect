@@ -3,7 +3,12 @@ from decimal import Decimal
 
 import pytest
 
-from finspect.calculator import FormulaError, revenue_growth, absolute_change
+from finspect.calculator import (
+    FormulaError,
+    absolute_change,
+    revenue_growth,
+    share_repurchase_comparison,
+)
 
 
 def test_revenue_growth():
@@ -141,4 +146,26 @@ def test_absolute_change_rejects_float_input():
         absolute_change(
             current=100.0,
             prior=Decimal("80"),
+        )
+
+
+def test_share_repurchase_comparison_reports_cash_flow_ratio_and_spend_change():
+    result = share_repurchase_comparison(
+        current_amount=Decimal("130"),
+        prior_amount=Decimal("100"),
+        current_operating_cash_flow=Decimal("500"),
+    )
+
+    assert result.formula_id == "Q10"
+    assert result.value == Decimal("26")
+    assert result.metrics["change_in_repurchase_amount"] == Decimal("30")
+    assert result.metrics["change_in_repurchase_percent"] == Decimal("30")
+
+
+def test_share_repurchase_comparison_rejects_nonpositive_operating_cash_flow():
+    with pytest.raises(FormulaError, match="positive current-period operating"):
+        share_repurchase_comparison(
+            current_amount=Decimal("100"),
+            prior_amount=Decimal("80"),
+            current_operating_cash_flow=Decimal("0"),
         )

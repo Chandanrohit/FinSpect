@@ -23,6 +23,7 @@ from finspect.calculator import (
     liquid_asset_contribution,
     margin_change,
     revenue_growth,
+    share_repurchase_comparison,
 )
 from finspect.edgar.fact_adapter import sec_fact_to_financial_fact
 from finspect.schema import (
@@ -60,6 +61,7 @@ DEFAULT_RECEIVABLES_MATRIX = (
 )
 DEFAULT_INVENTORY_MATRIX = ROOT / "data" / "fixtures" / "annual_inventory_reference_matrix.json"
 DEFAULT_DILUTION_MATRIX = ROOT / "data" / "fixtures" / "annual_share_dilution_reference_matrix.json"
+DEFAULT_REPURCHASE_MATRIX = ROOT / "data" / "fixtures" / "annual_share_repurchase_reference_matrix.json"
 
 
 def evaluate_annual_revenue_matrix(path: Path) -> dict[str, Any]:
@@ -291,6 +293,93 @@ def evaluate_share_dilution_matrix(path: Path) -> dict[str, Any]:
             }],
             "checks": checks,
             "status": "PASS" if passed else "FAIL",
+        })
+    tickers = sorted({item["company"]["ticker"] for item in cases})
+    return {
+        "matrix_id": matrix["matrix_id"],
+        "question_id": matrix["question_id"],
+        "evaluation_scope": matrix["evaluation_scope"],
+        "case_count": len(cases),
+        "pass_count": sum(item["status"] == "PASS" for item in cases),
+        "fail_count": sum(item["status"] == "FAIL" for item in cases),
+        "issuers": tickers,
+        "cases_per_issuer": {
+            ticker: sum(item["company"]["ticker"] == ticker for item in cases)
+            for ticker in tickers
+        },
+        "cases": cases,
+    }
+
+
+def evaluate_share_repurchase_matrix(path: Path) -> dict[str, Any]:
+    """Check Q10 cash repurchase ratios and year-over-year spend changes."""
+    matrix = json.loads(path.read_text(encoding="utf-8"))
+    cases = []
+    for reference in matrix["cases"]:
+        company = reference["company"]
+        prior, current = reference["periods"]
+        starts = [date.fromisoformat(item["start_date"]) for item in (prior, current)]
+        ends = [date.fromisoformat(item["end_date"]) for item in (prior, current)]
+        filing_dates = [date.fromisoformat(item["filing_date"]) for item in (prior, current)]
+        repurchase_prior = Decimal(prior["share_repurchase_cash"])
+        repurchase_current = Decimal(current["share_repurchase_cash"])
+        current_cash_flow = Decimal(current["operating_cash_flow"])
+        result = share_repurchase_comparison(
+            repurchase_current,
+            repurchase_prior,
+            current_cash_flow,
+        )
+        checks = {
+            "ordered_annual_periods": (
+                prior["fiscal_year"] < current["fiscal_year"]
+                and ends[0] < starts[1]
+                and all(300 <= (end - start).days <= 400 for start, end in zip(starts, ends, strict=True))
+            ),
+            "us_gaap_currency_facts": (
+                matrix["form"] == "10-K"
+                and matrix["taxonomy"] == "us-gaap"
+                and matrix["unit"] == "USD"
+                and matrix["share_repurchase_concept"] == "PaymentsForRepurchaseOfCommonStock"
+                and matrix["operating_cash_flow_concept"] == "NetCashProvidedByUsedInOperatingActivities"
+                and repurchase_prior >= 0
+                and repurchase_current >= 0
+                and current_cash_flow > 0
+            ),
+            "filing_dates_and_provenance": all(
+                filing_date >= end
+                and row["accession_number"].replace("-", "") in row["source_url"]
+                and row["source_url"].startswith("https://www.sec.gov/Archives/edgar/data/")
+                and f"/{int(company['cik'])}/" in row["source_url"]
+                for filing_date, end, row in zip(filing_dates, ends, (prior, current), strict=True)
+            ),
+            "current_ratio_correctness": (
+                result.value == Decimal(reference["expected_current_ratio_percent"])
+            ),
+            "spend_change_correctness": (
+                result.metrics["change_in_repurchase_amount"]
+                == Decimal(reference["expected_change_amount"])
+                and result.metrics.get("change_in_repurchase_percent")
+                == Decimal(reference["expected_change_percent"])
+            ),
+        }
+        cases.append({
+            "company": company,
+            "fiscal_years": [prior["fiscal_year"], current["fiscal_year"]],
+            "inputs_usd": {
+                "prior_share_repurchase_cash": str(repurchase_prior),
+                "current_share_repurchase_cash": str(repurchase_current),
+                "current_operating_cash_flow": str(current_cash_flow),
+            },
+            "expected_current_ratio_percent": reference["expected_current_ratio_percent"],
+            "actual_current_ratio_percent": str(result.value),
+            "expected_change_amount": reference["expected_change_amount"],
+            "actual_change_amount": str(result.metrics["change_in_repurchase_amount"]),
+            "evidence": [
+                {"fiscal_year": row["fiscal_year"], "accession_number": row["accession_number"], "source_url": row["source_url"]}
+                for row in (prior, current)
+            ],
+            "checks": checks,
+            "status": "PASS" if all(checks.values()) else "FAIL",
         })
     tickers = sorted({item["company"]["ticker"] for item in cases})
     return {
@@ -1556,6 +1645,7 @@ def evaluate_benchmark(
     receivables_matrix = evaluate_receivables_matrix(DEFAULT_RECEIVABLES_MATRIX)
     inventory_matrix = evaluate_inventory_matrix(inventory_matrix_path)
     dilution_matrix = evaluate_share_dilution_matrix(DEFAULT_DILUTION_MATRIX)
+    repurchase_matrix = evaluate_share_repurchase_matrix(DEFAULT_REPURCHASE_MATRIX)
     inventory_reference = json.loads(inventory_matrix_path.read_text(encoding="utf-8"))
     questions = benchmark.question_map()
     if fixture.get("question_id") != "Q01" or "Q01" not in questions:
@@ -1642,6 +1732,71 @@ def evaluate_benchmark(
                 "checks": {"matrix_cases_pass": inventory_matrix["pass_count"] == inventory_matrix["case_count"], "live_retrieval": "not_evaluated", "query_interpretation": "not_evaluated"},
                 "overall_status": "PARTIAL" if inventory_matrix["pass_count"] == inventory_matrix["case_count"] else "FAIL",
                 "failure_reason": "Offline reference and narrative fixture checks only; live SEC retrieval and query interpretation were not evaluated.",
+            })
+            continue
+        if question_id == "Q10":
+            repurchase_reference = json.loads(
+                DEFAULT_REPURCHASE_MATRIX.read_text(encoding="utf-8")
+            )
+            reference = next(
+                item for item in repurchase_reference["cases"]
+                if item["company"]["ticker"] == "NVDA"
+                and item["periods"][1]["fiscal_year"] == 2025
+            )
+            prior, current = reference["periods"]
+            result = share_repurchase_comparison(
+                Decimal(current["share_repurchase_cash"]),
+                Decimal(prior["share_repurchase_cash"]),
+                Decimal(current["operating_cash_flow"]),
+            )
+            evidence = [
+                {
+                    "fiscal_year": row["fiscal_year"],
+                    "share_repurchase_cash": row["share_repurchase_cash"],
+                    "operating_cash_flow": row["operating_cash_flow"],
+                    "unit": "USD",
+                    "accession_number": row["accession_number"],
+                    "source_url": row["source_url"],
+                }
+                for row in (prior, current)
+            ]
+            matrix_pass = repurchase_matrix["pass_count"] == repurchase_matrix["case_count"]
+            report_questions.append({
+                "question_id": question_id,
+                "question": question.question_template,
+                "company": reference["company"],
+                "filings": evidence,
+                "reporting_periods": [
+                    {"fiscal_year": row["fiscal_year"], "end_date": row["end_date"]}
+                    for row in (prior, current)
+                ],
+                "expected_concepts": question.required_concepts,
+                "retrieval_mode": "offline_SEC_reference_matrix_not_live_retrieval",
+                "retrieved_inputs": evidence,
+                "selected_evidence": evidence,
+                "calculation_formula": result.expression,
+                "expected_answer": {
+                    "share_repurchase_amount": current["share_repurchase_cash"],
+                    "share_repurchase_as_percent_of_operating_cash_flow": reference["expected_current_ratio_percent"],
+                    "prior_year_amount": prior["share_repurchase_cash"],
+                    "year_over_year_amount_change": reference["expected_change_amount"],
+                    "year_over_year_change_percent": reference["expected_change_percent"],
+                },
+                "actual_answer": {
+                    "result_value": str(result.value),
+                    "result_unit": result.unit,
+                    "metrics": {key: str(value) for key, value in (result.metrics or {}).items()},
+                },
+                "checks": {
+                    "reference_matrix_cases_pass": matrix_pass,
+                    "live_retrieval": "not_evaluated",
+                    "query_interpretation": "not_evaluated",
+                },
+                "overall_status": "PARTIAL" if matrix_pass else "FAIL",
+                "failure_reason": (
+                    "Offline filing reference checks only; live SEC retrieval "
+                    "and query interpretation remain untested."
+                ),
             })
             continue
         if question_id == "Q13":
@@ -1757,7 +1912,7 @@ def evaluate_benchmark(
         "accuracy_percentage": None,
         "accuracy_note": (
             "No overall accuracy percentage is reported: Q01, Q03, Q05, Q07, Q08, Q09, "
-            "Q11, and Q13 have fixture-backed checks; issuer matrix case counts and "
+            "Q10, Q11, and Q13 have fixture-backed checks; issuer matrix case counts and "
             "individual checks are reported per operation, but neither "
             "live SEC retrieval nor the planner was evaluated."
         ),
@@ -1770,6 +1925,7 @@ def evaluate_benchmark(
             receivables_matrix,
             inventory_matrix,
             dilution_matrix,
+            repurchase_matrix,
         ],
         "questions": report_questions,
     }
