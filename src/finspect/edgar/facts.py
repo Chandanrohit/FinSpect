@@ -4,6 +4,7 @@ from __future__ import annotations
 from datetime import date
 from typing import Any
 
+from .client import EdgarAPIError
 from .xbrl import XBRLService
 
 
@@ -82,11 +83,18 @@ class FinancialFactRetriever:
             raise ValueError("taxonomy, concept, and form must not be empty")
 
         # Fetch the SEC response using the existing service.
-        response = self.xbrl.get_company_concept(
-            cik=cik,
-            taxonomy=taxonomy,
-            concept=concept,
-        )
+        try:
+            response = self.xbrl.get_company_concept(
+                cik=cik,
+                taxonomy=taxonomy,
+                concept=concept,
+            )
+        except EdgarAPIError as exc:
+            if exc.status_code == 404:
+                raise FactRetrievalError(
+                    f"SEC does not expose concept {concept!r} for this issuer."
+                ) from exc
+            raise
 
         all_units = response.get("units", {})
         if not all_units:

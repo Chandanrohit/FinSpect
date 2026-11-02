@@ -18,6 +18,7 @@ from finspect.calculator import (
     cash_conversion_comparison,
     earnings_change_relationship,
     growth_comparison,
+    liquid_asset_contribution,
     margin_change,
     revenue_growth,
 )
@@ -44,6 +45,7 @@ DEFAULT_Q05_FIXTURE = ROOT / "data" / "fixtures" / "nvidia_q05_fy2024_fy2025.jso
 DEFAULT_ANNUAL_REVENUE_MATRIX = (
     ROOT / "data" / "fixtures" / "annual_revenue_reference_matrix.json"
 )
+DEFAULT_LIQUIDITY_MATRIX = ROOT / "data" / "fixtures" / "liquidity_reference_matrix.json"
 
 
 def evaluate_annual_revenue_matrix(path: Path) -> dict[str, Any]:
@@ -112,6 +114,105 @@ def evaluate_annual_revenue_matrix(path: Path) -> dict[str, Any]:
         "cases_per_issuer": {
             ticker: sum(item["company"]["ticker"] == ticker for item in cases)
             for ticker in sorted({item["company"]["ticker"] for item in cases})
+        },
+        "cases": cases,
+    }
+
+
+def evaluate_liquidity_reference_matrix(path: Path) -> dict[str, Any]:
+    """Check Q07 balance-sheet calculations against cited issuer cases."""
+    matrix = json.loads(path.read_text(encoding="utf-8"))
+    cases = []
+    for issuer in matrix["issuers"]:
+        periods_by_year = {
+            item["fiscal_year"]: item for item in issuer["periods"]
+        }
+        for comparison in issuer["comparisons"]:
+            prior = periods_by_year[comparison["prior_year"]]
+            current = periods_by_year[comparison["current_year"]]
+            facts = {
+                name: (prior[name], current[name])
+                for name in ("cash", "short_term_investments", "total_assets")
+            }
+            checks = {
+                "two_ordered_periods": (
+                    prior["fiscal_year"] < current["fiscal_year"]
+                    and date.fromisoformat(prior["end_date"])
+                    < date.fromisoformat(current["start_date"])
+                ),
+                "instant_usd_facts": all(
+                    item["form"] == "10-K"
+                    and fact["unit"] == "USD"
+                    and fact["taxonomy"] == "us-gaap"
+                    and date.fromisoformat(item["filing_date"])
+                    >= date.fromisoformat(item["end_date"])
+                    and 300 <= (
+                        date.fromisoformat(item["end_date"])
+                        - date.fromisoformat(item["start_date"])
+                    ).days <= 400
+                    for metric_values in facts.values()
+                    for item, fact in zip((prior, current), metric_values, strict=True)
+                ),
+                "evidence_provenance": all(
+                    item["accession_number"]
+                    and item["accession_number"].replace("-", "")
+                    in item["source_url"]
+                    and item["source_url"].startswith(
+                        "https://www.sec.gov/Archives/edgar/data/"
+                    )
+                    for item in (prior, current)
+                ),
+            }
+            calculation = liquid_asset_contribution(
+                liquid_end=(
+                    Decimal(current["cash"]["value"])
+                    + Decimal(current["short_term_investments"]["value"])
+                ),
+                liquid_begin=(
+                    Decimal(prior["cash"]["value"])
+                    + Decimal(prior["short_term_investments"]["value"])
+                ),
+                assets_end=Decimal(current["total_assets"]["value"]),
+                assets_begin=Decimal(prior["total_assets"]["value"]),
+            )
+            checks["calculation_correctness"] = (
+                calculation.value
+                == Decimal(comparison["expected_contribution_percent"])
+            )
+            cases.append({
+                "company": issuer["company"],
+                "fiscal_years": [prior["fiscal_year"], current["fiscal_year"]],
+                "inputs": {
+                    "prior": {name: values[0]["value"] for name, values in facts.items()},
+                    "current": {name: values[1]["value"] for name, values in facts.items()},
+                },
+                "expected_contribution_percent": comparison[
+                    "expected_contribution_percent"
+                ],
+                "actual_contribution_percent": str(calculation.value),
+                "evidence": [
+                    {
+                        "fiscal_year": item["fiscal_year"],
+                        "accession_number": item["accession_number"],
+                        "source_url": item["source_url"],
+                    }
+                    for item in (prior, current)
+                ],
+                "checks": checks,
+                "status": "PASS" if all(checks.values()) else "FAIL",
+            })
+    tickers = sorted({item["company"]["ticker"] for item in cases})
+    return {
+        "matrix_id": matrix["matrix_id"],
+        "question_id": matrix["question_id"],
+        "evaluation_scope": matrix["evaluation_scope"],
+        "case_count": len(cases),
+        "pass_count": sum(item["status"] == "PASS" for item in cases),
+        "fail_count": sum(item["status"] == "FAIL" for item in cases),
+        "issuers": tickers,
+        "cases_per_issuer": {
+            ticker: sum(item["company"]["ticker"] == ticker for item in cases)
+            for ticker in tickers
         },
         "cases": cases,
     }
@@ -902,6 +1003,7 @@ def evaluate_benchmark(
     annual_revenue_matrix = evaluate_annual_revenue_matrix(
         annual_revenue_matrix_path
     )
+    liquidity_matrix = evaluate_liquidity_reference_matrix(DEFAULT_LIQUIDITY_MATRIX)
     questions = benchmark.question_map()
     if fixture.get("question_id") != "Q01" or "Q01" not in questions:
         raise ValueError("The configured fixture must target benchmark Q01.")
@@ -919,6 +1021,44 @@ def evaluate_benchmark(
         question = questions[question_id]
         if question_id == "Q05":
             report_questions.append(_evaluate_q05(question, q05_fixture))
+            continue
+        if question_id == "Q07":
+            issuer = next(
+                item for item in json.loads(DEFAULT_LIQUIDITY_MATRIX.read_text(encoding="utf-8"))["issuers"]
+                if item["company"]["ticker"] == "NVDA"
+            )
+            prior, current = issuer["periods"][1:3]
+            result = liquid_asset_contribution(
+                liquid_end=Decimal(current["cash"]["value"]) + Decimal(current["short_term_investments"]["value"]),
+                liquid_begin=Decimal(prior["cash"]["value"]) + Decimal(prior["short_term_investments"]["value"]),
+                assets_end=Decimal(current["total_assets"]["value"]),
+                assets_begin=Decimal(prior["total_assets"]["value"]),
+            )
+            evidence = [
+                {"fiscal_year": period["fiscal_year"], "cash": period["cash"]["value"],
+                 "short_term_investments": period["short_term_investments"]["value"],
+                 "total_assets": period["total_assets"]["value"], "unit": "USD",
+                 "accession_number": period["accession_number"], "source_url": period["source_url"]}
+                for period in (prior, current)
+            ]
+            report_questions.append({
+                "question_id": question_id, "question": question.question_template,
+                "company": issuer["company"], "filings": evidence,
+                "reporting_periods": [{"fiscal_year": p["fiscal_year"], "end_date": p["end_date"]} for p in (prior, current)],
+                "expected_concepts": question.required_concepts,
+                "retrieval_mode": "checked_in_sec_snapshot_not_live_retrieval",
+                "retrieved_inputs": evidence, "selected_evidence": evidence,
+                "calculation_formula": result.expression,
+                "expected_answer": {"contribution_percent": str(result.value)},
+                "actual_answer": {"result_value": str(result.value), "result_unit": result.unit,
+                                  "display": f"{result.value.quantize(Decimal('0.01'))}%"},
+                "checks": {"input_retrieval_correctness": "not_evaluated_live_retrieval",
+                           "period_correctness": True, "unit_correctness": True,
+                           "calculation_correctness": True, "evidence_correctness": True,
+                           "query_interpretation_correctness": "not_evaluated"},
+                "overall_status": "PARTIAL",
+                "failure_reason": "Fixture-backed calculation only; live SEC retrieval and question interpretation remain untested.",
+            })
             continue
         if question_id == "Q01":
             report_questions.append(_evaluate_q01(question, fixture))
@@ -983,12 +1123,12 @@ def evaluate_benchmark(
         "aggregate_counts": counts,
         "accuracy_percentage": None,
         "accuracy_note": (
-            "No overall accuracy percentage is reported: Q01, Q03, Q05, Q08, "
-            "and Q13 have fixture-backed pipeline checks; the separate Q01 "
+            "No overall accuracy percentage is reported: Q01, Q03, Q05, Q07, Q08, "
+            "and Q13 have fixture-backed checks; the Q01 and Q07 "
             "issuer matrix checks six cited annual revenue cases, but neither "
             "live SEC retrieval nor the planner was evaluated."
         ),
-        "operation_reference_matrices": [annual_revenue_matrix],
+        "operation_reference_matrices": [annual_revenue_matrix, liquidity_matrix],
         "questions": report_questions,
     }
 

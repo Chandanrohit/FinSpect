@@ -19,11 +19,12 @@ from finspect.calculator import (
     cash_conversion_comparison,
     earnings_change_relationship,
     growth_comparison,
+    liquid_asset_contribution,
     margin_change,
     revenue_growth,
 )
 from finspect.edgar.client import EdgarClient
-from finspect.edgar.facts import FinancialFactRetriever
+from finspect.edgar.facts import FactRetrievalError, FinancialFactRetriever
 from finspect.query_planner import QueryPlan
 from finspect.edgar.xbrl import XBRLService
 from finspect.llm_planner import planner_from_environment
@@ -142,6 +143,18 @@ class FinSpectOrchestrator:
         has_operating_income = bool(
             metric_names & {"operating income", "operating income loss"}
         )
+        has_cash_balance = bool(
+            metric_names & {"cash and cash equivalents", "cash cash equivalents"}
+        )
+        has_short_term_investments = bool(
+            metric_names
+            & {
+                "short term investments",
+                "marketable securities",
+                "short term investments or marketable securities",
+            }
+        )
+        has_total_assets = bool(metric_names & {"assets", "total assets"})
         is_supported_revenue_operation = (
             plan.operation in {"growth_rate", "absolute_change"}
             and has_revenue
@@ -194,6 +207,22 @@ class FinSpectOrchestrator:
                 "operating income loss",
             }
         )
+        is_supported_liquidity = (
+            plan.operation == "liquidity_asset_contribution"
+            and has_cash_balance
+            and has_short_term_investments
+            and has_total_assets
+            and metric_names
+            <= {
+                "cash and cash equivalents",
+                "cash cash equivalents",
+                "short term investments",
+                "marketable securities",
+                "short term investments or marketable securities",
+                "assets",
+                "total assets",
+            }
+        )
 
         if not (
             is_supported_revenue_operation
@@ -201,6 +230,7 @@ class FinSpectOrchestrator:
             or is_supported_receivables_operation
             or is_supported_cash_conversion
             or is_supported_earnings_change
+            or is_supported_liquidity
         ):
             answer = build_unsupported_answer(
                 question=question,
@@ -209,7 +239,8 @@ class FinSpectOrchestrator:
                     "absolute annual revenue change, and operating margin "
                     "change, annual receivables/revenue growth comparison, and "
                     "annual cash-conversion comparison plus the net-income/"
-                    "operating-income change relationship."
+                    "operating-income change relationship, and annual liquid-"
+                    "asset contribution to total asset change."
                 ),
             )
             return PipelineResult(plan=plan, answer=answer)
@@ -282,7 +313,11 @@ class FinSpectOrchestrator:
         # retrieve each concept for the same verified annual periods.
         concept_specs = (
             {}
-            if is_supported_cash_conversion or is_supported_earnings_change
+            if (
+                is_supported_cash_conversion
+                or is_supported_earnings_change
+                or is_supported_liquidity
+            )
             else {"revenue": (periods[0].concept, False)}
         )
         if is_supported_margin_operation:
@@ -301,26 +336,63 @@ class FinSpectOrchestrator:
         elif is_supported_earnings_change:
             concept_specs["net_income"] = ("NetIncomeLoss", False)
             concept_specs["operating_income"] = ("OperatingIncomeLoss", False)
+        elif is_supported_liquidity:
+            concept_specs["cash_and_cash_equivalents"] = (
+                (
+                    "CashAndCashEquivalentsAtCarryingValue",
+                    "CashCashEquivalentsRestrictedCashAndRestrictedCashEquivalents",
+                ),
+                True,
+            )
+            concept_specs["short_term_investments"] = (
+                (
+                    "MarketableSecuritiesCurrent",
+                    "ShortTermInvestments",
+                    "AvailableForSaleSecuritiesCurrent",
+                ),
+                True,
+            )
+            concept_specs["total_assets"] = (("Assets",), True)
 
         raw_by_metric: dict[str, tuple[dict[str, Any], ...]] = {}
         canonical_by_metric: dict[str, tuple[FinancialFact, ...]] = {}
         roles = (PeriodRole.COMPARABLE_PRIOR, PeriodRole.CURRENT)
 
-        for metric_name, (concept, is_instant) in concept_specs.items():
-            raw_facts = tuple(
-                self.fact_retriever.get_fact(
-                    cik=cik,
-                    taxonomy="us-gaap",
-                    concept=concept,
-                    start_date=None if is_instant else period.start_date,
-                    end_date=period.end_date,
-                    form=period.form,
-                    unit=period.currency,
-                    filed_on_or_before=period.filing_date,
-                    accession_number=period.accession_number,
-                )
-                for period in periods
+        for metric_name, (concept_options, is_instant) in concept_specs.items():
+            concepts = (
+                (concept_options,)
+                if isinstance(concept_options, str)
+                else tuple(concept_options)
             )
+            raw_facts = None
+            last_retrieval_error = None
+            for concept in concepts:
+                try:
+                    candidate_facts = tuple(
+                        self.fact_retriever.get_fact(
+                            cik=cik,
+                            taxonomy="us-gaap",
+                            concept=concept,
+                            start_date=None if is_instant else period.start_date,
+                            end_date=period.end_date,
+                            form=period.form,
+                            unit=period.currency,
+                            filed_on_or_before=period.filing_date,
+                            accession_number=period.accession_number,
+                        )
+                        for period in periods
+                    )
+                except FactRetrievalError as exc:
+                    last_retrieval_error = exc
+                    continue
+                raw_facts = candidate_facts
+                break
+            if raw_facts is None:
+                if last_retrieval_error is not None:
+                    raise last_retrieval_error
+                raise FactRetrievalError(
+                    f"No candidate SEC concept is configured for {metric_name}."
+                )
             adapted_facts = tuple(
                 sec_fact_to_financial_fact(
                     raw_fact,
@@ -489,6 +561,65 @@ class FinSpectOrchestrator:
                 operating_current=income_current.normalized_value,
                 operating_prior=income_prior.normalized_value,
             )
+        elif is_supported_liquidity:
+            cash_prior, cash_current = canonical_by_metric[
+                "cash_and_cash_equivalents"
+            ]
+            investments_prior, investments_current = canonical_by_metric[
+                "short_term_investments"
+            ]
+            assets_prior, assets_current = canonical_by_metric["total_assets"]
+            balances = (
+                cash_prior,
+                cash_current,
+                investments_prior,
+                investments_current,
+                assets_prior,
+                assets_current,
+            )
+            if any(fact.period.kind != "instant" for fact in balances):
+                raise ValueError("Q07 inputs must be instant balance-sheet facts.")
+            for prior_fact, current_fact in (
+                (cash_prior, cash_current),
+                (investments_prior, investments_current),
+                (assets_prior, assets_current),
+            ):
+                if (
+                    prior_fact.period.end_date
+                    != date.fromisoformat(periods[0].end_date)
+                    or current_fact.period.end_date
+                    != date.fromisoformat(periods[1].end_date)
+                ):
+                    raise ValueError(
+                        "Q07 balances must align with the requested fiscal year ends."
+                    )
+            for cash_fact, investment_fact, asset_fact in (
+                (cash_prior, investments_prior, assets_prior),
+                (cash_current, investments_current, assets_current),
+            ):
+                require_compatible_facts(
+                    cash_fact,
+                    investment_fact,
+                    require_same_period=False,
+                )
+                require_compatible_facts(
+                    cash_fact,
+                    asset_fact,
+                    require_same_period=False,
+                )
+            validate_currency_inputs(*balances)
+            calculation = liquid_asset_contribution(
+                liquid_end=(
+                    cash_current.normalized_value
+                    + investments_current.normalized_value
+                ),
+                liquid_begin=(
+                    cash_prior.normalized_value
+                    + investments_prior.normalized_value
+                ),
+                assets_end=assets_current.normalized_value,
+                assets_begin=assets_prior.normalized_value,
+            )
 
         facts = tuple(
             fact
@@ -522,6 +653,10 @@ class FinSpectOrchestrator:
             question=question,
             result=calculation,
             evidence=evidence,
+            limitations=(
+                ("Uses reported cash and current short-term investments; this is not an unrestricted-cash measure.",)
+                if is_supported_liquidity else ()
+            ),
         )
 
         return PipelineResult(

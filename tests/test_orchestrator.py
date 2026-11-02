@@ -5,6 +5,7 @@ from pathlib import Path
 import pytest
 
 from finspect.orchestrator import AnnualPeriod, FinSpectOrchestrator
+from finspect.edgar.facts import FactRetrievalError
 from finspect.plan_normalizer import normalize_query_plan
 from finspect.query_planner import (
     CompanyRequest,
@@ -387,6 +388,134 @@ def test_q01_reference_matrix_runs_through_orchestrator(reference_case):
     )
 
 
+_LIQUIDITY_MATRIX = json.loads(
+    (
+        Path(__file__).resolve().parents[1]
+        / "data"
+        / "fixtures"
+        / "liquidity_reference_matrix.json"
+    ).read_text(encoding="utf-8")
+)["issuers"]
+_LIQUIDITY_CASES = [
+    (issuer, comparison)
+    for issuer in _LIQUIDITY_MATRIX
+    for comparison in issuer["comparisons"]
+]
+
+
+@pytest.mark.parametrize(
+    ("issuer", "comparison"),
+    _LIQUIDITY_CASES,
+    ids=lambda parameter: parameter.get("company", {}).get("ticker")
+    if isinstance(parameter, dict) and "company" in parameter
+    else f"FY{parameter['prior_year']}-FY{parameter['current_year']}",
+)
+def test_q07_liquidity_reference_matrix_runs_through_orchestrator(
+    issuer, comparison
+):
+    company = issuer["company"]
+    periods = {row["fiscal_year"]: row for row in issuer["periods"]}
+    prior = periods[comparison["prior_year"]]
+    current = periods[comparison["current_year"]]
+    question = (
+        f"How did {company['name']}'s cash, cash equivalents and short-term "
+        f"investments or marketable securities change from FY{prior['fiscal_year']} "
+        f"to FY{current['fiscal_year']}, and what percentage of the change in "
+        "total assets did this represent?"
+    )
+    plan = make_plan().model_copy(update={
+        "original_question": question,
+        "company": CompanyRequest(**company),
+        "period": PeriodRequest(
+            period_label=f"FY{current['fiscal_year']}",
+            period_kind="annual",
+            fiscal_year=current["fiscal_year"],
+            comparison_required=True,
+            comparison_period=f"FY{prior['fiscal_year']}",
+        ),
+        "operation": "liquidity_asset_contribution",
+        "metrics": [
+            MetricRequest(
+                name="cash_and_cash_equivalents",
+                role="primary",
+                sources=["xbrl"],
+            ),
+            MetricRequest(
+                name="short_term_investments_or_marketable_securities",
+                role="supporting",
+                sources=["xbrl"],
+            ),
+            MetricRequest(
+                name="total_assets",
+                role="supporting",
+                sources=["xbrl"],
+            ),
+        ],
+    })
+
+    class Planner:
+        def plan(self, _question):
+            return plan
+
+    class CompanyResolver:
+        def resolve(self, **_kwargs):
+            return company
+
+    class FactRetriever:
+        def get_fact(self, *, concept, end_date, **_kwargs):
+            period = next(
+                row for row in issuer["periods"]
+                if row["end_date"] == end_date
+            )
+            fact = next(
+                (period[key] for key in (
+                    "cash", "short_term_investments", "total_assets"
+                ) if period[key]["concept"] == concept),
+                None,
+            )
+            if fact is None:
+                raise FactRetrievalError("Concept not used by this issuer.")
+            return {
+                "cik": company["cik"],
+                "company": company["name"],
+                "taxonomy": fact["taxonomy"],
+                "concept": fact["concept"],
+                "label": fact["concept"],
+                "value": fact["value"],
+                "unit": fact["unit"],
+                "start_date": None,
+                "end_date": period["end_date"],
+                "fiscal_year": period["fiscal_year"],
+                "form": period["form"],
+                "filing_date": period["filing_date"],
+                "accession_number": period["accession_number"],
+                "primary_document": period["primary_document"],
+            }
+
+    result = FinSpectOrchestrator(
+        planner=Planner(),
+        normalizer=normalize_query_plan,
+        period_resolver=lambda _cik, year: AnnualPeriod(
+            fiscal_year=periods[year]["fiscal_year"],
+            start_date=periods[year]["start_date"],
+            end_date=periods[year]["end_date"],
+            form=periods[year]["form"],
+            filing_date=periods[year]["filing_date"],
+            accession_number=periods[year]["accession_number"],
+        ),
+        fact_retriever=FactRetriever(),
+        company_resolver=CompanyResolver(),
+    ).run(question)
+
+    assert result.plan.company.ticker == company["ticker"]
+    assert result.answer.formula_id == "Q07"
+    assert result.answer.result_value == comparison["expected_contribution_percent"]
+    assert len(result.answer.evidence) == 6
+    assert all(item.source_url and item.source_url.startswith(
+        "https://www.sec.gov/Archives/edgar/data/"
+    ) for item in result.answer.evidence)
+
+
 def test_q03_nvidia_operating_margin_change_end_to_end_fixture():
     question = (
         "How did NVIDIA's operating margin change from FY2024 to FY2025?"
@@ -762,7 +891,7 @@ def make_unsupported_benchmark_plan(question):
     [
         f"Q{number:02d}"
         for number in range(2, 21)
-        if number not in {3, 5, 8, 13}
+        if number not in {3, 5, 7, 8, 13}
     ],
 )
 def test_other_benchmark_operations_are_explicitly_unsupported(question_id):

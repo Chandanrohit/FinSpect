@@ -1,0 +1,43 @@
+{
+  "matrix_id": "annual-liquid-asset-contribution-multi-issuer-v1",
+  "question_id": "Q07",
+  "evaluation_scope": "offline reference cases; balance-sheet values are reported current assets and do not imply unrestricted availability",
+  "issuers": [
+    {
+      "company": {"name": "NVIDIA Corporation", "ticker": "NVDA", "cik": "0001045810"},
+      "periods": [
+        {"fiscal_year": 2023, "start_date": "2022-01-31", "end_date": "2023-01-29", "form": "10-K", "filing_date": "2023-02-24", "accession_number": "0001045810-23-000017", "source_url": "https://www.sec.gov/Archives/edgar/data/1045810/000104581023000017/0001045810-23-000017-index.htm", "primary_document": "nvda-20230129.htm", "cash": {"taxonomy": "us-gaap", "concept": "CashAndCashEquivalentsAtCarryingValue", "value": "3389000000", "unit": "USD"}, "short_term_investments": {"taxonomy": "us-gaap", "concept": "MarketableSecuritiesCurrent", "value": "9907000000", "unit": "USD"}, "total_assets": {"taxonomy": "us-gaap", "concept": "Assets", "value": "41182000000", "unit": "USD"}},
+        {"fiscal_year": 2024, "start_date": "2023-01-30", "end_date": "2024-01-28", "form": "10-K", "filing_date": "2024-02-21", "accession_number": "0001045810-24-000029", "source_url": "https://www.sec.gov/Archives/edgar/data/1045810/000104581024000029/0001045810-24-000029-index.htm", "primary_document": "nvda-20240128.htm", "cash": {"taxonomy": "us-gaap", "concept": "CashAndCashEquivalentsAtCarryingValue", "value": "7280000000", "unit": "USD"}, "short_term_investments": {"taxonomy": "us-gaap", "concept": "MarketableSecuritiesCurrent", "value": "18704000000", "unit": "USD"}, "total_assets": {"taxonomy": "us-gaap", "concept": "Assets", "value": "65728000000", "unit": "USD"}},
+        {"fiscal_year": 2025, "start_date": "2024-01-29", "end_date": "2025-01-26", "form": "10-K", "filing_date": "2025-02-26", "accession_number": "0001045810-25-000023", "source_url": "https://www.sec.gov/Archives/edgar/data/1045810/000104581025000023/0001045810-25-000023-index.htm", "primary_document": "nvda-20250126.htm", "cash": {"taxonomy": "us-gaap", "concept": "CashAndCashEquivalentsAtCarryingValue", "value": "8589000000", "unit": "USD"}, "short_term_investments": {"taxonomy": "us-gaap", "concept": "MarketableSecuritiesCurrent", "value": "34621000000", "unit": "USD"}, "total_assets": {"taxonomy": "us-gaap", "concept": "Assets", "value": "111601000000", "unit": "USD"}}
+      ],
+      "comparisons": [
+        {"prior_year": 2023, "current_year": 2024, "expected_contribution_percent": "51.69070316955919498085227736"},
+        {"prior_year": 2024, "current_year": 2025, "expected_contribution_percent": "37.55150088287227781047675103"}
+      ]
+    },
+    {
+      "company": {"name": "Microsoft Corporation", "ticker": "MSFT", "cik": "0000789019"},
+      "periods": [
+        {"fiscal_year": 2023, "start_date": "2022-07-01", "end_date": "2023-06-30", "form": "10-K", "filing_date": "2023-07-27", "accession_number": "0000950170-23-035122", "source_url": "https://www.sec.gov/Archives/edgar/data/789019/000095017023035122/0000950170-23-035122-index.htm", "primary_document": "msft-20230630.htm", "cash": {"taxonomy": "us-gaap", "concept": "CashAndCashEquivalentsAtCarryingValue", "value": "34704000000", "unit": "USD"}, "short_term_investments": {"taxonomy": "us-gaap", "concept": "ShortTermInvestments", "value": "76558000000", "unit": "USD"}, "total_assets": {"taxonomy": "us-gaap", "concept": "Assets", "value": "411976000000", "unit": "USD"}},
+        {"fiscal_year": 2024, "start_date": "2023-07-01", "end_date": "2024-06-30", "form": "10-K", "filing_date": "2024-07-30", "accession_number": "0000950170-24-087843", "source_url": "https://www.sec.gov/Archives/edgar/data/789019/000095017024087843/0000950170-24-087843-index.htm", "primary_document": "msft-20240630.htm", "cash": {"taxonomy": "us-gaap", "concept": "CashAndCashEquivalentsAtCarryingValue", "value": "18315000000", "unit": "USD"}, "short_term_investments": {"taxonomy": "us-gaap", "concept": "ShortTermInvestments", "value": "57228000000", "unit": "USD"}, "total_assets": {"taxonomy": "us-gaap", "concept": "Assets", "value": "512163000000", "unit": "USD"}},
+        {"fiscal_year": 2025, "start_date": "2024-07-01", "end_date": "2025-06-30", "form": "10-K", "filing_date": "2025-07-30", "accession_number": "0000950170-25-100235", "source_url": "https://www.sec.gov/Archives/edgar/data/789019/000095017025100235/0000950170-25-100235-index.htm", "primary_document": "msft-20250630.htm", "cash": {"taxonomy": "us-gaap", "concept": "CashAndCashEquivalentsAtCarryingValue", "value": "30242000000", "unit": "USD"}, "short_term_investments": {"taxonomy": "us-gaap", "concept": "ShortTermInvestments", "value": "64323000000", "unit": "USD"}, "total_assets": {"taxonomy": "us-gaap", "concept": "Assets", "value": "619003000000", "unit": "USD"}}
+      ],
+      "comparisons": [
+        {"prior_year": 2023, "current_year": 2024, "expected_contribution_percent": "-35.65233014263327577430205516"},
+        {"prior_year": 2024, "current_year": 2025, "expected_contribution_percent": "17.80419318607263197304380382"}
+      ]
+    },
+    {
+      "company": {"name": "Apple Inc.", "ticker": "AAPL", "cik": "0000320193"},
+      "periods": [
+        {"fiscal_year": 2023, "start_date": "2022-09-25", "end_date": "2023-09-30", "form": "10-K", "filing_date": "2023-11-03", "accession_number": "0000320193-23-000106", "source_url": "https://www.sec.gov/Archives/edgar/data/320193/000032019323000106/0000320193-23-000106-index.htm", "primary_document": "aapl-20230930.htm", "cash": {"taxonomy": "us-gaap", "concept": "CashAndCashEquivalentsAtCarryingValue", "value": "29965000000", "unit": "USD"}, "short_term_investments": {"taxonomy": "us-gaap", "concept": "MarketableSecuritiesCurrent", "value": "31590000000", "unit": "USD"}, "total_assets": {"taxonomy": "us-gaap", "concept": "Assets", "value": "352583000000", "unit": "USD"}},
+        {"fiscal_year": 2024, "start_date": "2023-10-01", "end_date": "2024-09-28", "form": "10-K", "filing_date": "2024-11-01", "accession_number": "0000320193-24-000123", "source_url": "https://www.sec.gov/Archives/edgar/data/320193/000032019324000123/0000320193-24-000123-index.htm", "primary_document": "aapl-20240928.htm", "cash": {"taxonomy": "us-gaap", "concept": "CashAndCashEquivalentsAtCarryingValue", "value": "29943000000", "unit": "USD"}, "short_term_investments": {"taxonomy": "us-gaap", "concept": "MarketableSecuritiesCurrent", "value": "35228000000", "unit": "USD"}, "total_assets": {"taxonomy": "us-gaap", "concept": "Assets", "value": "364980000000", "unit": "USD"}},
+        {"fiscal_year": 2025, "start_date": "2024-09-29", "end_date": "2025-09-27", "form": "10-K", "filing_date": "2025-10-31", "accession_number": "0000320193-25-000079", "source_url": "https://www.sec.gov/Archives/edgar/data/320193/000032019325000079/0000320193-25-000079-index.htm", "primary_document": "aapl-20250927.htm", "cash": {"taxonomy": "us-gaap", "concept": "CashAndCashEquivalentsAtCarryingValue", "value": "35934000000", "unit": "USD"}, "short_term_investments": {"taxonomy": "us-gaap", "concept": "MarketableSecuritiesCurrent", "value": "18763000000", "unit": "USD"}, "total_assets": {"taxonomy": "us-gaap", "concept": "Assets", "value": "359241000000", "unit": "USD"}}
+      ],
+      "comparisons": [
+        {"prior_year": 2023, "current_year": 2024, "expected_contribution_percent": "29.16834718076954101798822296"},
+        {"prior_year": 2024, "current_year": 2025, "expected_contribution_percent": "182.5056630074925945286635302"}
+      ]
+    }
+  ]
+}

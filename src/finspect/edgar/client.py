@@ -9,6 +9,10 @@ import requests
 class EdgarAPIError(Exception):
     """Raised when an SEC EDGAR request fails."""
 
+    def __init__(self, message: str, *, status_code: int | None = None) -> None:
+        super().__init__(message)
+        self.status_code = status_code
+
 
 class EdgarClient:
     """
@@ -93,7 +97,8 @@ class EdgarClient:
         if not response.ok:
             raise EdgarAPIError(
                 f"SEC returned HTTP {response.status_code}: "
-                f"{response.reason}"
+                f"{response.reason}",
+                status_code=response.status_code,
             )
 
         return response

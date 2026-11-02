@@ -7,12 +7,12 @@
   "question_count": 20,
   "aggregate_counts": {
     "PASS": 0,
-    "PARTIAL": 5,
-    "UNSUPPORTED": 15,
+    "PARTIAL": 6,
+    "UNSUPPORTED": 14,
     "FAIL": 0
   },
   "accuracy_percentage": null,
-  "accuracy_note": "No overall accuracy percentage is reported: Q01, Q03, Q05, Q08, and Q13 have fixture-backed pipeline checks; the separate Q01 issuer matrix checks six cited annual revenue cases, but neither live SEC retrieval nor the planner was evaluated.",
+  "accuracy_note": "No overall accuracy percentage is reported: Q01, Q03, Q05, Q07, Q08, and Q13 have fixture-backed checks; the Q01 and Q07 issuer matrix checks six cited annual revenue cases, but neither live SEC retrieval nor the planner was evaluated.",
   "operation_reference_matrices": [
     {
       "matrix_id": "annual-revenue-growth-multi-issuer-v1",
@@ -238,6 +238,290 @@
             "annual_usd_inputs": true,
             "evidence_provenance": true,
             "issuer_metadata": true,
+            "calculation_correctness": true
+          },
+          "status": "PASS"
+        }
+      ]
+    },
+    {
+      "matrix_id": "annual-liquid-asset-contribution-multi-issuer-v1",
+      "question_id": "Q07",
+      "evaluation_scope": "offline reference cases; balance-sheet values are reported current assets and do not imply unrestricted availability",
+      "case_count": 6,
+      "pass_count": 6,
+      "fail_count": 0,
+      "issuers": [
+        "AAPL",
+        "MSFT",
+        "NVDA"
+      ],
+      "cases_per_issuer": {
+        "AAPL": 2,
+        "MSFT": 2,
+        "NVDA": 2
+      },
+      "cases": [
+        {
+          "company": {
+            "name": "NVIDIA Corporation",
+            "ticker": "NVDA",
+            "cik": "0001045810"
+          },
+          "fiscal_years": [
+            2023,
+            2024
+          ],
+          "inputs": {
+            "prior": {
+              "cash": "3389000000",
+              "short_term_investments": "9907000000",
+              "total_assets": "41182000000"
+            },
+            "current": {
+              "cash": "7280000000",
+              "short_term_investments": "18704000000",
+              "total_assets": "65728000000"
+            }
+          },
+          "expected_contribution_percent": "51.69070316955919498085227736",
+          "actual_contribution_percent": "51.69070316955919498085227736",
+          "evidence": [
+            {
+              "fiscal_year": 2023,
+              "accession_number": "0001045810-23-000017",
+              "source_url": "https://www.sec.gov/Archives/edgar/data/1045810/000104581023000017/0001045810-23-000017-index.htm"
+            },
+            {
+              "fiscal_year": 2024,
+              "accession_number": "0001045810-24-000029",
+              "source_url": "https://www.sec.gov/Archives/edgar/data/1045810/000104581024000029/0001045810-24-000029-index.htm"
+            }
+          ],
+          "checks": {
+            "two_ordered_periods": true,
+            "instant_usd_facts": true,
+            "evidence_provenance": true,
+            "calculation_correctness": true
+          },
+          "status": "PASS"
+        },
+        {
+          "company": {
+            "name": "NVIDIA Corporation",
+            "ticker": "NVDA",
+            "cik": "0001045810"
+          },
+          "fiscal_years": [
+            2024,
+            2025
+          ],
+          "inputs": {
+            "prior": {
+              "cash": "7280000000",
+              "short_term_investments": "18704000000",
+              "total_assets": "65728000000"
+            },
+            "current": {
+              "cash": "8589000000",
+              "short_term_investments": "34621000000",
+              "total_assets": "111601000000"
+            }
+          },
+          "expected_contribution_percent": "37.55150088287227781047675103",
+          "actual_contribution_percent": "37.55150088287227781047675103",
+          "evidence": [
+            {
+              "fiscal_year": 2024,
+              "accession_number": "0001045810-24-000029",
+              "source_url": "https://www.sec.gov/Archives/edgar/data/1045810/000104581024000029/0001045810-24-000029-index.htm"
+            },
+            {
+              "fiscal_year": 2025,
+              "accession_number": "0001045810-25-000023",
+              "source_url": "https://www.sec.gov/Archives/edgar/data/1045810/000104581025000023/0001045810-25-000023-index.htm"
+            }
+          ],
+          "checks": {
+            "two_ordered_periods": true,
+            "instant_usd_facts": true,
+            "evidence_provenance": true,
+            "calculation_correctness": true
+          },
+          "status": "PASS"
+        },
+        {
+          "company": {
+            "name": "Microsoft Corporation",
+            "ticker": "MSFT",
+            "cik": "0000789019"
+          },
+          "fiscal_years": [
+            2023,
+            2024
+          ],
+          "inputs": {
+            "prior": {
+              "cash": "34704000000",
+              "short_term_investments": "76558000000",
+              "total_assets": "411976000000"
+            },
+            "current": {
+              "cash": "18315000000",
+              "short_term_investments": "57228000000",
+              "total_assets": "512163000000"
+            }
+          },
+          "expected_contribution_percent": "-35.65233014263327577430205516",
+          "actual_contribution_percent": "-35.65233014263327577430205516",
+          "evidence": [
+            {
+              "fiscal_year": 2023,
+              "accession_number": "0000950170-23-035122",
+              "source_url": "https://www.sec.gov/Archives/edgar/data/789019/000095017023035122/0000950170-23-035122-index.htm"
+            },
+            {
+              "fiscal_year": 2024,
+              "accession_number": "0000950170-24-087843",
+              "source_url": "https://www.sec.gov/Archives/edgar/data/789019/000095017024087843/0000950170-24-087843-index.htm"
+            }
+          ],
+          "checks": {
+            "two_ordered_periods": true,
+            "instant_usd_facts": true,
+            "evidence_provenance": true,
+            "calculation_correctness": true
+          },
+          "status": "PASS"
+        },
+        {
+          "company": {
+            "name": "Microsoft Corporation",
+            "ticker": "MSFT",
+            "cik": "0000789019"
+          },
+          "fiscal_years": [
+            2024,
+            2025
+          ],
+          "inputs": {
+            "prior": {
+              "cash": "18315000000",
+              "short_term_investments": "57228000000",
+              "total_assets": "512163000000"
+            },
+            "current": {
+              "cash": "30242000000",
+              "short_term_investments": "64323000000",
+              "total_assets": "619003000000"
+            }
+          },
+          "expected_contribution_percent": "17.80419318607263197304380382",
+          "actual_contribution_percent": "17.80419318607263197304380382",
+          "evidence": [
+            {
+              "fiscal_year": 2024,
+              "accession_number": "0000950170-24-087843",
+              "source_url": "https://www.sec.gov/Archives/edgar/data/789019/000095017024087843/0000950170-24-087843-index.htm"
+            },
+            {
+              "fiscal_year": 2025,
+              "accession_number": "0000950170-25-100235",
+              "source_url": "https://www.sec.gov/Archives/edgar/data/789019/000095017025100235/0000950170-25-100235-index.htm"
+            }
+          ],
+          "checks": {
+            "two_ordered_periods": true,
+            "instant_usd_facts": true,
+            "evidence_provenance": true,
+            "calculation_correctness": true
+          },
+          "status": "PASS"
+        },
+        {
+          "company": {
+            "name": "Apple Inc.",
+            "ticker": "AAPL",
+            "cik": "0000320193"
+          },
+          "fiscal_years": [
+            2023,
+            2024
+          ],
+          "inputs": {
+            "prior": {
+              "cash": "29965000000",
+              "short_term_investments": "31590000000",
+              "total_assets": "352583000000"
+            },
+            "current": {
+              "cash": "29943000000",
+              "short_term_investments": "35228000000",
+              "total_assets": "364980000000"
+            }
+          },
+          "expected_contribution_percent": "29.16834718076954101798822296",
+          "actual_contribution_percent": "29.16834718076954101798822296",
+          "evidence": [
+            {
+              "fiscal_year": 2023,
+              "accession_number": "0000320193-23-000106",
+              "source_url": "https://www.sec.gov/Archives/edgar/data/320193/000032019323000106/0000320193-23-000106-index.htm"
+            },
+            {
+              "fiscal_year": 2024,
+              "accession_number": "0000320193-24-000123",
+              "source_url": "https://www.sec.gov/Archives/edgar/data/320193/000032019324000123/0000320193-24-000123-index.htm"
+            }
+          ],
+          "checks": {
+            "two_ordered_periods": true,
+            "instant_usd_facts": true,
+            "evidence_provenance": true,
+            "calculation_correctness": true
+          },
+          "status": "PASS"
+        },
+        {
+          "company": {
+            "name": "Apple Inc.",
+            "ticker": "AAPL",
+            "cik": "0000320193"
+          },
+          "fiscal_years": [
+            2024,
+            2025
+          ],
+          "inputs": {
+            "prior": {
+              "cash": "29943000000",
+              "short_term_investments": "35228000000",
+              "total_assets": "364980000000"
+            },
+            "current": {
+              "cash": "35934000000",
+              "short_term_investments": "18763000000",
+              "total_assets": "359241000000"
+            }
+          },
+          "expected_contribution_percent": "182.5056630074925945286635302",
+          "actual_contribution_percent": "182.5056630074925945286635302",
+          "evidence": [
+            {
+              "fiscal_year": 2024,
+              "accession_number": "0000320193-24-000123",
+              "source_url": "https://www.sec.gov/Archives/edgar/data/320193/000032019324000123/0000320193-24-000123-index.htm"
+            },
+            {
+              "fiscal_year": 2025,
+              "accession_number": "0000320193-25-000079",
+              "source_url": "https://www.sec.gov/Archives/edgar/data/320193/000032019325000079/0000320193-25-000079-index.htm"
+            }
+          ],
+          "checks": {
+            "two_ordered_periods": true,
+            "instant_usd_facts": true,
+            "evidence_provenance": true,
             "calculation_correctness": true
           },
           "status": "PASS"
@@ -745,30 +1029,106 @@
     {
       "question_id": "Q07",
       "question": "How did cash, cash equivalents and short-term investments or marketable securities change during the reporting period, and what percentage of the change in total assets did this represent?",
-      "company": null,
-      "filings": [],
-      "reporting_periods": [],
+      "company": {
+        "name": "NVIDIA Corporation",
+        "ticker": "NVDA",
+        "cik": "0001045810"
+      },
+      "filings": [
+        {
+          "fiscal_year": 2024,
+          "cash": "7280000000",
+          "short_term_investments": "18704000000",
+          "total_assets": "65728000000",
+          "unit": "USD",
+          "accession_number": "0001045810-24-000029",
+          "source_url": "https://www.sec.gov/Archives/edgar/data/1045810/000104581024000029/0001045810-24-000029-index.htm"
+        },
+        {
+          "fiscal_year": 2025,
+          "cash": "8589000000",
+          "short_term_investments": "34621000000",
+          "total_assets": "111601000000",
+          "unit": "USD",
+          "accession_number": "0001045810-25-000023",
+          "source_url": "https://www.sec.gov/Archives/edgar/data/1045810/000104581025000023/0001045810-25-000023-index.htm"
+        }
+      ],
+      "reporting_periods": [
+        {
+          "fiscal_year": 2024,
+          "end_date": "2024-01-28"
+        },
+        {
+          "fiscal_year": 2025,
+          "end_date": "2025-01-26"
+        }
+      ],
       "expected_concepts": [
         "cash_and_cash_equivalents",
         "short_term_investments_or_marketable_securities",
         "total_assets"
       ],
-      "retrieval_mode": "not_run",
-      "retrieved_inputs": [],
-      "selected_evidence": [],
-      "calculation_formula": "(liquid_assets_end - liquid_assets_begin) / (total_assets_end - total_assets_begin) * 100",
-      "expected_answer": null,
-      "actual_answer": "I cannot answer this request reliably yet: No complete retrieval-to-answer path is implemented for Q07; calculator registration alone is not support.\n\nYour question: How did cash, cash equivalents and short-term investments or marketable securities change during the reporting period, and what percentage of the change in total assets did this represent?",
-      "checks": {
-        "input_retrieval_correctness": null,
-        "period_correctness": null,
-        "unit_correctness": null,
-        "calculation_correctness": null,
-        "evidence_correctness": null,
-        "query_interpretation_correctness": null
+      "retrieval_mode": "checked_in_sec_snapshot_not_live_retrieval",
+      "retrieved_inputs": [
+        {
+          "fiscal_year": 2024,
+          "cash": "7280000000",
+          "short_term_investments": "18704000000",
+          "total_assets": "65728000000",
+          "unit": "USD",
+          "accession_number": "0001045810-24-000029",
+          "source_url": "https://www.sec.gov/Archives/edgar/data/1045810/000104581024000029/0001045810-24-000029-index.htm"
+        },
+        {
+          "fiscal_year": 2025,
+          "cash": "8589000000",
+          "short_term_investments": "34621000000",
+          "total_assets": "111601000000",
+          "unit": "USD",
+          "accession_number": "0001045810-25-000023",
+          "source_url": "https://www.sec.gov/Archives/edgar/data/1045810/000104581025000023/0001045810-25-000023-index.htm"
+        }
+      ],
+      "selected_evidence": [
+        {
+          "fiscal_year": 2024,
+          "cash": "7280000000",
+          "short_term_investments": "18704000000",
+          "total_assets": "65728000000",
+          "unit": "USD",
+          "accession_number": "0001045810-24-000029",
+          "source_url": "https://www.sec.gov/Archives/edgar/data/1045810/000104581024000029/0001045810-24-000029-index.htm"
+        },
+        {
+          "fiscal_year": 2025,
+          "cash": "8589000000",
+          "short_term_investments": "34621000000",
+          "total_assets": "111601000000",
+          "unit": "USD",
+          "accession_number": "0001045810-25-000023",
+          "source_url": "https://www.sec.gov/Archives/edgar/data/1045810/000104581025000023/0001045810-25-000023-index.htm"
+        }
+      ],
+      "calculation_formula": "(liquid_end-liquid_begin)/(total_assets_end-total_assets_begin)*100",
+      "expected_answer": {
+        "contribution_percent": "37.55150088287227781047675103"
       },
-      "overall_status": "UNSUPPORTED",
-      "failure_reason": "No complete retrieval-to-answer path is implemented for Q07; calculator registration alone is not support."
+      "actual_answer": {
+        "result_value": "37.55150088287227781047675103",
+        "result_unit": "percent",
+        "display": "37.55%"
+      },
+      "checks": {
+        "input_retrieval_correctness": "not_evaluated_live_retrieval",
+        "period_correctness": true,
+        "unit_correctness": true,
+        "calculation_correctness": true,
+        "evidence_correctness": true,
+        "query_interpretation_correctness": "not_evaluated"
+      },
+      "overall_status": "PARTIAL",
+      "failure_reason": "Fixture-backed calculation only; live SEC retrieval and question interpretation remain untested."
     },
     {
       "question_id": "Q08",

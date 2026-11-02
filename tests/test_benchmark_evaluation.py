@@ -7,8 +7,8 @@ def test_benchmark_report_records_fixture_and_unsupported_questions():
     assert report["question_count"] == 20
     assert report["aggregate_counts"] == {
         "PASS": 0,
-        "PARTIAL": 5,
-        "UNSUPPORTED": 15,
+        "PARTIAL": 6,
+        "UNSUPPORTED": 14,
         "FAIL": 0,
     }
     assert report["accuracy_percentage"] is None
@@ -22,6 +22,14 @@ def test_benchmark_report_records_fixture_and_unsupported_questions():
     assert revenue_matrix["fail_count"] == 0
     assert revenue_matrix["issuers"] == ["AAPL", "MSFT", "NVDA"]
     assert set(revenue_matrix["cases_per_issuer"].values()) == {2}
+
+    liquidity_matrix = report["operation_reference_matrices"][1]
+    assert liquidity_matrix["question_id"] == "Q07"
+    assert liquidity_matrix["case_count"] == 6
+    assert liquidity_matrix["pass_count"] == 6
+    assert liquidity_matrix["fail_count"] == 0
+    assert liquidity_matrix["issuers"] == ["AAPL", "MSFT", "NVDA"]
+    assert set(liquidity_matrix["cases_per_issuer"].values()) == {2}
 
     questions = {item["question_id"]: item for item in report["questions"]}
     q01 = questions["Q01"]
@@ -49,6 +57,12 @@ def test_benchmark_report_records_fixture_and_unsupported_questions():
     assert q05["checks"]["calculation_correctness"] is True
     assert len(q05["selected_evidence"]) == 4
 
+    q07 = questions["Q07"]
+    assert q07["overall_status"] == "PARTIAL"
+    assert q07["actual_answer"]["result_unit"] == "percent"
+    assert q07["checks"]["calculation_correctness"] is True
+    assert len(q07["selected_evidence"]) == 2
+
     q08 = questions["Q08"]
     assert q08["overall_status"] == "PARTIAL"
     assert q08["actual_answer"]["result_unit"] == "percentage_points"
@@ -70,7 +84,7 @@ def test_benchmark_report_records_fixture_and_unsupported_questions():
     for question_id in [
         f"Q{number:02d}"
         for number in range(2, 21)
-        if number not in {3, 5, 8, 13}
+        if number not in {3, 5, 7, 8, 13}
     ]:
         question = questions[question_id]
         assert question["overall_status"] == "UNSUPPORTED"
