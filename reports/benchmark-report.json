@@ -12,22 +12,24 @@
     "FAIL": 0
   },
   "accuracy_percentage": null,
-  "accuracy_note": "No overall accuracy percentage is reported: Q01, Q03, Q05, Q07, Q08, Q09, and Q13 have fixture-backed checks; the Q01, Q03, Q05, Q07, Q08, Q09, and Q13 issuer matrices check six cited annual cases each, but neither live SEC retrieval nor the planner was evaluated.",
+  "accuracy_note": "No overall accuracy percentage is reported: Q01, Q03, Q05, Q07, Q08, Q09, and Q13 have fixture-backed checks; issuer matrix case counts and individual checks are reported per operation, but neither live SEC retrieval nor the planner was evaluated.",
   "operation_reference_matrices": [
     {
-      "matrix_id": "annual-revenue-growth-multi-issuer-v1",
+      "matrix_id": "annual-revenue-growth-multi-issuer-v2-healthcare",
       "question_id": "Q01",
       "evaluation_scope": "offline reference cases; does not measure live SEC retrieval or LLM interpretation",
-      "case_count": 6,
-      "pass_count": 6,
+      "case_count": 8,
+      "pass_count": 8,
       "fail_count": 0,
       "issuers": [
         "AAPL",
+        "CVS",
         "MSFT",
         "NVDA"
       ],
       "cases_per_issuer": {
         "AAPL": 2,
+        "CVS": 2,
         "MSFT": 2,
         "NVDA": 2
       },
@@ -231,6 +233,76 @@
             {
               "accession_number": "0000320193-25-000079",
               "source_url": "https://www.sec.gov/Archives/edgar/data/320193/000032019325000079/0000320193-25-000079-index.htm"
+            }
+          ],
+          "checks": {
+            "two_ordered_periods": true,
+            "annual_usd_inputs": true,
+            "evidence_provenance": true,
+            "issuer_metadata": true,
+            "calculation_correctness": true
+          },
+          "status": "PASS"
+        },
+        {
+          "company": {
+            "name": "CVS Health Corporation",
+            "ticker": "CVS",
+            "cik": "0000064803"
+          },
+          "fiscal_years": [
+            2023,
+            2024
+          ],
+          "input_values_usd": [
+            "357776000000",
+            "372809000000"
+          ],
+          "expected_growth_percent": "4.201791064800321989177585976",
+          "actual_growth_percent": "4.201791064800321989177585976",
+          "evidence": [
+            {
+              "accession_number": "0000064803-24-000007",
+              "source_url": "https://www.sec.gov/Archives/edgar/data/64803/000006480324000007/0000064803-24-000007-index.html"
+            },
+            {
+              "accession_number": "0000064803-25-000007",
+              "source_url": "https://www.sec.gov/Archives/edgar/data/64803/000006480325000007/0000064803-25-000007-index.html"
+            }
+          ],
+          "checks": {
+            "two_ordered_periods": true,
+            "annual_usd_inputs": true,
+            "evidence_provenance": true,
+            "issuer_metadata": true,
+            "calculation_correctness": true
+          },
+          "status": "PASS"
+        },
+        {
+          "company": {
+            "name": "CVS Health Corporation",
+            "ticker": "CVS",
+            "cik": "0000064803"
+          },
+          "fiscal_years": [
+            2024,
+            2025
+          ],
+          "input_values_usd": [
+            "372809000000",
+            "402067000000"
+          ],
+          "expected_growth_percent": "7.847986502471775091266573500",
+          "actual_growth_percent": "7.847986502471775091266573500",
+          "evidence": [
+            {
+              "accession_number": "0000064803-25-000007",
+              "source_url": "https://www.sec.gov/Archives/edgar/data/64803/000006480325000007/0000064803-25-000007-index.html"
+            },
+            {
+              "accession_number": "0000064803-26-000010",
+              "source_url": "https://www.sec.gov/Archives/edgar/data/64803/000006480326000010/0000064803-26-000010-index.html"
             }
           ],
           "checks": {

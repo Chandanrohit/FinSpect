@@ -84,6 +84,7 @@ def evaluate_annual_revenue_matrix(path: Path) -> dict[str, Any]:
                 and item["source_url"].startswith(
                     "https://www.sec.gov/Archives/edgar/data/"
                 )
+                and f"/{int(company['cik'])}/" in item["source_url"]
                 and item["accession_number"].replace("-", "")
                 in item["source_url"]
                 for item in periods
@@ -1619,8 +1620,8 @@ def evaluate_benchmark(
         "accuracy_percentage": None,
         "accuracy_note": (
             "No overall accuracy percentage is reported: Q01, Q03, Q05, Q07, Q08, Q09, "
-            "and Q13 have fixture-backed checks; the Q01, Q03, Q05, Q07, Q08, Q09, and Q13 "
-            "issuer matrices check six cited annual cases each, but neither "
+            "and Q13 have fixture-backed checks; issuer matrix case counts and "
+            "individual checks are reported per operation, but neither "
             "live SEC retrieval nor the planner was evaluated."
         ),
         "operation_reference_matrices": [

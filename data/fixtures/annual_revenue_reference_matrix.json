@@ -1,5 +1,5 @@
 {
-  "matrix_id": "annual-revenue-growth-multi-issuer-v1",
+  "matrix_id": "annual-revenue-growth-multi-issuer-v2-healthcare",
   "question_id": "Q01",
   "evaluation_scope": "offline reference cases; does not measure live SEC retrieval or LLM interpretation",
   "cases": [
@@ -230,6 +230,82 @@
         }
       ],
       "expected_growth_percent": "6.425511782832738757400232716"
+    },
+    {
+      "company": {
+        "name": "CVS Health Corporation",
+        "ticker": "CVS",
+        "cik": "0000064803"
+      },
+      "periods": [
+        {
+          "fiscal_year": 2023,
+          "start_date": "2023-01-01",
+          "end_date": "2023-12-31",
+          "value": "357776000000",
+          "filing_date": "2024-02-07",
+          "accession_number": "0000064803-24-000007",
+          "source_url": "https://www.sec.gov/Archives/edgar/data/64803/000006480324000007/0000064803-24-000007-index.html",
+          "taxonomy": "us-gaap",
+          "concept": "Revenues",
+          "unit": "USD",
+          "form": "10-K",
+          "primary_document": "cvs-20231231.htm"
+        },
+        {
+          "fiscal_year": 2024,
+          "start_date": "2024-01-01",
+          "end_date": "2024-12-31",
+          "value": "372809000000",
+          "filing_date": "2025-02-12",
+          "accession_number": "0000064803-25-000007",
+          "source_url": "https://www.sec.gov/Archives/edgar/data/64803/000006480325000007/0000064803-25-000007-index.html",
+          "taxonomy": "us-gaap",
+          "concept": "Revenues",
+          "unit": "USD",
+          "form": "10-K",
+          "primary_document": "cvs-20241231.htm"
+        }
+      ],
+      "expected_growth_percent": "4.201791064800321989177585976"
+    },
+    {
+      "company": {
+        "name": "CVS Health Corporation",
+        "ticker": "CVS",
+        "cik": "0000064803"
+      },
+      "periods": [
+        {
+          "fiscal_year": 2024,
+          "start_date": "2024-01-01",
+          "end_date": "2024-12-31",
+          "value": "372809000000",
+          "filing_date": "2025-02-12",
+          "accession_number": "0000064803-25-000007",
+          "source_url": "https://www.sec.gov/Archives/edgar/data/64803/000006480325000007/0000064803-25-000007-index.html",
+          "taxonomy": "us-gaap",
+          "concept": "Revenues",
+          "unit": "USD",
+          "form": "10-K",
+          "primary_document": "cvs-20241231.htm"
+        },
+        {
+          "fiscal_year": 2025,
+          "start_date": "2025-01-01",
+          "end_date": "2025-12-31",
+          "value": "402067000000",
+          "filing_date": "2026-02-10",
+          "accession_number": "0000064803-26-000010",
+          "source_url": "https://www.sec.gov/Archives/edgar/data/64803/000006480326000010/0000064803-26-000010-index.html",
+          "taxonomy": "us-gaap",
+          "concept": "Revenues",
+          "unit": "USD",
+          "form": "10-K",
+          "primary_document": "cvs-20251231.htm"
+        }
+      ],
+      "expected_growth_percent": "7.847986502471775091266573500"
     }
   ]
 }
