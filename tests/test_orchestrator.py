@@ -6,6 +6,7 @@ import pytest
 
 from finspect.orchestrator import AnnualPeriod, FinSpectOrchestrator
 from finspect.edgar.facts import FactRetrievalError
+from finspect.edgar.parser import FilingParser
 from finspect.plan_normalizer import normalize_query_plan
 from finspect.query_planner import (
     CompanyRequest,
@@ -13,6 +14,7 @@ from finspect.query_planner import (
     PeriodRequest,
     QueryPlan,
     AnswerRequirements,
+    RetrievalRequirements,
 )
 from finspect.schema import load_benchmark
 
@@ -1147,6 +1149,268 @@ def test_q07_liquidity_reference_matrix_runs_through_orchestrator(
     assert all(item.source_url and item.source_url.startswith(
         "https://www.sec.gov/Archives/edgar/data/"
     ) for item in result.answer.evidence)
+
+
+def test_q12_retrieves_exact_annual_statement_of_equity_and_calculates_contribution():
+    question = (
+        "What were NVIDIA's principal changes in shareholders' equity during FY2025, "
+        "and what percentage of ending equity did the largest component represent?"
+    )
+    plan = make_plan().model_copy(update={
+        "original_question": question,
+        "company": CompanyRequest(name="NVIDIA", ticker="NVDA", cik=CIK),
+        "period": PeriodRequest(
+            period_label="FY2025",
+            period_kind="annual",
+            fiscal_year=2025,
+            comparison_required=False,
+        ),
+        "benchmark_id": "Q12",
+        "task_type": "calculation",
+        "operation": "equity_component_contribution",
+        "metrics": [
+            MetricRequest(
+                name="shareholders_equity", role="primary", sources=["financial_table"]
+            ),
+            MetricRequest(
+                name="equity_components", role="supporting", sources=["financial_table"]
+            ),
+        ],
+        "retrieval": RetrievalRequirements(sources=["financial_table"]),
+        "answer": AnswerRequirements(include_formula=True, expected_output="percentage"),
+    })
+
+    class Planner:
+        def plan(self, _question):
+            return plan
+
+    class Resolver:
+        def resolve(self, **_kwargs):
+            return {"name": "NVIDIA Corporation", "ticker": "NVDA", "cik": CIK}
+
+    filing = {
+        "cik": CIK,
+        "form": "10-K",
+        "filing_date": "2025-02-26",
+        "report_date": "2025-01-26",
+        "accession_number": "0001045810-25-000023",
+        "primary_document": "nvda-20250126.htm",
+        "html": """
+        <table>
+          <tr><th>(In millions, except per share data)</th><th>Jan 26, 2025</th><th>Jan 28, 2024</th></tr>
+          <tr><td>Net income</td><td>72,880</td><td>29,760</td></tr>
+          <tr><td>Other comprehensive income</td><td>1</td><td>70</td></tr>
+          <tr><td>Issuance of common stock from stock plans</td><td>490</td><td>403</td></tr>
+          <tr><td>Shares repurchased</td><td>(34,015)</td><td>(9,746)</td></tr>
+          <tr><td>Cash dividends declared and paid</td><td>(834)</td><td>(395)</td></tr>
+          <tr><td>Stock-based compensation</td><td>4,757</td><td>3,568</td></tr>
+          <tr><td>Total shareholders' equity, ending balances</td><td>79,327</td><td>42,978</td></tr>
+        </table>
+        """,
+    }
+
+    class FilingRetriever:
+        submissions = type("Submissions", (), {
+            "get_filing_url": staticmethod(
+                lambda **_kwargs: "https://www.sec.gov/Archives/edgar/data/1045810/000104581025000023/nvda-20250126.htm"
+            )
+        })()
+
+        def get_filing(self, *, cik, accession_number, form):
+            assert cik == CIK
+            assert accession_number == filing["accession_number"]
+            assert form == "10-K"
+            return filing
+
+    class NoFacts:
+        def get_fact(self, **_kwargs):
+            raise AssertionError("Q12 should use the exact filing table, not XBRL guesses")
+
+    result = FinSpectOrchestrator(
+        planner=Planner(),
+        normalizer=normalize_query_plan,
+        period_resolver=lambda _cik, year: PERIODS[year],
+        fact_retriever=NoFacts(),
+        company_resolver=Resolver(),
+        filing_retriever=FilingRetriever(),
+        filing_parser=FilingParser(),
+    ).run(question)
+
+    assert result.answer.formula_id == "Q12"
+    assert Decimal(result.answer.result_value) == Decimal(
+        "91.87288060811577394834041373"
+    )
+    assert "Net income" in result.answer.text
+    assert "FY2025" in result.answer.text
+    assert len(result.answer.evidence) == 7
+    assert all(
+        item.accession_number == filing["accession_number"]
+        and item.source_url.endswith("nvda-20250126.htm")
+        for item in result.answer.evidence
+    )
+
+
+def test_q12_rejects_wrong_filing_period_before_equity_extraction():
+    question = "What were NVIDIA's principal equity changes during FY2025?"
+    plan = make_plan().model_copy(update={
+        "original_question": question,
+        "company": CompanyRequest(name="NVIDIA", ticker="NVDA", cik=CIK),
+        "period": PeriodRequest(
+            period_label="FY2025", period_kind="annual", fiscal_year=2025
+        ),
+        "benchmark_id": "Q12",
+        "operation": "equity_component_contribution",
+        "metrics": [
+            MetricRequest(name="shareholders_equity", role="primary", sources=["financial_table"]),
+            MetricRequest(name="equity_components", role="supporting", sources=["financial_table"]),
+        ],
+        "retrieval": RetrievalRequirements(sources=["financial_table"]),
+    })
+
+    class Planner:
+        def plan(self, _question):
+            return plan
+
+    class Resolver:
+        def resolve(self, **_kwargs):
+            return {"name": "NVIDIA Corporation", "ticker": "NVDA", "cik": CIK}
+
+    class FilingRetriever:
+        def get_filing(self, **_kwargs):
+            return {
+                "cik": CIK,
+                "form": "10-K",
+                "filing_date": "2025-02-26",
+                "report_date": "2024-01-28",
+                "accession_number": "0001045810-24-000029",
+                "primary_document": "nvda-20240128.htm",
+                "html": "<table></table>",
+            }
+
+    result = FinSpectOrchestrator(
+        planner=Planner(),
+        normalizer=normalize_query_plan,
+        period_resolver=lambda _cik, year: PERIODS[year],
+        fact_retriever=FixtureFactRetriever(),
+        company_resolver=Resolver(),
+        filing_retriever=FilingRetriever(),
+        filing_parser=FilingParser(),
+    ).run(question)
+
+    assert result.answer.formula_id is None
+    assert "does not match" in result.answer.text
+
+
+def test_q12_exact_filing_pipeline_matches_all_six_issuer_period_references():
+    matrix_path = (
+        Path(__file__).parents[1]
+        / "data"
+        / "fixtures"
+        / "annual_equity_allocation_reference_matrix.json"
+    )
+    references = json.loads(matrix_path.read_text(encoding="utf-8"))["cases"]
+    assert len(references) == 6
+
+    for reference in references:
+        company = reference["company"]
+        fiscal_year = reference["fiscal_year"]
+        period = AnnualPeriod(
+            fiscal_year=fiscal_year,
+            start_date=reference["start_date"],
+            end_date=reference["end_date"],
+            form="10-K",
+            concept="ShareholdersEquity",
+            filing_date=reference["filing_date"],
+            accession_number=reference["accession_number"],
+        )
+        rows = "".join(
+            f"<tr><td>{item['label']}</td><td>{item['value']}</td></tr>"
+            for item in reference["components"]
+        )
+        html = f"""
+        <p>Statement of Shareholders’ Equity</p><p>(In millions)</p>
+        <table>
+          <tr><th>Fiscal year</th><th>{fiscal_year}</th></tr>
+          {rows}
+          <tr><td>Total shareholders’ equity, ending balances</td>
+              <td>{reference['ending_equity']}</td></tr>
+        </table>
+        """
+        question = (
+            f"What were {company['name']}'s principal equity changes in FY{fiscal_year}, "
+            "and what percent of ending equity did the largest change represent?"
+        )
+        plan = make_plan().model_copy(update={
+            "original_question": question,
+            "company": CompanyRequest(
+                name=company["name"],
+                ticker=company["ticker"],
+                cik=company["cik"],
+            ),
+            "period": PeriodRequest(
+                period_label=f"FY{fiscal_year}",
+                period_kind="annual",
+                fiscal_year=fiscal_year,
+                comparison_required=False,
+            ),
+            "benchmark_id": "Q12",
+            "operation": "equity_component_contribution",
+            "metrics": [
+                MetricRequest(
+                    name="shareholders_equity",
+                    role="primary",
+                    sources=["financial_table"],
+                ),
+                MetricRequest(
+                    name="equity_components",
+                    role="supporting",
+                    sources=["financial_table"],
+                ),
+            ],
+            "retrieval": RetrievalRequirements(sources=["financial_table"]),
+        })
+
+        class Planner:
+            def plan(self, _question):
+                return plan
+
+        class Resolver:
+            def resolve(self, **_kwargs):
+                return company
+
+        class FilingRetriever:
+            submissions = type("Submissions", (), {
+                "get_filing_url": staticmethod(lambda **_kwargs: reference["source_url"])
+            })()
+
+            def get_filing(self, **_kwargs):
+                return {
+                    "cik": company["cik"],
+                    "form": "10-K",
+                    "filing_date": reference["filing_date"],
+                    "report_date": reference["end_date"],
+                    "accession_number": reference["accession_number"],
+                    "primary_document": "reference-filing.htm",
+                    "html": html,
+                }
+
+        class NoFacts:
+            def get_fact(self, **_kwargs):
+                raise AssertionError("Q12 should use the exact filing equity table")
+
+        result = FinSpectOrchestrator(
+            planner=Planner(),
+            normalizer=normalize_query_plan,
+            period_resolver=lambda _cik, _year: period,
+            fact_retriever=NoFacts(),
+            company_resolver=Resolver(),
+            filing_retriever=FilingRetriever(),
+        ).run(question)
+
+        assert result.answer.formula_id == "Q12"
+        assert result.answer.result_value == reference["expected_contribution_percent"]
+        assert result.answer.evidence[-1].accession_number == reference["accession_number"]
+        assert result.answer.evidence[-1].value == Decimal(reference["ending_equity"]) * 1_000_000
 
 
 def test_q03_nvidia_operating_margin_change_end_to_end_fixture():

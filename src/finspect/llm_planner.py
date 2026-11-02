@@ -43,6 +43,12 @@ Rules:
 13. For comparisons between fiscal years, specify both the current
     and comparison periods and retrieve the same financial metric
     for both periods.
+14. For Q12 equity-change questions, require one explicit annual fiscal
+    year, use operation "equity_component_contribution", request both
+    "shareholders_equity" and "equity_components" from "financial_table",
+    and do not request a comparison period.
+15. If an equity-change question has no explicit fiscal year, request
+    clarification instead of guessing which annual filing to use.
 """
 
 

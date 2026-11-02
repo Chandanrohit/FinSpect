@@ -87,6 +87,15 @@ def build_calculation_answer(
             f"That is a {abs(change).quantize(Decimal('0.01')):,.2f} "
             f"percentage-point {change_description}."
         )
+    elif result.formula_id == "Q12":
+        component_name = next(
+            name for name in result.inputs if name != "ending_equity"
+        )
+        amount = result.inputs[component_name]
+        result_line = (
+            f"The largest disclosed equity change was {component_name} at "
+            f"${amount:,.0f}, or {_format_result(result.value, 'percent')} of ending equity."
+        )
     else:
         result_line = f"{company_name}'s result is {value_text}."
 

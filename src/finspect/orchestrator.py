@@ -24,12 +24,16 @@ from finspect.calculator import (
     margin_change,
     revenue_growth,
     inventory_revenue_growth_comparison,
+    largest_component_contribution,
     share_repurchase_comparison,
 )
 from finspect.edgar.client import EdgarClient
 from finspect.edgar.facts import FactRetrievalError, FinancialFactRetriever
 from finspect.edgar.filings import FilingRetriever, FilingRetrievalError
-from finspect.edgar.parser import FilingParser
+from finspect.edgar.equity_statement import (
+    EquityStatementError,
+    EquityStatementExtractor,
+)
 from finspect.narrative_retriever import NarrativeRetriever
 from finspect.query_planner import QueryPlan
 from finspect.edgar.xbrl import XBRLService
@@ -285,6 +289,22 @@ class FinSpectOrchestrator:
                 "net cash provided by operating activities",
             }
         )
+        is_supported_equity_allocation = (
+            plan.operation == "equity_component_contribution"
+            and bool(metric_names & {
+                "shareholders equity", "stockholders equity", "equity balance"
+            })
+            and bool(metric_names & {
+                "equity components", "equity changes", "changes in equity"
+            })
+            and metric_names <= {
+                "shareholders equity", "stockholders equity", "equity balance",
+                "equity components", "equity changes", "changes in equity",
+            }
+            and plan.period.period_kind == "annual"
+            and plan.period.fiscal_year is not None
+            and not plan.period.comparison_required
+        )
 
         if not (
             is_supported_revenue_operation
@@ -296,6 +316,7 @@ class FinSpectOrchestrator:
             or is_supported_liquidity
             or is_supported_dilution
             or is_supported_share_repurchase
+            or is_supported_equity_allocation
         ):
             answer = build_unsupported_answer(
                 question=question,
@@ -307,14 +328,15 @@ class FinSpectOrchestrator:
                     "operating-income change relationship, and annual liquid-"
                     "asset contribution to total asset change plus annual "
                     "weighted-average share dilution and annual share "
-                    "repurchase analysis."
+                    "repurchase analysis, and annual equity-change analysis "
+                    "when an exact 10-K statement of equity is available."
                 ),
             )
             return PipelineResult(plan=plan, answer=answer)
 
     
         fiscal_years = self._get_two_annual_years(plan)
-        if is_supported_dilution:
+        if is_supported_dilution or is_supported_equity_allocation:
             fiscal_years = (plan.period.fiscal_year,)
         if fiscal_years is None:
             answer = build_unsupported_answer(
@@ -374,10 +396,142 @@ class FinSpectOrchestrator:
         ]
         for period, requested_year in zip(periods, fiscal_years, strict=True):
             self._validate_annual_period(period, requested_year)
-        if not is_supported_dilution and date.fromisoformat(
+        if len(periods) == 2 and date.fromisoformat(
             periods[1].start_date
         ) <= date.fromisoformat(periods[0].end_date):
             raise ValueError("Comparable annual periods must not overlap.")
+
+        if is_supported_equity_allocation:
+            current_period = periods[0]
+            if not self.filing_retriever:
+                return PipelineResult(
+                    plan=plan,
+                    answer=build_unsupported_answer(
+                        question,
+                        "Exact SEC filing retrieval is not configured for the statement of equity.",
+                    ),
+                )
+            if not current_period.accession_number or not current_period.filing_date:
+                return PipelineResult(
+                    plan=plan,
+                    answer=build_unsupported_answer(
+                        question,
+                        "The annual period could not be tied to an exact 10-K accession and filing date.",
+                    ),
+                )
+            try:
+                filing = self.filing_retriever.get_filing(
+                    cik=cik,
+                    accession_number=current_period.accession_number,
+                    form="10-K",
+                )
+            except FilingRetrievalError as exc:
+                return PipelineResult(
+                    plan=plan,
+                    answer=build_unsupported_answer(
+                        question,
+                        f"Could not retrieve the exact annual filing: {exc}",
+                    ),
+                )
+            if (
+                filing.get("form") != "10-K"
+                or str(filing.get("cik", "")).zfill(10) != cik
+                or filing.get("accession_number") != current_period.accession_number
+                or filing.get("filing_date") != current_period.filing_date
+                or filing.get("report_date") != current_period.end_date
+            ):
+                return PipelineResult(
+                    plan=plan,
+                    answer=build_unsupported_answer(
+                        question,
+                        "Retrieved filing metadata does not match the requested issuer, fiscal year, and exact 10-K period.",
+                    ),
+                )
+            if not filing.get("html") or not filing.get("primary_document"):
+                return PipelineResult(
+                    plan=plan,
+                    answer=build_unsupported_answer(
+                        question,
+                        "The exact 10-K response did not include its filing HTML and primary document.",
+                    ),
+                )
+            try:
+                statement = EquityStatementExtractor().extract(
+                    filing["html"],
+                    fiscal_year=current_period.fiscal_year,
+                    period_end=current_period.end_date,
+                )
+            except (EquityStatementError, ValueError) as exc:
+                return PipelineResult(
+                    plan=plan,
+                    answer=build_unsupported_answer(
+                        question,
+                        f"The exact 10-K was retrieved, but its statement of equity was not unambiguous: {exc}",
+                    ),
+                )
+            component_name, calculation = largest_component_contribution(
+                statement.components, statement.ending_equity
+            )
+            filing_url = self.filing_retriever.submissions.get_filing_url(
+                cik=cik,
+                accession_number=current_period.accession_number,
+                primary_document=filing["primary_document"],
+            )
+            period_label = (
+                f"FY{current_period.fiscal_year} ending {current_period.end_date}"
+            )
+            evidence = [
+                AnswerEvidence(
+                    label=label,
+                    value=value,
+                    unit="USD",
+                    period=period_label,
+                    filing_date=current_period.filing_date,
+                    accession_number=current_period.accession_number,
+                    source_url=filing_url,
+                )
+                for label, value in statement.components.items()
+            ]
+            evidence.append(AnswerEvidence(
+                label="Ending shareholders’ equity",
+                value=statement.ending_equity,
+                unit="USD",
+                period=period_label,
+                filing_date=current_period.filing_date,
+                accession_number=current_period.accession_number,
+                source_url=filing_url,
+            ))
+            answer = build_calculation_answer(
+                company_name=resolved["name"],
+                question=question,
+                result=calculation,
+                evidence=evidence,
+                limitations=(
+                    "The component is the single disclosed statement row with the greatest absolute amount; separately reported rows are not aggregated.",
+                    f"Amounts are read from the 10-K statement presentation ({statement.unit}) and normalized to USD.",
+                ),
+            )
+            return PipelineResult(
+                plan=plan,
+                answer=answer,
+                facts=({
+                    "company": resolved["name"],
+                    "ticker": resolved.get("ticker"),
+                    "cik": cik,
+                    "fiscal_year": current_period.fiscal_year,
+                    "period_end": current_period.end_date,
+                    "form": filing["form"],
+                    "filing_date": filing["filing_date"],
+                    "accession_number": filing["accession_number"],
+                    "equity_components": {
+                        label: str(value)
+                        for label, value in statement.components.items()
+                    },
+                    "ending_equity": str(statement.ending_equity),
+                    "unit": "USD",
+                    "source_url": filing_url,
+                },),
+            )
 
         # 5. Resolve supported metrics to controlled SEC concepts, then
         # retrieve each concept for the same verified annual periods.
