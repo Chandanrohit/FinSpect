@@ -46,6 +46,7 @@ DEFAULT_ANNUAL_REVENUE_MATRIX = (
     ROOT / "data" / "fixtures" / "annual_revenue_reference_matrix.json"
 )
 DEFAULT_LIQUIDITY_MATRIX = ROOT / "data" / "fixtures" / "liquidity_reference_matrix.json"
+DEFAULT_MARGIN_MATRIX = ROOT / "data" / "fixtures" / "annual_margin_reference_matrix.json"
 
 
 def evaluate_annual_revenue_matrix(path: Path) -> dict[str, Any]:
@@ -212,6 +213,110 @@ def evaluate_liquidity_reference_matrix(path: Path) -> dict[str, Any]:
         "issuers": tickers,
         "cases_per_issuer": {
             ticker: sum(item["company"]["ticker"] == ticker for item in cases)
+            for ticker in tickers
+        },
+        "cases": cases,
+    }
+
+
+def evaluate_annual_margin_matrix(path: Path) -> dict[str, Any]:
+    """Check annual margin changes against cited 10-K statement values."""
+    matrix = json.loads(path.read_text(encoding="utf-8"))
+    if matrix.get("form") != "10-K":
+        raise ValueError("Annual margin reference matrix must use Form 10-K data.")
+    cases = []
+    for issuer in matrix["issuers"]:
+        periods_by_year = {item["fiscal_year"]: item for item in issuer["periods"]}
+        for comparison in issuer["comparisons"]:
+            prior = periods_by_year[comparison["prior_year"]]
+            current = periods_by_year[comparison["current_year"]]
+            actual = margin_change(
+                current_income=Decimal(current["operating_income"]),
+                current_revenue=Decimal(current["revenue"]),
+                prior_income=Decimal(prior["operating_income"]),
+                prior_revenue=Decimal(prior["revenue"]),
+            )
+            checks = {
+                "two_ordered_annual_periods": (
+                    prior["fiscal_year"] < current["fiscal_year"]
+                    and date.fromisoformat(prior["end_date"])
+                    < date.fromisoformat(current["start_date"])
+                    and all(
+                        350 <= (
+                            date.fromisoformat(item["end_date"])
+                            - date.fromisoformat(item["start_date"])
+                        ).days <= 380
+                        and date.fromisoformat(item["filing_date"])
+                        >= date.fromisoformat(item["end_date"])
+                        for item in (prior, current)
+                    )
+                ),
+                "fact_concepts_and_units": (
+                    matrix.get("taxonomy") == "us-gaap"
+                    and matrix.get("unit") == "USD"
+                    and matrix.get("operating_income_concept") == "OperatingIncomeLoss"
+                    and issuer.get("revenue_concept") in {
+                        "Revenues",
+                        "RevenueFromContractWithCustomerExcludingAssessedTax",
+                        "SalesRevenueNet",
+                    }
+                ),
+                "positive_statement_inputs": all(
+                    Decimal(item[key]) > 0
+                    for item in (prior, current)
+                    for key in ("revenue", "operating_income")
+                ),
+                "evidence_provenance": all(
+                    item["accession_number"].replace("-", "") in item["source_url"]
+                    and item["source_url"].startswith(
+                        "https://www.sec.gov/Archives/edgar/data/"
+                    )
+                    for item in (prior, current)
+                ),
+            }
+            checks["calculation_correctness"] = (
+                actual.value
+                == Decimal(comparison["expected_margin_change_percentage_points"])
+            )
+            cases.append({
+                "company": issuer["company"],
+                "fiscal_years": [prior["fiscal_year"], current["fiscal_year"]],
+                "prior_inputs_usd": {
+                    "revenue": prior["revenue"],
+                    "operating_income": prior["operating_income"],
+                },
+                "current_inputs_usd": {
+                    "revenue": current["revenue"],
+                    "operating_income": current["operating_income"],
+                },
+                "taxonomy": matrix["taxonomy"],
+                "unit": matrix["unit"],
+                "concepts": {
+                    "revenue": issuer["revenue_concept"],
+                    "operating_income": matrix["operating_income_concept"],
+                },
+                "expected_margin_change_percentage_points": comparison[
+                    "expected_margin_change_percentage_points"
+                ],
+                "actual_margin_change_percentage_points": str(actual.value),
+                "evidence": [
+                    {"accession_number": item["accession_number"], "source_url": item["source_url"]}
+                    for item in (prior, current)
+                ],
+                "checks": checks,
+                "status": "PASS" if all(checks.values()) else "FAIL",
+            })
+    tickers = sorted({item["company"]["ticker"] for item in cases})
+    return {
+        "matrix_id": matrix["matrix_id"],
+        "question_id": matrix["question_id"],
+        "evaluation_scope": matrix["evaluation_scope"],
+        "case_count": len(cases),
+        "pass_count": sum(case["status"] == "PASS" for case in cases),
+        "fail_count": sum(case["status"] == "FAIL" for case in cases),
+        "issuers": tickers,
+        "cases_per_issuer": {
+            ticker: sum(case["company"]["ticker"] == ticker for case in cases)
             for ticker in tickers
         },
         "cases": cases,
@@ -1004,6 +1109,7 @@ def evaluate_benchmark(
         annual_revenue_matrix_path
     )
     liquidity_matrix = evaluate_liquidity_reference_matrix(DEFAULT_LIQUIDITY_MATRIX)
+    margin_matrix = evaluate_annual_margin_matrix(DEFAULT_MARGIN_MATRIX)
     questions = benchmark.question_map()
     if fixture.get("question_id") != "Q01" or "Q01" not in questions:
         raise ValueError("The configured fixture must target benchmark Q01.")
@@ -1124,11 +1230,15 @@ def evaluate_benchmark(
         "accuracy_percentage": None,
         "accuracy_note": (
             "No overall accuracy percentage is reported: Q01, Q03, Q05, Q07, Q08, "
-            "and Q13 have fixture-backed checks; the Q01 and Q07 "
-            "issuer matrix checks six cited annual revenue cases, but neither "
+            "and Q13 have fixture-backed checks; the Q01, Q03, and Q07 "
+            "issuer matrices check six cited annual cases each, but neither "
             "live SEC retrieval nor the planner was evaluated."
         ),
-        "operation_reference_matrices": [annual_revenue_matrix, liquidity_matrix],
+        "operation_reference_matrices": [
+            annual_revenue_matrix,
+            margin_matrix,
+            liquidity_matrix,
+        ],
         "questions": report_questions,
     }
 

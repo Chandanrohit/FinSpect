@@ -58,9 +58,9 @@ Keep the first screen focused on asking a company question. Use familiar investi
 
 ## Current state and next slice
 
-Overall benchmark report: 6 `PARTIAL`, 14 `UNSUPPORTED`, 0 `PASS`, 0 `FAIL`. Partial cases use fixture data and validated plans, not live retrieval or planner validation. The Q01 revenue-growth and Q07 liquid-asset-contribution reference matrices each have 6/6 passing offline cases across NVIDIA, Microsoft, and Apple (two annual pairs each), with no live retrieval. No overall accuracy percentage is defensible yet.
+Overall benchmark report: 6 `PARTIAL`, 14 `UNSUPPORTED`, 0 `PASS`, 0 `FAIL`. Partial cases use fixture data and validated plans, not live retrieval or planner validation. The Q01 revenue-growth, Q03 operating-margin-change, and Q07 liquid-asset-contribution reference matrices each have 6/6 passing offline cases across NVIDIA, Microsoft, and Apple (two annual pairs each), with no live retrieval. No overall accuracy percentage is defensible yet.
 
-Completed slices: benchmark baseline and investor-facing Streamlit home; Q01 annual revenue growth and Q07 annual liquid-asset contribution reference matrices across three issuers each. Next: extend Gate 1 to another annual financial-statement operation and meet its own multi-issuer reference gate before committing it. These gates are offline reference coverage; live SEC, planner, and Gnani evaluation remains in Gate 5.
+Completed slices: benchmark baseline and investor-facing Streamlit home; Q01 annual revenue growth, Q03 annual operating-margin change, and Q07 annual liquid-asset contribution reference matrices across three issuers each. Next: extend Gate 1 with multi-issuer annual net-income or cash-flow comparisons and meet that operation's reference gate before committing it. These gates are offline reference coverage; live SEC, planner, and Gnani evaluation remains in Gate 5.
 
 ## Scope limits
 

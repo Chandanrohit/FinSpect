@@ -403,6 +403,110 @@ _LIQUIDITY_CASES = [
 ]
 
 
+_MARGIN_MATRIX = json.loads(
+    (
+        Path(__file__).resolve().parents[1]
+        / "data"
+        / "fixtures"
+        / "annual_margin_reference_matrix.json"
+    ).read_text(encoding="utf-8")
+)["issuers"]
+_MARGIN_CASES = [
+    (issuer, comparison)
+    for issuer in _MARGIN_MATRIX
+    for comparison in issuer["comparisons"]
+]
+
+
+@pytest.mark.parametrize(
+    ("issuer", "comparison"),
+    _MARGIN_CASES,
+    ids=lambda parameter: parameter.get("company", {}).get("ticker")
+    if isinstance(parameter, dict) and "company" in parameter
+    else f"FY{parameter['prior_year']}-FY{parameter['current_year']}",
+)
+def test_q03_margin_reference_matrix_runs_through_orchestrator(issuer, comparison):
+    company = issuer["company"]
+    periods_by_year = {row["fiscal_year"]: row for row in issuer["periods"]}
+    prior = periods_by_year[comparison["prior_year"]]
+    current = periods_by_year[comparison["current_year"]]
+    question = (
+        f"How did {company['name']}'s operating margin change from "
+        f"FY{prior['fiscal_year']} to FY{current['fiscal_year']}?"
+    )
+    periods = {
+        row["fiscal_year"]: AnnualPeriod(
+            fiscal_year=row["fiscal_year"],
+            start_date=row["start_date"],
+            end_date=row["end_date"],
+            form="10-K",
+            concept=issuer["revenue_concept"],
+            filing_date=row["filing_date"],
+            accession_number=row["accession_number"],
+            currency="USD",
+        )
+        for row in issuer["periods"]
+    }
+    plan = make_plan().model_copy(update={
+        "original_question": question,
+        "company": CompanyRequest(**company),
+        "period": PeriodRequest(
+            period_label=f"FY{current['fiscal_year']}",
+            period_kind="annual",
+            fiscal_year=current["fiscal_year"],
+            comparison_required=True,
+            comparison_period=f"FY{prior['fiscal_year']}",
+        ),
+        "operation": "margin_change",
+        "metrics": [
+            MetricRequest(name="total_revenue", role="primary", sources=["xbrl"]),
+            MetricRequest(name="operating_income", role="supporting", sources=["xbrl"]),
+        ],
+    })
+
+    class Planner:
+        def plan(self, _question):
+            return plan
+
+    class CompanyResolver:
+        def resolve(self, **_kwargs):
+            return company
+
+    class FactRetriever:
+        def get_fact(self, *, concept, end_date, **_kwargs):
+            row = next(item for item in issuer["periods"] if item["end_date"] == end_date)
+            is_revenue = concept == issuer["revenue_concept"]
+            return {
+                "cik": company["cik"], "company": company["name"],
+                "taxonomy": "us-gaap", "concept": concept,
+                "label": "Revenue" if is_revenue else "Operating income",
+                "value": row["revenue"] if is_revenue else row["operating_income"],
+                "unit": "USD", "start_date": row["start_date"],
+                "end_date": row["end_date"], "fiscal_year": row["fiscal_year"],
+                "form": "10-K", "filing_date": row["filing_date"],
+                "accession_number": row["accession_number"],
+            }
+
+    result = FinSpectOrchestrator(
+        planner=Planner(),
+        normalizer=normalize_query_plan,
+        period_resolver=lambda _cik, year: periods[year],
+        fact_retriever=FactRetriever(),
+        company_resolver=CompanyResolver(),
+    ).run(question)
+
+    assert result.plan.company.cik == company["cik"]
+    assert result.plan.company.ticker == company["ticker"]
+    assert Decimal(result.answer.result_value) == Decimal(
+        comparison["expected_margin_change_percentage_points"]
+    )
+    assert result.answer.result_unit == "percentage_points"
+    assert len(result.answer.evidence) == 4
+    assert {item.accession_number for item in result.answer.evidence} == {
+        prior["accession_number"], current["accession_number"]
+    }
+
+
 @pytest.mark.parametrize(
     ("issuer", "comparison"),
     _LIQUIDITY_CASES,
