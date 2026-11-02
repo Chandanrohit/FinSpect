@@ -7,12 +7,12 @@
   "question_count": 20,
   "aggregate_counts": {
     "PASS": 0,
-    "PARTIAL": 10,
-    "UNSUPPORTED": 10,
+    "PARTIAL": 11,
+    "UNSUPPORTED": 9,
     "FAIL": 0
   },
   "accuracy_percentage": null,
-  "accuracy_note": "No overall accuracy percentage is reported: Q01, Q03, Q05, Q07, Q08, Q09, Q10, Q11, Q12, and Q13 have fixture-backed checks; issuer matrix case counts and individual checks are reported per operation, but neither live SEC retrieval nor the planner was evaluated.",
+  "accuracy_note": "No overall accuracy percentage is reported: Q01, Q03, Q05, Q07, Q08, Q09, Q10, Q11, Q12, Q13, and Q14 have fixture-backed checks; issuer matrix case counts and individual checks are reported per operation, but neither live SEC retrieval nor the planner was evaluated.",
   "operation_reference_matrices": [
     {
       "matrix_id": "annual-revenue-growth-multi-issuer-v2-healthcare",
@@ -3241,6 +3241,208 @@
           "status": "PASS"
         }
       ]
+    },
+    {
+      "matrix_id": "annual-cash-allocation-multi-issuer-v1",
+      "question_id": "Q14",
+      "evaluation_scope": "Offline SEC 10-K consolidated cash-flow statement amounts. Cash outflows are normalized to positive USD magnitudes; this matrix does not measure live retrieval or interpretation.",
+      "capital_expenditure_definition": "Cash payments for property and equipment; for NVIDIA the filed cash-flow line includes property and equipment and intangible assets.",
+      "case_count": 6,
+      "pass_count": 6,
+      "fail_count": 0,
+      "issuers": [
+        "AAPL",
+        "MSFT",
+        "NVDA"
+      ],
+      "cases_per_issuer": {
+        "AAPL": 2,
+        "MSFT": 2,
+        "NVDA": 2
+      },
+      "minimum_gate_coverage_met": true,
+      "cases": [
+        {
+          "company": {
+            "name": "NVIDIA Corporation",
+            "ticker": "NVDA",
+            "cik": "0001045810"
+          },
+          "fiscal_year": 2024,
+          "period": {
+            "start_date": "2023-01-30",
+            "end_date": "2024-01-28"
+          },
+          "inputs": {
+            "share_repurchase_cash": "9533000000",
+            "dividends_paid": "395000000",
+            "capital_expenditure": "1069000000",
+            "operating_cash_flow": "28090000000"
+          },
+          "expected_cash_allocation_percent": "39.14916340334638661445354219",
+          "actual_cash_allocation_percent": "39.14916340334638661445354219",
+          "accession_number": "0001045810-24-000029",
+          "source_url": "https://www.sec.gov/Archives/edgar/data/1045810/000104581024000029/0001045810-24-000029-index.htm",
+          "checks": {
+            "annual_period_and_filing": true,
+            "source_provenance": true,
+            "positive_operating_cash_flow": true,
+            "cash_outflow_magnitudes_nonnegative": true,
+            "cash_allocation_calculation_correct": true
+          },
+          "status": "PASS"
+        },
+        {
+          "company": {
+            "name": "NVIDIA Corporation",
+            "ticker": "NVDA",
+            "cik": "0001045810"
+          },
+          "fiscal_year": 2025,
+          "period": {
+            "start_date": "2024-01-29",
+            "end_date": "2025-01-26"
+          },
+          "inputs": {
+            "share_repurchase_cash": "33706000000",
+            "dividends_paid": "834000000",
+            "capital_expenditure": "3236000000",
+            "operating_cash_flow": "64089000000"
+          },
+          "expected_cash_allocation_percent": "58.94303234564433834199316575",
+          "actual_cash_allocation_percent": "58.94303234564433834199316575",
+          "accession_number": "0001045810-25-000023",
+          "source_url": "https://www.sec.gov/Archives/edgar/data/1045810/000104581025000023/0001045810-25-000023-index.htm",
+          "checks": {
+            "annual_period_and_filing": true,
+            "source_provenance": true,
+            "positive_operating_cash_flow": true,
+            "cash_outflow_magnitudes_nonnegative": true,
+            "cash_allocation_calculation_correct": true
+          },
+          "status": "PASS"
+        },
+        {
+          "company": {
+            "name": "Microsoft Corporation",
+            "ticker": "MSFT",
+            "cik": "0000789019"
+          },
+          "fiscal_year": 2024,
+          "period": {
+            "start_date": "2023-07-01",
+            "end_date": "2024-06-30"
+          },
+          "inputs": {
+            "share_repurchase_cash": "17254000000",
+            "dividends_paid": "21771000000",
+            "capital_expenditure": "44477000000",
+            "operating_cash_flow": "118548000000"
+          },
+          "expected_cash_allocation_percent": "70.43729122380807774066201032",
+          "actual_cash_allocation_percent": "70.43729122380807774066201032",
+          "accession_number": "0000950170-24-087843",
+          "source_url": "https://www.sec.gov/Archives/edgar/data/789019/000095017024087843/0000950170-24-087843-index.htm",
+          "checks": {
+            "annual_period_and_filing": true,
+            "source_provenance": true,
+            "positive_operating_cash_flow": true,
+            "cash_outflow_magnitudes_nonnegative": true,
+            "cash_allocation_calculation_correct": true
+          },
+          "status": "PASS"
+        },
+        {
+          "company": {
+            "name": "Microsoft Corporation",
+            "ticker": "MSFT",
+            "cik": "0000789019"
+          },
+          "fiscal_year": 2025,
+          "period": {
+            "start_date": "2024-07-01",
+            "end_date": "2025-06-30"
+          },
+          "inputs": {
+            "share_repurchase_cash": "18420000000",
+            "dividends_paid": "24082000000",
+            "capital_expenditure": "64551000000",
+            "operating_cash_flow": "136162000000"
+          },
+          "expected_cash_allocation_percent": "78.62178875163408293062675343",
+          "actual_cash_allocation_percent": "78.62178875163408293062675343",
+          "accession_number": "0000950170-25-100235",
+          "source_url": "https://www.sec.gov/Archives/edgar/data/789019/000095017025100235/0000950170-25-100235-index.htm",
+          "checks": {
+            "annual_period_and_filing": true,
+            "source_provenance": true,
+            "positive_operating_cash_flow": true,
+            "cash_outflow_magnitudes_nonnegative": true,
+            "cash_allocation_calculation_correct": true
+          },
+          "status": "PASS"
+        },
+        {
+          "company": {
+            "name": "Apple Inc.",
+            "ticker": "AAPL",
+            "cik": "0000320193"
+          },
+          "fiscal_year": 2024,
+          "period": {
+            "start_date": "2023-10-01",
+            "end_date": "2024-09-28"
+          },
+          "inputs": {
+            "share_repurchase_cash": "94949000000",
+            "dividends_paid": "15234000000",
+            "capital_expenditure": "9447000000",
+            "operating_cash_flow": "118254000000"
+          },
+          "expected_cash_allocation_percent": "101.1635970030612072318906760",
+          "actual_cash_allocation_percent": "101.1635970030612072318906760",
+          "accession_number": "0000320193-24-000123",
+          "source_url": "https://www.sec.gov/Archives/edgar/data/320193/000032019324000123/0000320193-24-000123-index.htm",
+          "checks": {
+            "annual_period_and_filing": true,
+            "source_provenance": true,
+            "positive_operating_cash_flow": true,
+            "cash_outflow_magnitudes_nonnegative": true,
+            "cash_allocation_calculation_correct": true
+          },
+          "status": "PASS"
+        },
+        {
+          "company": {
+            "name": "Apple Inc.",
+            "ticker": "AAPL",
+            "cik": "0000320193"
+          },
+          "fiscal_year": 2025,
+          "period": {
+            "start_date": "2024-09-29",
+            "end_date": "2025-09-27"
+          },
+          "inputs": {
+            "share_repurchase_cash": "90711000000",
+            "dividends_paid": "15421000000",
+            "capital_expenditure": "12715000000",
+            "operating_cash_flow": "111482000000"
+          },
+          "expected_cash_allocation_percent": "106.6064476776519976319047021",
+          "actual_cash_allocation_percent": "106.6064476776519976319047021",
+          "accession_number": "0000320193-25-000079",
+          "source_url": "https://www.sec.gov/Archives/edgar/data/320193/000032019325000079/0000320193-25-000079-index.htm",
+          "checks": {
+            "annual_period_and_filing": true,
+            "source_provenance": true,
+            "positive_operating_cash_flow": true,
+            "cash_outflow_magnitudes_nonnegative": true,
+            "cash_allocation_calculation_correct": true
+          },
+          "status": "PASS"
+        }
+      ]
     }
   ],
   "questions": [
@@ -4594,30 +4796,261 @@
       "question_id": "Q14",
       "question": "What proportion of operating cash flow was allocated to shareholder returns and capital expenditure during the reporting period?",
       "company": null,
-      "filings": [],
-      "reporting_periods": [],
+      "filings": [
+        {
+          "company": {
+            "name": "NVIDIA Corporation",
+            "ticker": "NVDA",
+            "cik": "0001045810"
+          },
+          "fiscal_year": 2024,
+          "accession_number": "0001045810-24-000029",
+          "source_url": "https://www.sec.gov/Archives/edgar/data/1045810/000104581024000029/0001045810-24-000029-index.htm"
+        },
+        {
+          "company": {
+            "name": "NVIDIA Corporation",
+            "ticker": "NVDA",
+            "cik": "0001045810"
+          },
+          "fiscal_year": 2025,
+          "accession_number": "0001045810-25-000023",
+          "source_url": "https://www.sec.gov/Archives/edgar/data/1045810/000104581025000023/0001045810-25-000023-index.htm"
+        },
+        {
+          "company": {
+            "name": "Microsoft Corporation",
+            "ticker": "MSFT",
+            "cik": "0000789019"
+          },
+          "fiscal_year": 2024,
+          "accession_number": "0000950170-24-087843",
+          "source_url": "https://www.sec.gov/Archives/edgar/data/789019/000095017024087843/0000950170-24-087843-index.htm"
+        },
+        {
+          "company": {
+            "name": "Microsoft Corporation",
+            "ticker": "MSFT",
+            "cik": "0000789019"
+          },
+          "fiscal_year": 2025,
+          "accession_number": "0000950170-25-100235",
+          "source_url": "https://www.sec.gov/Archives/edgar/data/789019/000095017025100235/0000950170-25-100235-index.htm"
+        },
+        {
+          "company": {
+            "name": "Apple Inc.",
+            "ticker": "AAPL",
+            "cik": "0000320193"
+          },
+          "fiscal_year": 2024,
+          "accession_number": "0000320193-24-000123",
+          "source_url": "https://www.sec.gov/Archives/edgar/data/320193/000032019324000123/0000320193-24-000123-index.htm"
+        },
+        {
+          "company": {
+            "name": "Apple Inc.",
+            "ticker": "AAPL",
+            "cik": "0000320193"
+          },
+          "fiscal_year": 2025,
+          "accession_number": "0000320193-25-000079",
+          "source_url": "https://www.sec.gov/Archives/edgar/data/320193/000032019325000079/0000320193-25-000079-index.htm"
+        }
+      ],
+      "reporting_periods": [
+        {
+          "company": {
+            "name": "NVIDIA Corporation",
+            "ticker": "NVDA",
+            "cik": "0001045810"
+          },
+          "fiscal_year": 2024
+        },
+        {
+          "company": {
+            "name": "NVIDIA Corporation",
+            "ticker": "NVDA",
+            "cik": "0001045810"
+          },
+          "fiscal_year": 2025
+        },
+        {
+          "company": {
+            "name": "Microsoft Corporation",
+            "ticker": "MSFT",
+            "cik": "0000789019"
+          },
+          "fiscal_year": 2024
+        },
+        {
+          "company": {
+            "name": "Microsoft Corporation",
+            "ticker": "MSFT",
+            "cik": "0000789019"
+          },
+          "fiscal_year": 2025
+        },
+        {
+          "company": {
+            "name": "Apple Inc.",
+            "ticker": "AAPL",
+            "cik": "0000320193"
+          },
+          "fiscal_year": 2024
+        },
+        {
+          "company": {
+            "name": "Apple Inc.",
+            "ticker": "AAPL",
+            "cik": "0000320193"
+          },
+          "fiscal_year": 2025
+        }
+      ],
       "expected_concepts": [
         "operating_cash_flow",
         "share_repurchase",
         "dividends",
         "capital_expenditure"
       ],
-      "retrieval_mode": "not_run",
-      "retrieved_inputs": [],
-      "selected_evidence": [],
-      "calculation_formula": "(share_repurchase + dividends + capital_expenditure) / operating_cash_flow * 100",
-      "expected_answer": null,
-      "actual_answer": "I cannot answer this request reliably yet: No complete retrieval-to-answer path is implemented for Q14; calculator registration alone is not support.\n\nYour question: What proportion of operating cash flow was allocated to shareholder returns and capital expenditure during the reporting period?",
+      "retrieval_mode": "offline_SEC_cash_flow_reference_matrix_not_live_retrieval",
+      "retrieved_inputs": [
+        {
+          "share_repurchase_cash": "9533000000",
+          "dividends_paid": "395000000",
+          "capital_expenditure": "1069000000",
+          "operating_cash_flow": "28090000000"
+        },
+        {
+          "share_repurchase_cash": "33706000000",
+          "dividends_paid": "834000000",
+          "capital_expenditure": "3236000000",
+          "operating_cash_flow": "64089000000"
+        },
+        {
+          "share_repurchase_cash": "17254000000",
+          "dividends_paid": "21771000000",
+          "capital_expenditure": "44477000000",
+          "operating_cash_flow": "118548000000"
+        },
+        {
+          "share_repurchase_cash": "18420000000",
+          "dividends_paid": "24082000000",
+          "capital_expenditure": "64551000000",
+          "operating_cash_flow": "136162000000"
+        },
+        {
+          "share_repurchase_cash": "94949000000",
+          "dividends_paid": "15234000000",
+          "capital_expenditure": "9447000000",
+          "operating_cash_flow": "118254000000"
+        },
+        {
+          "share_repurchase_cash": "90711000000",
+          "dividends_paid": "15421000000",
+          "capital_expenditure": "12715000000",
+          "operating_cash_flow": "111482000000"
+        }
+      ],
+      "selected_evidence": [
+        {
+          "accession_number": "0001045810-24-000029",
+          "source_url": "https://www.sec.gov/Archives/edgar/data/1045810/000104581024000029/0001045810-24-000029-index.htm"
+        },
+        {
+          "accession_number": "0001045810-25-000023",
+          "source_url": "https://www.sec.gov/Archives/edgar/data/1045810/000104581025000023/0001045810-25-000023-index.htm"
+        },
+        {
+          "accession_number": "0000950170-24-087843",
+          "source_url": "https://www.sec.gov/Archives/edgar/data/789019/000095017024087843/0000950170-24-087843-index.htm"
+        },
+        {
+          "accession_number": "0000950170-25-100235",
+          "source_url": "https://www.sec.gov/Archives/edgar/data/789019/000095017025100235/0000950170-25-100235-index.htm"
+        },
+        {
+          "accession_number": "0000320193-24-000123",
+          "source_url": "https://www.sec.gov/Archives/edgar/data/320193/000032019324000123/0000320193-24-000123-index.htm"
+        },
+        {
+          "accession_number": "0000320193-25-000079",
+          "source_url": "https://www.sec.gov/Archives/edgar/data/320193/000032019325000079/0000320193-25-000079-index.htm"
+        }
+      ],
+      "calculation_formula": "(share_repurchase_cash + dividends_paid + capital_expenditure) / operating_cash_flow * 100",
+      "expected_answer": [
+        {
+          "ticker": "NVDA",
+          "fiscal_year": 2024,
+          "cash_allocation_percent": "39.14916340334638661445354219"
+        },
+        {
+          "ticker": "NVDA",
+          "fiscal_year": 2025,
+          "cash_allocation_percent": "58.94303234564433834199316575"
+        },
+        {
+          "ticker": "MSFT",
+          "fiscal_year": 2024,
+          "cash_allocation_percent": "70.43729122380807774066201032"
+        },
+        {
+          "ticker": "MSFT",
+          "fiscal_year": 2025,
+          "cash_allocation_percent": "78.62178875163408293062675343"
+        },
+        {
+          "ticker": "AAPL",
+          "fiscal_year": 2024,
+          "cash_allocation_percent": "101.1635970030612072318906760"
+        },
+        {
+          "ticker": "AAPL",
+          "fiscal_year": 2025,
+          "cash_allocation_percent": "106.6064476776519976319047021"
+        }
+      ],
+      "actual_answer": [
+        {
+          "ticker": "NVDA",
+          "fiscal_year": 2024,
+          "cash_allocation_percent": "39.14916340334638661445354219"
+        },
+        {
+          "ticker": "NVDA",
+          "fiscal_year": 2025,
+          "cash_allocation_percent": "58.94303234564433834199316575"
+        },
+        {
+          "ticker": "MSFT",
+          "fiscal_year": 2024,
+          "cash_allocation_percent": "70.43729122380807774066201032"
+        },
+        {
+          "ticker": "MSFT",
+          "fiscal_year": 2025,
+          "cash_allocation_percent": "78.62178875163408293062675343"
+        },
+        {
+          "ticker": "AAPL",
+          "fiscal_year": 2024,
+          "cash_allocation_percent": "101.1635970030612072318906760"
+        },
+        {
+          "ticker": "AAPL",
+          "fiscal_year": 2025,
+          "cash_allocation_percent": "106.6064476776519976319047021"
+        }
+      ],
       "checks": {
-        "input_retrieval_correctness": null,
-        "period_correctness": null,
-        "unit_correctness": null,
-        "calculation_correctness": null,
-        "evidence_correctness": null,
-        "query_interpretation_correctness": null
+        "reference_matrix_cases_pass": true,
+        "live_retrieval": "not_evaluated",
+        "query_interpretation": "not_evaluated"
       },
-      "overall_status": "UNSUPPORTED",
-      "failure_reason": "No complete retrieval-to-answer path is implemented for Q14; calculator registration alone is not support."
+      "overall_status": "PARTIAL",
+      "failure_reason": "Offline reference calculations only; live SEC retrieval and query interpretation remain untested."
     },
     {
       "question_id": "Q15",

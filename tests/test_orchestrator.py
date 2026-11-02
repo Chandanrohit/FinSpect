@@ -1413,6 +1413,169 @@ def test_q12_exact_filing_pipeline_matches_all_six_issuer_period_references():
         assert result.answer.evidence[-1].value == Decimal(reference["ending_equity"]) * 1_000_000
 
 
+def test_q14_annual_cash_allocation_uses_four_period_matched_cash_facts():
+    question = (
+        "What proportion of NVIDIA's FY2025 operating cash flow was allocated "
+        "to share repurchases, dividends, and capital expenditure?"
+    )
+    plan = make_plan().model_copy(update={
+        "original_question": question,
+        "period": PeriodRequest(
+            period_label="FY2025",
+            period_kind="annual",
+            fiscal_year=2025,
+            comparison_required=False,
+        ),
+        "benchmark_id": "Q14",
+        "operation": "cash_allocation",
+        "metrics": [
+            MetricRequest(name="share_repurchase_cash", role="supporting", sources=["xbrl"]),
+            MetricRequest(name="dividends_paid", role="supporting", sources=["xbrl"]),
+            MetricRequest(name="capital_expenditure", role="supporting", sources=["xbrl"]),
+            MetricRequest(name="operating_cash_flow", role="primary", sources=["xbrl"]),
+        ],
+    })
+    values = {
+        "PaymentsForRepurchaseOfCommonStock": -33_706_000_000,
+        "PaymentsOfDividendsCommonStock": -834_000_000,
+        "PaymentsToAcquirePropertyPlantAndEquipment": -3_236_000_000,
+        "NetCashProvidedByUsedInOperatingActivities": 64_089_000_000,
+    }
+
+    class Planner:
+        def plan(self, _question):
+            return plan
+
+    class FactRetriever:
+        def get_fact(self, *, concept, **kwargs):
+            assert concept in values
+            assert kwargs["end_date"] == "2025-01-26"
+            assert kwargs["start_date"] == "2024-01-29"
+            assert kwargs["accession_number"] == PERIODS[2025].accession_number
+            return {
+                **FACTS[2025],
+                "concept": concept,
+                "label": concept,
+                "value": values[concept],
+            }
+
+    result = FinSpectOrchestrator(
+        planner=Planner(),
+        normalizer=normalize_query_plan,
+        period_resolver=lambda _cik, year: PERIODS[year],
+        fact_retriever=FactRetriever(),
+        company_resolver=FixtureCompanyResolver(),
+    ).run(question)
+
+    expected = (
+        Decimal("33706000000") + Decimal("834000000") + Decimal("3236000000")
+    ) / Decimal("64089000000") * Decimal("100")
+    assert result.answer.formula_id == "Q14"
+    assert Decimal(result.answer.result_value) == expected
+    assert len(result.answer.evidence) == 4
+    assert {fact.accession_number for fact in result.answer.evidence} == {
+        PERIODS[2025].accession_number
+    }
+
+
+def test_q14_cash_allocation_pipeline_matches_six_annual_references():
+    matrix_path = (
+        Path(__file__).parents[1]
+        / "data"
+        / "fixtures"
+        / "annual_cash_allocation_reference_matrix.json"
+    )
+    references = json.loads(matrix_path.read_text(encoding="utf-8"))["cases"]
+    concept_by_metric = {
+        "share_repurchase_cash": "PaymentsForRepurchaseOfCommonStock",
+        "dividends_paid": "PaymentsOfDividendsCommonStock",
+        "capital_expenditure": "PaymentsToAcquirePropertyPlantAndEquipment",
+        "operating_cash_flow": "NetCashProvidedByUsedInOperatingActivities",
+    }
+
+    for reference in references:
+        company = reference["company"]
+        year = reference["fiscal_year"]
+        period = AnnualPeriod(
+            fiscal_year=year,
+            start_date=reference["start_date"],
+            end_date=reference["end_date"],
+            form="10-K",
+            concept="Revenues",
+            filing_date=reference["filing_date"],
+            accession_number=reference["accession_number"],
+        )
+        concept_values = {
+            concept_by_metric["share_repurchase_cash"]: -int(reference["share_repurchase_cash"]),
+            concept_by_metric["dividends_paid"]: -int(reference["dividends_paid"]),
+            concept_by_metric["capital_expenditure"]: -int(reference["capital_expenditure"]),
+            concept_by_metric["operating_cash_flow"]: int(reference["operating_cash_flow"]),
+        }
+        question = (
+            f"What proportion of {company['name']}'s FY{year} operating cash flow "
+            "was allocated to shareholder returns and capital expenditure?"
+        )
+        plan = make_plan().model_copy(update={
+            "original_question": question,
+            "company": CompanyRequest(**company),
+            "period": PeriodRequest(
+                period_label=f"FY{year}",
+                period_kind="annual",
+                fiscal_year=year,
+                comparison_required=False,
+            ),
+            "benchmark_id": "Q14",
+            "operation": "cash_allocation",
+            "metrics": [
+                MetricRequest(name=name, role="supporting", sources=["xbrl"])
+                for name in concept_by_metric
+            ],
+        })
+
+        class Planner:
+            def plan(self, _question):
+                return plan
+
+        class CompanyResolver:
+            def resolve(self, **_kwargs):
+                return company
+
+        class FactRetriever:
+            def get_fact(self, *, concept, **_kwargs):
+                return {
+                    "cik": company["cik"],
+                    "company": company["name"],
+                    "taxonomy": "us-gaap",
+                    "concept": concept,
+                    "label": concept,
+                    "value": concept_values[concept],
+                    "unit": "USD",
+                    "start_date": reference["start_date"],
+                    "end_date": reference["end_date"],
+                    "fiscal_year": year,
+                    "form": "10-K",
+                    "filing_date": reference["filing_date"],
+                    "accession_number": reference["accession_number"],
+                }
+
+        result = FinSpectOrchestrator(
+            planner=Planner(),
+            normalizer=normalize_query_plan,
+            period_resolver=lambda _cik, _year: period,
+            fact_retriever=FactRetriever(),
+            company_resolver=CompanyResolver(),
+        ).run(question)
+
+        assert result.answer.formula_id == "Q14"
+        assert result.answer.result_value == reference["expected_cash_allocation_percent"]
+        assert "capital expenditure" in result.answer.text.lower()
+        assert any("cash-flow statement classification" in note for note in result.answer.limitations)
+        assert len(result.answer.evidence) == 4
+        assert {item.accession_number for item in result.answer.evidence} == {
+            reference["accession_number"]
+        }
+
+
 def test_q03_nvidia_operating_margin_change_end_to_end_fixture():
     question = (
         "How did NVIDIA's operating margin change from FY2024 to FY2025?"

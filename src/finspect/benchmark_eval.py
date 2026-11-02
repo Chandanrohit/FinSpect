@@ -15,6 +15,7 @@ from finspect.answer_builder import (
     build_unsupported_answer,
 )
 from finspect.calculator import (
+    cash_allocation,
     cash_conversion_comparison,
     dilution_ratio,
     earnings_change_relationship,
@@ -64,6 +65,87 @@ DEFAULT_INVENTORY_MATRIX = ROOT / "data" / "fixtures" / "annual_inventory_refere
 DEFAULT_DILUTION_MATRIX = ROOT / "data" / "fixtures" / "annual_share_dilution_reference_matrix.json"
 DEFAULT_REPURCHASE_MATRIX = ROOT / "data" / "fixtures" / "annual_share_repurchase_reference_matrix.json"
 DEFAULT_EQUITY_MATRIX = ROOT / "data" / "fixtures" / "annual_equity_allocation_reference_matrix.json"
+DEFAULT_CASH_ALLOCATION_MATRIX = (
+    ROOT / "data" / "fixtures" / "annual_cash_allocation_reference_matrix.json"
+)
+
+
+def evaluate_cash_allocation_matrix(path: Path) -> dict[str, Any]:
+    """Validate Q14 cash-allocation calculations against cited SEC filings."""
+    matrix = json.loads(path.read_text(encoding="utf-8"))
+    cases = []
+    for reference in matrix["cases"]:
+        company = reference["company"]
+        start = date.fromisoformat(reference["start_date"])
+        end = date.fromisoformat(reference["end_date"])
+        filed = date.fromisoformat(reference["filing_date"])
+        result = cash_allocation(
+            share_repurchase=Decimal(reference["share_repurchase_cash"]),
+            dividends=Decimal(reference["dividends_paid"]),
+            capex=Decimal(reference["capital_expenditure"]),
+            operating_cash_flow=Decimal(reference["operating_cash_flow"]),
+        )
+        checks = {
+            "annual_period_and_filing": (
+                start < end and 300 <= (end - start).days <= 400 and filed >= end
+            ),
+            "source_provenance": (
+                reference["accession_number"].replace("-", "")
+                in reference["source_url"]
+                and reference["source_url"].startswith(
+                    "https://www.sec.gov/Archives/edgar/data/"
+                )
+                and f"/{int(company['cik'])}/" in reference["source_url"]
+            ),
+            "positive_operating_cash_flow": Decimal(reference["operating_cash_flow"]) > 0,
+            "cash_outflow_magnitudes_nonnegative": all(
+                Decimal(reference[key]) >= 0
+                for key in (
+                    "share_repurchase_cash", "dividends_paid", "capital_expenditure"
+                )
+            ),
+            "cash_allocation_calculation_correct": (
+                result.value == Decimal(reference["expected_cash_allocation_percent"])
+            ),
+        }
+        cases.append({
+            "company": company,
+            "fiscal_year": reference["fiscal_year"],
+            "period": {"start_date": reference["start_date"], "end_date": reference["end_date"]},
+            "inputs": {
+                key: reference[key]
+                for key in (
+                    "share_repurchase_cash", "dividends_paid",
+                    "capital_expenditure", "operating_cash_flow",
+                )
+            },
+            "expected_cash_allocation_percent": reference["expected_cash_allocation_percent"],
+            "actual_cash_allocation_percent": str(result.value),
+            "accession_number": reference["accession_number"],
+            "source_url": reference["source_url"],
+            "checks": checks,
+            "status": "PASS" if all(checks.values()) else "FAIL",
+        })
+    tickers = sorted({case["company"]["ticker"] for case in cases})
+    counts = {
+        ticker: sum(case["company"]["ticker"] == ticker for case in cases)
+        for ticker in tickers
+    }
+    return {
+        "matrix_id": matrix["matrix_id"],
+        "question_id": matrix["question_id"],
+        "evaluation_scope": matrix["evaluation_scope"],
+        "capital_expenditure_definition": matrix["capital_expenditure_definition"],
+        "case_count": len(cases),
+        "pass_count": sum(case["status"] == "PASS" for case in cases),
+        "fail_count": sum(case["status"] == "FAIL" for case in cases),
+        "issuers": tickers,
+        "cases_per_issuer": counts,
+        "minimum_gate_coverage_met": len(tickers) >= 3 and all(
+            count >= 2 for count in counts.values()
+        ),
+        "cases": cases,
+    }
 
 
 def evaluate_equity_allocation_matrix(path: Path) -> dict[str, Any]:
@@ -1737,6 +1819,9 @@ def evaluate_benchmark(
     dilution_matrix = evaluate_share_dilution_matrix(DEFAULT_DILUTION_MATRIX)
     repurchase_matrix = evaluate_share_repurchase_matrix(DEFAULT_REPURCHASE_MATRIX)
     equity_matrix = evaluate_equity_allocation_matrix(DEFAULT_EQUITY_MATRIX)
+    cash_allocation_matrix = evaluate_cash_allocation_matrix(
+        DEFAULT_CASH_ALLOCATION_MATRIX
+    )
     inventory_reference = json.loads(inventory_matrix_path.read_text(encoding="utf-8"))
     questions = benchmark.question_map()
     if fixture.get("question_id") != "Q01" or "Q01" not in questions:
@@ -1892,6 +1977,67 @@ def evaluate_benchmark(
             continue
         if question_id == "Q13":
             report_questions.append(_evaluate_q13(question, q13_fixture))
+            continue
+        if question_id == "Q14":
+            matrix_pass = (
+                cash_allocation_matrix["minimum_gate_coverage_met"]
+                and cash_allocation_matrix["pass_count"]
+                == cash_allocation_matrix["case_count"]
+            )
+            report_questions.append({
+                "question_id": question_id,
+                "question": question.question_template,
+                "company": None,
+                "filings": [
+                    {
+                        "company": case["company"],
+                        "fiscal_year": case["fiscal_year"],
+                        "accession_number": case["accession_number"],
+                        "source_url": case["source_url"],
+                    }
+                    for case in cash_allocation_matrix["cases"]
+                ],
+                "reporting_periods": [
+                    {"company": case["company"], "fiscal_year": case["fiscal_year"]}
+                    for case in cash_allocation_matrix["cases"]
+                ],
+                "expected_concepts": question.required_concepts,
+                "retrieval_mode": "offline_SEC_cash_flow_reference_matrix_not_live_retrieval",
+                "retrieved_inputs": [case["inputs"] for case in cash_allocation_matrix["cases"]],
+                "selected_evidence": [
+                    {"accession_number": case["accession_number"], "source_url": case["source_url"]}
+                    for case in cash_allocation_matrix["cases"]
+                ],
+                "calculation_formula": (
+                    "(share_repurchase_cash + dividends_paid + capital_expenditure) "
+                    "/ operating_cash_flow * 100"
+                ),
+                "expected_answer": [
+                    {
+                        "ticker": case["company"]["ticker"],
+                        "fiscal_year": case["fiscal_year"],
+                        "cash_allocation_percent": case["expected_cash_allocation_percent"],
+                    }
+                    for case in cash_allocation_matrix["cases"]
+                ],
+                "actual_answer": [
+                    {
+                        "ticker": case["company"]["ticker"],
+                        "fiscal_year": case["fiscal_year"],
+                        "cash_allocation_percent": case["actual_cash_allocation_percent"],
+                    }
+                    for case in cash_allocation_matrix["cases"]
+                ],
+                "checks": {
+                    "reference_matrix_cases_pass": matrix_pass,
+                    "live_retrieval": "not_evaluated",
+                    "query_interpretation": "not_evaluated",
+                },
+                "overall_status": "PARTIAL" if matrix_pass else "FAIL",
+                "failure_reason": (
+                    "Offline reference calculations only; live SEC retrieval and query interpretation remain untested."
+                ),
+            })
             continue
         if question_id == "Q11":
             dilution_reference = json.loads(
@@ -2080,7 +2226,7 @@ def evaluate_benchmark(
         "accuracy_percentage": None,
         "accuracy_note": (
             "No overall accuracy percentage is reported: Q01, Q03, Q05, Q07, Q08, Q09, "
-            "Q10, Q11, Q12, and Q13 have fixture-backed checks; issuer matrix case counts and "
+            "Q10, Q11, Q12, Q13, and Q14 have fixture-backed checks; issuer matrix case counts and "
             "individual checks are reported per operation, but neither "
             "live SEC retrieval nor the planner was evaluated."
         ),
@@ -2095,6 +2241,7 @@ def evaluate_benchmark(
             dilution_matrix,
             repurchase_matrix,
             equity_matrix,
+            cash_allocation_matrix,
         ],
         "questions": report_questions,
     }

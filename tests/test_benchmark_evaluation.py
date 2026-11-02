@@ -7,8 +7,8 @@ def test_benchmark_report_records_fixture_and_unsupported_questions():
     assert report["question_count"] == 20
     assert report["aggregate_counts"] == {
         "PASS": 0,
-        "PARTIAL": 10,
-        "UNSUPPORTED": 10,
+        "PARTIAL": 11,
+        "UNSUPPORTED": 9,
         "FAIL": 0,
     }
     assert report["accuracy_percentage"] is None
@@ -116,6 +116,14 @@ def test_benchmark_report_records_fixture_and_unsupported_questions():
     assert apple_buyback_case["actual_largest_component"] == "Common stock repurchased"
     assert apple_buyback_case["actual_contribution_percent"].startswith("-168.29")
 
+    cash_allocation_matrix = report["operation_reference_matrices"][10]
+    assert cash_allocation_matrix["question_id"] == "Q14"
+    assert cash_allocation_matrix["case_count"] == cash_allocation_matrix["pass_count"] == 6
+    assert cash_allocation_matrix["fail_count"] == 0
+    assert cash_allocation_matrix["issuers"] == ["AAPL", "MSFT", "NVDA"]
+    assert cash_allocation_matrix["minimum_gate_coverage_met"] is True
+    assert set(cash_allocation_matrix["cases_per_issuer"].values()) == {2}
+
     questions = {item["question_id"]: item for item in report["questions"]}
     q01 = questions["Q01"]
     assert q01["overall_status"] == "PARTIAL"
@@ -193,6 +201,14 @@ def test_benchmark_report_records_fixture_and_unsupported_questions():
     assert q12["checks"]["signed_component_preserved"] is True
     assert "no live" in q12["failure_reason"].lower() or "live SEC" in q12["failure_reason"]
 
+    q14 = questions["Q14"]
+    assert q14["overall_status"] == "PARTIAL"
+    assert q14["checks"]["reference_matrix_cases_pass"] is True
+    assert len(q14["actual_answer"]) == 6
+    assert q14["actual_answer"][-1]["cash_allocation_percent"] == (
+        "106.6064476776519976319047021"
+    )
+
     q09 = questions["Q09"]
     assert q09["overall_status"] == "PARTIAL"
     assert q09["actual_answer"]["result_unit"] == "percentage_points"
@@ -202,7 +218,7 @@ def test_benchmark_report_records_fixture_and_unsupported_questions():
     for question_id in [
         f"Q{number:02d}"
         for number in range(2, 21)
-        if number not in {3, 5, 7, 8, 9, 10, 11, 12, 13}
+        if number not in {3, 5, 7, 8, 9, 10, 11, 12, 13, 14}
     ]:
         question = questions[question_id]
         assert question["overall_status"] == "UNSUPPORTED"

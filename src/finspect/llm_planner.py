@@ -49,6 +49,13 @@ Rules:
     and do not request a comparison period.
 15. If an equity-change question has no explicit fiscal year, request
     clarification instead of guessing which annual filing to use.
+16. For Q14 cash-allocation questions, require one explicit annual fiscal
+    year and use operation "cash_allocation" with operating cash flow,
+    share repurchases, dividends paid, and capital expenditure from the
+    same 10-K period. Do not request a comparison period.
+17. Treat share repurchases, cash dividends, and capital expenditure as
+    cash outflow magnitudes in the calculation; keep operating cash flow
+    as reported and request clarification if the fiscal year is missing.
 """
 
 

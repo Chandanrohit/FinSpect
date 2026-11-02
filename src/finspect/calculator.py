@@ -300,6 +300,10 @@ def cash_allocation(share_repurchase: Decimal, dividends: Decimal, capex: Decima
                     operating_cash_flow: Decimal) -> CalculationResult:
     r, d, x, c = map(dec, (share_repurchase, dividends, capex, operating_cash_flow))
     # The caller must normalize cash outflows to positive economic amounts.
+    if min(r, d, x) < ZERO:
+        raise FormulaError("Cash-allocation outflows must be non-negative magnitudes.")
+    if c <= ZERO:
+        raise FormulaError("Cash allocation requires positive operating cash flow.")
     return _result("Q14", _pct(r+d+x, c, label="cash allocation"), "percent",
                    "(share_repurchase + dividends + capital_expenditure) / operating_cash_flow * 100",
                    {"share_repurchase": r, "dividends": d, "capital_expenditure": x, "operating_cash_flow": c},

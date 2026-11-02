@@ -96,6 +96,16 @@ def build_calculation_answer(
             f"The largest disclosed equity change was {component_name} at "
             f"${amount:,.0f}, or {_format_result(result.value, 'percent')} of ending equity."
         )
+    elif result.formula_id == "Q14":
+        allocated = sum(
+            result.inputs[name]
+            for name in ("share_repurchase", "dividends", "capital_expenditure")
+        )
+        result_line = (
+            f"{company_name} used "
+            f"${allocated:,.0f}, equal to {_format_result(result.value, 'percent')} "
+            "of operating cash flow for share repurchases, dividends, and capital expenditure."
+        )
     else:
         result_line = f"{company_name}'s result is {value_text}."
 

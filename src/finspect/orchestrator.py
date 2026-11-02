@@ -17,6 +17,7 @@ from finspect.answer_builder import (
 from finspect.calculator import (
     absolute_change,
     cash_conversion_comparison,
+    cash_allocation,
     dilution_ratio,
     earnings_change_relationship,
     growth_comparison,
@@ -177,6 +178,12 @@ class FinSpectOrchestrator:
             metric_names
             & {"share repurchase cash", "share repurchases", "share repurchase"}
         )
+        has_dividends = bool(
+            metric_names & {"dividends", "dividends paid", "cash dividends"}
+        )
+        has_capital_expenditure = bool(
+            metric_names & {"capital expenditure", "capital expenditures", "capex"}
+        )
         has_basic_shares = bool(
             metric_names & {"basic weighted average shares", "basic shares"}
         )
@@ -305,6 +312,22 @@ class FinSpectOrchestrator:
             and plan.period.fiscal_year is not None
             and not plan.period.comparison_required
         )
+        is_supported_cash_allocation = (
+            plan.operation == "cash_allocation"
+            and has_share_repurchase
+            and has_dividends
+            and has_capital_expenditure
+            and has_operating_cash_flow
+            and metric_names <= {
+                "share repurchase cash", "share repurchases", "share repurchase",
+                "dividends", "dividends paid", "cash dividends",
+                "capital expenditure", "capital expenditures", "capex",
+                "operating cash flow", "net cash provided by operating activities",
+            }
+            and plan.period.period_kind == "annual"
+            and plan.period.fiscal_year is not None
+            and not plan.period.comparison_required
+        )
 
         if not (
             is_supported_revenue_operation
@@ -317,6 +340,7 @@ class FinSpectOrchestrator:
             or is_supported_dilution
             or is_supported_share_repurchase
             or is_supported_equity_allocation
+            or is_supported_cash_allocation
         ):
             answer = build_unsupported_answer(
                 question=question,
@@ -329,14 +353,20 @@ class FinSpectOrchestrator:
                     "asset contribution to total asset change plus annual "
                     "weighted-average share dilution and annual share "
                     "repurchase analysis, and annual equity-change analysis "
-                    "when an exact 10-K statement of equity is available."
+                    "when an exact 10-K statement of equity is available, "
+                    "plus annual shareholder-return and capital-expenditure "
+                    "allocation when all cash-flow inputs are available."
                 ),
             )
             return PipelineResult(plan=plan, answer=answer)
 
     
         fiscal_years = self._get_two_annual_years(plan)
-        if is_supported_dilution or is_supported_equity_allocation:
+        if (
+            is_supported_dilution
+            or is_supported_equity_allocation
+            or is_supported_cash_allocation
+        ):
             fiscal_years = (plan.period.fiscal_year,)
         if fiscal_years is None:
             answer = build_unsupported_answer(
@@ -543,6 +573,7 @@ class FinSpectOrchestrator:
                 or is_supported_liquidity
                 or is_supported_dilution
                 or is_supported_share_repurchase
+                or is_supported_cash_allocation
             )
             else {"revenue": (periods[0].concept, False)}
         )
@@ -599,12 +630,34 @@ class FinSpectOrchestrator:
                 ("NetCashProvidedByUsedInOperatingActivities",),
                 False,
             )
+        elif is_supported_cash_allocation:
+            concept_specs["share_repurchase_cash"] = (
+                ("PaymentsForRepurchaseOfCommonStock", "PaymentsRelatedToRepurchasesOfCommonStock"),
+                False,
+            )
+            concept_specs["dividends_paid"] = (
+                ("PaymentsOfDividendsCommonStock", "PaymentsOfDividends"),
+                False,
+            )
+            concept_specs["capital_expenditure"] = (
+                (
+                    "PaymentsToAcquirePropertyPlantAndEquipment",
+                    "PaymentsToAcquireProductiveAssets",
+                    "PaymentsForCapitalImprovements",
+                    "PaymentsRelatedToPropertyAndEquipmentAndIntangibleAssets",
+                ),
+                False,
+            )
+            concept_specs["operating_cash_flow"] = (
+                ("NetCashProvidedByUsedInOperatingActivities",),
+                False,
+            )
 
         raw_by_metric: dict[str, tuple[dict[str, Any], ...]] = {}
         canonical_by_metric: dict[str, tuple[FinancialFact, ...]] = {}
         roles = (
             (PeriodRole.CURRENT,)
-            if is_supported_dilution
+            if is_supported_dilution or is_supported_cash_allocation
             else (PeriodRole.COMPARABLE_PRIOR, PeriodRole.CURRENT)
         )
 
@@ -925,6 +978,23 @@ class FinSpectOrchestrator:
                 prior_amount=abs(repurchase_prior.normalized_value),
                 current_operating_cash_flow=cash_flow_current.normalized_value,
             )
+        elif is_supported_cash_allocation:
+            (repurchase,) = canonical_by_metric["share_repurchase_cash"]
+            (dividends,) = canonical_by_metric["dividends_paid"]
+            (capex,) = canonical_by_metric["capital_expenditure"]
+            (cash_flow,) = canonical_by_metric["operating_cash_flow"]
+            inputs = (repurchase, dividends, capex, cash_flow)
+            if any(fact.period.kind != "duration" for fact in inputs):
+                raise ValueError("Q14 inputs must be annual duration facts.")
+            for fact in inputs[1:]:
+                require_compatible_facts(repurchase, fact)
+            validate_currency_inputs(*inputs)
+            calculation = cash_allocation(
+                share_repurchase=abs(repurchase.normalized_value),
+                dividends=abs(dividends.normalized_value),
+                capex=abs(capex.normalized_value),
+                operating_cash_flow=cash_flow.normalized_value,
+            )
 
         facts = tuple(
             fact
@@ -960,7 +1030,12 @@ class FinSpectOrchestrator:
             evidence=evidence,
             limitations=(
                 ("Uses reported cash and current short-term investments; this is not an unrestricted-cash measure.",)
-                if is_supported_liquidity else ()
+                if is_supported_liquidity
+                else (
+                    "Capital expenditure follows the issuer’s cash-flow statement classification; some filers include intangible assets in this line.",
+                )
+                if is_supported_cash_allocation
+                else ()
             ),
         )
 

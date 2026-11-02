@@ -6,10 +6,39 @@ import pytest
 from finspect.calculator import (
     FormulaError,
     absolute_change,
+    cash_allocation,
     largest_component_contribution,
     revenue_growth,
     share_repurchase_comparison,
 )
+
+
+def test_cash_allocation_sums_returns_and_capex_as_positive_outflows():
+    result = cash_allocation(
+        share_repurchase=Decimal("33706000000"),
+        dividends=Decimal("834000000"),
+        capex=Decimal("3236000000"),
+        operating_cash_flow=Decimal("64089000000"),
+    )
+
+    assert result.formula_id == "Q14"
+    assert result.value == (
+        Decimal("33706000000") + Decimal("834000000") + Decimal("3236000000")
+    ) / Decimal("64089000000") * Decimal("100")
+
+
+@pytest.mark.parametrize(
+    "inputs",
+    [
+        (Decimal("-1"), Decimal("0"), Decimal("0"), Decimal("1")),
+        (Decimal("0"), Decimal("-1"), Decimal("0"), Decimal("1")),
+        (Decimal("0"), Decimal("0"), Decimal("-1"), Decimal("1")),
+        (Decimal("1"), Decimal("1"), Decimal("1"), Decimal("0")),
+    ],
+)
+def test_cash_allocation_rejects_invalid_outflows_or_operating_cash_flow(inputs):
+    with pytest.raises(FormulaError):
+        cash_allocation(*inputs)
 
 
 def test_revenue_growth():
