@@ -1,5 +1,5 @@
 {
-  "matrix_id": "annual-net-income-operating-income-change-multi-issuer-v1",
+  "matrix_id": "annual-net-income-operating-income-change-multi-issuer-v2-healthcare",
   "question_id": "Q05",
   "evaluation_scope": "offline reference cases from SEC 10-K statements; does not measure live SEC retrieval or query interpretation",
   "form": "10-K",
@@ -9,42 +9,211 @@
   "operating_income_concept": "OperatingIncomeLoss",
   "issuers": [
     {
-      "company": {"name": "NVIDIA Corporation", "ticker": "NVDA", "cik": "0001045810"},
+      "company": {
+        "name": "NVIDIA Corporation",
+        "ticker": "NVDA",
+        "cik": "0001045810"
+      },
       "revenue_concept": "Revenues",
       "periods": [
-        {"fiscal_year": 2023, "start_date": "2022-01-31", "end_date": "2023-01-29", "filing_date": "2023-02-24", "accession_number": "0001045810-23-000017", "source_url": "https://www.sec.gov/Archives/edgar/data/1045810/000104581023000017/0001045810-23-000017-index.htm", "net_income": "4368000000", "operating_income": "4224000000"},
-        {"fiscal_year": 2024, "start_date": "2023-01-30", "end_date": "2024-01-28", "filing_date": "2024-02-21", "accession_number": "0001045810-24-000029", "source_url": "https://www.sec.gov/Archives/edgar/data/1045810/000104581024000029/0001045810-24-000029-index.htm", "net_income": "29760000000", "operating_income": "32972000000"},
-        {"fiscal_year": 2025, "start_date": "2024-01-29", "end_date": "2025-01-26", "filing_date": "2025-02-26", "accession_number": "0001045810-25-000023", "source_url": "https://www.sec.gov/Archives/edgar/data/1045810/000104581025000023/0001045810-25-000023-index.htm", "net_income": "72880000000", "operating_income": "81453000000"}
+        {
+          "fiscal_year": 2023,
+          "start_date": "2022-01-31",
+          "end_date": "2023-01-29",
+          "filing_date": "2023-02-24",
+          "accession_number": "0001045810-23-000017",
+          "source_url": "https://www.sec.gov/Archives/edgar/data/1045810/000104581023000017/0001045810-23-000017-index.htm",
+          "net_income": "4368000000",
+          "operating_income": "4224000000"
+        },
+        {
+          "fiscal_year": 2024,
+          "start_date": "2023-01-30",
+          "end_date": "2024-01-28",
+          "filing_date": "2024-02-21",
+          "accession_number": "0001045810-24-000029",
+          "source_url": "https://www.sec.gov/Archives/edgar/data/1045810/000104581024000029/0001045810-24-000029-index.htm",
+          "net_income": "29760000000",
+          "operating_income": "32972000000"
+        },
+        {
+          "fiscal_year": 2025,
+          "start_date": "2024-01-29",
+          "end_date": "2025-01-26",
+          "filing_date": "2025-02-26",
+          "accession_number": "0001045810-25-000023",
+          "source_url": "https://www.sec.gov/Archives/edgar/data/1045810/000104581025000023/0001045810-25-000023-index.htm",
+          "net_income": "72880000000",
+          "operating_income": "81453000000"
+        }
       ],
       "comparisons": [
-        {"prior_year": 2023, "current_year": 2024, "expected_relationship_percent": "88.32614442743843049951300960"},
-        {"prior_year": 2024, "current_year": 2025, "expected_relationship_percent": "88.94205977599471958086673130"}
+        {
+          "prior_year": 2023,
+          "current_year": 2024,
+          "expected_relationship_percent": "88.32614442743843049951300960"
+        },
+        {
+          "prior_year": 2024,
+          "current_year": 2025,
+          "expected_relationship_percent": "88.94205977599471958086673130"
+        }
       ]
     },
     {
-      "company": {"name": "Microsoft Corporation", "ticker": "MSFT", "cik": "0000789019"},
+      "company": {
+        "name": "Microsoft Corporation",
+        "ticker": "MSFT",
+        "cik": "0000789019"
+      },
       "revenue_concept": "Revenues",
       "periods": [
-        {"fiscal_year": 2023, "start_date": "2022-07-01", "end_date": "2023-06-30", "filing_date": "2023-07-27", "accession_number": "0000950170-23-035122", "source_url": "https://www.sec.gov/Archives/edgar/data/789019/000095017023035122/0000950170-23-035122-index.htm", "net_income": "72361000000", "operating_income": "88523000000"},
-        {"fiscal_year": 2024, "start_date": "2023-07-01", "end_date": "2024-06-30", "filing_date": "2024-07-30", "accession_number": "0000950170-24-087843", "source_url": "https://www.sec.gov/Archives/edgar/data/789019/000095017024087843/0000950170-24-087843-index.htm", "net_income": "88136000000", "operating_income": "109433000000"},
-        {"fiscal_year": 2025, "start_date": "2024-07-01", "end_date": "2025-06-30", "filing_date": "2025-07-30", "accession_number": "0000950170-25-100235", "source_url": "https://www.sec.gov/Archives/edgar/data/789019/000095017025100235/0000950170-25-100235-index.htm", "net_income": "101832000000", "operating_income": "128528000000"}
+        {
+          "fiscal_year": 2023,
+          "start_date": "2022-07-01",
+          "end_date": "2023-06-30",
+          "filing_date": "2023-07-27",
+          "accession_number": "0000950170-23-035122",
+          "source_url": "https://www.sec.gov/Archives/edgar/data/789019/000095017023035122/0000950170-23-035122-index.htm",
+          "net_income": "72361000000",
+          "operating_income": "88523000000"
+        },
+        {
+          "fiscal_year": 2024,
+          "start_date": "2023-07-01",
+          "end_date": "2024-06-30",
+          "filing_date": "2024-07-30",
+          "accession_number": "0000950170-24-087843",
+          "source_url": "https://www.sec.gov/Archives/edgar/data/789019/000095017024087843/0000950170-24-087843-index.htm",
+          "net_income": "88136000000",
+          "operating_income": "109433000000"
+        },
+        {
+          "fiscal_year": 2025,
+          "start_date": "2024-07-01",
+          "end_date": "2025-06-30",
+          "filing_date": "2025-07-30",
+          "accession_number": "0000950170-25-100235",
+          "source_url": "https://www.sec.gov/Archives/edgar/data/789019/000095017025100235/0000950170-25-100235-index.htm",
+          "net_income": "101832000000",
+          "operating_income": "128528000000"
+        }
       ],
       "comparisons": [
-        {"prior_year": 2023, "current_year": 2024, "expected_relationship_percent": "75.44237207077953132472501196"},
-        {"prior_year": 2024, "current_year": 2025, "expected_relationship_percent": "71.72558261324954176485991097"}
+        {
+          "prior_year": 2023,
+          "current_year": 2024,
+          "expected_relationship_percent": "75.44237207077953132472501196"
+        },
+        {
+          "prior_year": 2024,
+          "current_year": 2025,
+          "expected_relationship_percent": "71.72558261324954176485991097"
+        }
       ]
     },
     {
-      "company": {"name": "Apple Inc.", "ticker": "AAPL", "cik": "0000320193"},
+      "company": {
+        "name": "Apple Inc.",
+        "ticker": "AAPL",
+        "cik": "0000320193"
+      },
       "revenue_concept": "Revenues",
       "periods": [
-        {"fiscal_year": 2023, "start_date": "2022-09-25", "end_date": "2023-09-30", "filing_date": "2023-11-03", "accession_number": "0000320193-23-000106", "source_url": "https://www.sec.gov/Archives/edgar/data/320193/000032019323000106/0000320193-23-000106-index.htm", "net_income": "96995000000", "operating_income": "114301000000"},
-        {"fiscal_year": 2024, "start_date": "2023-10-01", "end_date": "2024-09-28", "filing_date": "2024-11-01", "accession_number": "0000320193-24-000123", "source_url": "https://www.sec.gov/Archives/edgar/data/320193/000032019324000123/0000320193-24-000123-index.htm", "net_income": "93736000000", "operating_income": "123216000000"},
-        {"fiscal_year": 2025, "start_date": "2024-09-29", "end_date": "2025-09-27", "filing_date": "2025-10-31", "accession_number": "0000320193-25-000079", "source_url": "https://www.sec.gov/Archives/edgar/data/320193/000032019325000079/0000320193-25-000079-index.htm", "net_income": "112010000000", "operating_income": "133050000000"}
+        {
+          "fiscal_year": 2023,
+          "start_date": "2022-09-25",
+          "end_date": "2023-09-30",
+          "filing_date": "2023-11-03",
+          "accession_number": "0000320193-23-000106",
+          "source_url": "https://www.sec.gov/Archives/edgar/data/320193/000032019323000106/0000320193-23-000106-index.htm",
+          "net_income": "96995000000",
+          "operating_income": "114301000000"
+        },
+        {
+          "fiscal_year": 2024,
+          "start_date": "2023-10-01",
+          "end_date": "2024-09-28",
+          "filing_date": "2024-11-01",
+          "accession_number": "0000320193-24-000123",
+          "source_url": "https://www.sec.gov/Archives/edgar/data/320193/000032019324000123/0000320193-24-000123-index.htm",
+          "net_income": "93736000000",
+          "operating_income": "123216000000"
+        },
+        {
+          "fiscal_year": 2025,
+          "start_date": "2024-09-29",
+          "end_date": "2025-09-27",
+          "filing_date": "2025-10-31",
+          "accession_number": "0000320193-25-000079",
+          "source_url": "https://www.sec.gov/Archives/edgar/data/320193/000032019325000079/0000320193-25-000079-index.htm",
+          "net_income": "112010000000",
+          "operating_income": "133050000000"
+        }
       ],
       "comparisons": [
-        {"prior_year": 2023, "current_year": 2024, "expected_relationship_percent": "-36.55636567582725743129556927"},
-        {"prior_year": 2024, "current_year": 2025, "expected_relationship_percent": "185.8246898515354891193817368"}
+        {
+          "prior_year": 2023,
+          "current_year": 2024,
+          "expected_relationship_percent": "-36.55636567582725743129556927"
+        },
+        {
+          "prior_year": 2024,
+          "current_year": 2025,
+          "expected_relationship_percent": "185.8246898515354891193817368"
+        }
+      ]
+    },
+    {
+      "company": {
+        "name": "CVS Health Corporation",
+        "ticker": "CVS",
+        "cik": "0000064803"
+      },
+      "revenue_concept": "Revenues",
+      "periods": [
+        {
+          "fiscal_year": 2023,
+          "start_date": "2023-01-01",
+          "end_date": "2023-12-31",
+          "filing_date": "2024-02-07",
+          "accession_number": "0000064803-24-000007",
+          "source_url": "https://www.sec.gov/Archives/edgar/data/64803/000006480324000007/0000064803-24-000007-index.html",
+          "net_income": "8368000000",
+          "operating_income": "13743000000"
+        },
+        {
+          "fiscal_year": 2024,
+          "start_date": "2024-01-01",
+          "end_date": "2024-12-31",
+          "filing_date": "2025-02-12",
+          "accession_number": "0000064803-25-000007",
+          "source_url": "https://www.sec.gov/Archives/edgar/data/64803/000006480325000007/0000064803-25-000007-index.html",
+          "net_income": "4586000000",
+          "operating_income": "8516000000"
+        },
+        {
+          "fiscal_year": 2025,
+          "start_date": "2025-01-01",
+          "end_date": "2025-12-31",
+          "filing_date": "2026-02-10",
+          "accession_number": "0000064803-26-000010",
+          "source_url": "https://www.sec.gov/Archives/edgar/data/64803/000006480326000010/0000064803-26-000010-index.html",
+          "net_income": "1728000000",
+          "operating_income": "4660000000"
+        }
+      ],
+      "comparisons": [
+        {
+          "prior_year": 2023,
+          "current_year": 2024,
+          "expected_relationship_percent": "72.35507939544671895925004783"
+        },
+        {
+          "prior_year": 2024,
+          "current_year": 2025,
+          "expected_relationship_percent": "74.11825726141078838174273859"
+        }
       ]
     }
   ]
