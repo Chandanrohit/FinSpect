@@ -27,6 +27,7 @@ def make_fact(
     value: str,
     role: PeriodRole,
     currency: Currency = Currency.USD,
+    currency_label: str | None = None,
     basis: PeriodBasis = PeriodBasis.FULL_YEAR,
 ) -> FinancialFact:
     """Build a valid revenue fact for validator tests."""
@@ -50,7 +51,7 @@ def make_fact(
             kind=UnitKind.CURRENCY,
             currency=currency,
             scale=Decimal("1"),
-            label=f"{currency.value}",
+            label=currency_label or currency.value,
         ),
         period=period,
         entity="Example Company",
@@ -143,6 +144,26 @@ def test_growth_inputs_reject_currency_mismatch():
         value="100",
         role=PeriodRole.COMPARABLE_PRIOR,
         currency=Currency.INR,
+    )
+
+    with pytest.raises(ValueError, match="Currency mismatch"):
+        validate_growth_inputs(current, prior)
+
+
+def test_growth_inputs_reject_different_currencies_marked_other():
+    current = make_fact(
+        fact_id="current-revenue",
+        value="150",
+        role=PeriodRole.CURRENT,
+        currency=Currency.OTHER,
+        currency_label="EUR",
+    )
+    prior = make_fact(
+        fact_id="prior-revenue",
+        value="100",
+        role=PeriodRole.COMPARABLE_PRIOR,
+        currency=Currency.OTHER,
+        currency_label="GBP",
     )
 
     with pytest.raises(ValueError, match="Currency mismatch"):

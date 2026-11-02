@@ -603,7 +603,17 @@ def require_compatible_facts(
     """Call before comparing or combining two extracted facts."""
     if left.unit.kind != right.unit.kind:
         raise ValueError("Incompatible unit dimensions.")
-    if left.unit.currency != right.unit.currency:
+    left_currency = (
+        left.unit.label
+        if left.unit.currency == Currency.OTHER
+        else left.unit.currency
+    )
+    right_currency = (
+        right.unit.label
+        if right.unit.currency == Currency.OTHER
+        else right.unit.currency
+    )
+    if left_currency != right_currency:
         raise ValueError("Currency mismatch; convert explicitly before calculation.")
     if require_same_period and left.period != right.period:
         raise ValueError("Period mismatch; resolve periods before calculation.")
@@ -785,7 +795,11 @@ def validate_instant_growth_inputs(
 def validate_currency_inputs(*facts: FinancialFact) -> None:
     if not facts:
         raise ValueError("At least one fact is required.")
-    currencies = {f.unit.currency for f in facts if f.unit.kind == UnitKind.CURRENCY}
+    currencies = {
+        f.unit.label if f.unit.currency == Currency.OTHER else f.unit.currency
+        for f in facts
+        if f.unit.kind == UnitKind.CURRENCY
+    }
     if len(currencies) > 1:
         raise ValueError("Mixed currencies; perform explicit FX conversion first.")
 

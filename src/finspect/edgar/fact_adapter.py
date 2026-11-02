@@ -1,6 +1,7 @@
 
 from __future__ import annotations
 
+import re
 from datetime import date
 from decimal import Decimal, InvalidOperation
 from typing import Any
@@ -111,10 +112,17 @@ def sec_fact_to_financial_fact(
         )
 
     raw_unit = str(raw["unit"]).strip()
-    if raw_unit != "USD":
+    if not re.fullmatch(r"[A-Z]{3}", raw_unit):
         raise ValueError(
-            f"Unsupported unit {raw_unit!r}; add an explicit unit mapping."
+            f"Unsupported currency unit {raw_unit!r}; expected a three-letter currency code."
         )
+    currency = (
+        Currency.USD
+        if raw_unit == "USD"
+        else Currency.INR
+        if raw_unit == "INR"
+        else Currency.OTHER
+    )
 
     cik = str(raw["cik"]).strip().lstrip("0")
     accession = str(raw["accession_number"]).strip()
@@ -166,9 +174,9 @@ def sec_fact_to_financial_fact(
         value=value,
         unit=Unit(
             kind=UnitKind.CURRENCY,
-            currency=Currency.USD,
+            currency=currency,
             scale=Decimal("1"),
-            label="USD",
+            label=raw_unit,
         ),
         period=period,
         entity=str(raw["company"]),

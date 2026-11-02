@@ -57,10 +57,11 @@ def make_plan(**overrides) -> QueryPlan:
     return QueryPlan.model_validate(data)
 
 
-def test_corrects_known_company_cik():
+def test_normalizer_does_not_use_company_specific_cik_registry():
     plan = normalize_query_plan(make_plan())
 
-    assert plan.company.cik == "0001045810"
+    # Identity is checked against live SEC company metadata downstream.
+    assert plan.company.cik == "0001067983"
     assert plan.company.ticker == "NVDA"
     assert plan.company.name == "NVIDIA Corporation"
 

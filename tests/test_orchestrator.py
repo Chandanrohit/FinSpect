@@ -52,9 +52,9 @@ class FixturePlanner:
 
 class FixtureCompanyResolver:
     def resolve(self, *, name=None, ticker=None, cik=None):
-        assert name == "NVIDIA Corporation"
+        assert name in {"NVIDIA", "NVIDIA Corporation"}
         assert ticker == "NVDA"
-        assert cik == CIK
+        assert cik in {CIK, CIK.lstrip("0")}
         return {"name": "NVIDIA Corporation", "ticker": "NVDA", "cik": CIK}
 
 
@@ -195,6 +195,94 @@ def test_q01_nvidia_fy2024_fy2025_end_to_end_fixture():
     ]
     assert all(item.source_url and "sec.gov/Archives" in item.source_url
                for item in result.answer.evidence)
+
+
+def test_q01_supports_microsoft_and_calendar_year_fiscal_periods():
+    question = "Calculate Microsoft's revenue growth from FY2024 to FY2025."
+    microsoft_cik = "0000789019"
+    plan = make_plan().model_copy(update={
+        "original_question": question,
+        "company": CompanyRequest(
+            name="Microsoft",
+            ticker="MSFT",
+            cik="789019",
+        ),
+        "period": PeriodRequest(
+            period_label="FY2025",
+            period_kind="annual",
+            fiscal_year=2025,
+            comparison_required=True,
+            comparison_period="FY2024",
+        ),
+    })
+    periods = {
+        2024: AnnualPeriod(
+            fiscal_year=2024,
+            start_date="2023-07-01",
+            end_date="2024-06-30",
+            concept="RevenueFromContractWithCustomerExcludingAssessedTax",
+            filing_date="2024-07-30",
+            accession_number="0000950170-24-087843",
+        ),
+        2025: AnnualPeriod(
+            fiscal_year=2025,
+            start_date="2024-07-01",
+            end_date="2025-06-30",
+            concept="RevenueFromContractWithCustomerExcludingAssessedTax",
+            filing_date="2025-07-30",
+            accession_number="0000950170-25-100235",
+        ),
+    }
+    values = {2024: 245_122_000_000, 2025: 281_724_000_000}
+
+    class Planner:
+        def plan(self, _question):
+            return plan
+
+    class CompanyResolver:
+        def resolve(self, **_kwargs):
+            return {
+                "name": "Microsoft Corporation",
+                "ticker": "MSFT",
+                "cik": microsoft_cik,
+            }
+
+    class FactRetriever:
+        def get_fact(self, *, end_date, concept, **_kwargs):
+            period = next(p for p in periods.values() if p.end_date == end_date)
+            fiscal_year = period.fiscal_year
+            return {
+                "cik": microsoft_cik,
+                "company": "MICROSOFT CORP",
+                "taxonomy": "us-gaap",
+                "concept": concept,
+                "label": "Revenue",
+                "value": values[fiscal_year],
+                "unit": "USD",
+                "start_date": period.start_date,
+                "end_date": period.end_date,
+                "fiscal_year": fiscal_year,
+                "form": "10-K",
+                "filing_date": period.filing_date,
+                "accession_number": period.accession_number,
+            }
+
+    result = FinSpectOrchestrator(
+        planner=Planner(),
+        normalizer=normalize_query_plan,
+        period_resolver=lambda _cik, year: periods[year],
+        fact_retriever=FactRetriever(),
+        company_resolver=CompanyResolver(),
+    ).run(question)
+
+    expected = (
+        Decimal(values[2025] - values[2024]) / Decimal(values[2024]) * 100
+    )
+    assert result.answer.formula_id == "Q01"
+    assert Decimal(result.answer.result_value) == expected
+    assert result.plan.company.name == "Microsoft Corporation"
+    assert result.plan.company.ticker == "MSFT"
+    assert len(result.answer.evidence) == 2
 
 
 def test_q03_nvidia_operating_margin_change_end_to_end_fixture():

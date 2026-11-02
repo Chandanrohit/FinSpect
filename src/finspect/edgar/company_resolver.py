@@ -56,6 +56,26 @@ class SECCompanyResolver:
 
         return self._companies
 
+    @staticmethod
+    def _match_company_name(
+        name: str,
+        companies: list[dict[str, str]],
+    ) -> list[dict[str, str]]:
+        normalized = normalize_company_text(name)
+        exact = [
+            company for company in companies
+            if normalize_company_text(company["name"]) == normalized
+        ]
+        if exact:
+            return exact
+        # SEC metadata uses legal entity names; accept a unique leading name
+        # such as "Microsoft" for "Microsoft Corporation", but fail closed
+        # when that short name could refer to multiple registrants.
+        return [
+            company for company in companies
+            if normalize_company_text(company["name"]).startswith(normalized + " ")
+        ]
+
     def resolve(
         self,
         *,
@@ -85,12 +105,7 @@ class SECCompanyResolver:
                     )
 
                 if name and name.strip():
-                    requested_name = normalize_company_text(name)
-                    exact_name_matches = [
-                        company for company in companies
-                        if normalize_company_text(company["name"])
-                        == requested_name
-                    ]
+                    exact_name_matches = self._match_company_name(name, companies)
                     if (
                         len(exact_name_matches) == 1
                         and exact_name_matches[0]["cik"] != resolved["cik"]
@@ -105,16 +120,15 @@ class SECCompanyResolver:
                 if company["ticker"] == requested_ticker
             ]
         elif name and name.strip():
-            requested_name = normalize_company_text(name)
-            matches = [
-                company for company in companies
-                if normalize_company_text(company["name"])
-                == requested_name
-            ]
+            matches = self._match_company_name(name, companies)
         else:
             raise CompanyResolutionError(
                 "Provide a company name, ticker, or CIK."
             )
+
+        # Multiple listed share classes can map to the same SEC registrant.
+        if len(matches) > 1 and len({company["cik"] for company in matches}) == 1:
+            matches = [min(matches, key=lambda company: company["ticker"])]
 
         if len(matches) == 0:
             raise CompanyResolutionError(

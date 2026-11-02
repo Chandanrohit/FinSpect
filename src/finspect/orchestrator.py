@@ -62,6 +62,7 @@ class AnnualPeriod:
     concept: str = "Revenues"
     filing_date: str | None = None
     accession_number: str | None = None
+    currency: str = "USD"
 
 PeriodResolver = Callable[[str, int], AnnualPeriod]
 
@@ -314,7 +315,7 @@ class FinSpectOrchestrator:
                     start_date=None if is_instant else period.start_date,
                     end_date=period.end_date,
                     form=period.form,
-                    unit="USD",
+                    unit=period.currency,
                     filed_on_or_before=period.filing_date,
                     accession_number=period.accession_number,
                 )
@@ -357,7 +358,9 @@ class FinSpectOrchestrator:
                 if raw_fact.get("end_date") != period.end_date:
                     raise ValueError("Retrieved fact has an unexpected end date.")
                 if raw_fact.get("unit") != "USD":
-                    raise ValueError(f"{metric_name} facts must use USD.")
+                    raise ValueError(
+                        f"{metric_name} facts must use {period.currency}."
+                    )
                 if raw_fact.get("form") != period.form:
                     raise ValueError("Retrieved fact has an unexpected filing form.")
                 if raw_fact.get("accession_number") != period.accession_number:
@@ -646,6 +649,7 @@ def get_orchestrator() -> FinSpectOrchestrator:
             concept=period.concept,
             filing_date=period.filing_date,
             accession_number=period.accession_number,
+            currency=period.currency,
         )
 
     return FinSpectOrchestrator(

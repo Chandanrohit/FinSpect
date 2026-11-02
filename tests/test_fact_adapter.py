@@ -9,9 +9,11 @@ from finspect.edgar.fact_adapter import (
     sec_filing_url,
 )
 from finspect.schema import (
+    Currency,
     PeriodBasis,
     PeriodKind,
     PeriodRole,
+    validate_currency_inputs,
 )
 
 
@@ -80,11 +82,38 @@ def test_rejects_non_finite_value(raw_fact):
 def test_rejects_unsupported_unit(raw_fact):
     raw_fact["unit"] = "shares"
 
-    with pytest.raises(ValueError, match="Unsupported unit"):
+    with pytest.raises(ValueError, match="Unsupported currency unit"):
         sec_fact_to_financial_fact(
             raw_fact,
             period_role=PeriodRole.CURRENT,
         )
+
+
+def test_preserves_other_reported_currencies_without_converting(raw_fact):
+    raw_fact["unit"] = "EUR"
+
+    fact = sec_fact_to_financial_fact(
+        raw_fact,
+        period_role=PeriodRole.CURRENT,
+    )
+
+    assert fact.unit.currency == Currency.OTHER
+    assert fact.unit.label == "EUR"
+
+
+def test_rejects_mixed_reported_currencies(raw_fact):
+    usd = sec_fact_to_financial_fact(
+        raw_fact,
+        period_role=PeriodRole.CURRENT,
+    )
+    euro_fact = {**raw_fact, "unit": "EUR"}
+    eur = sec_fact_to_financial_fact(
+        euro_fact,
+        period_role=PeriodRole.CURRENT,
+    )
+
+    with pytest.raises(ValueError, match="Mixed currencies"):
+        validate_currency_inputs(usd, eur)
 
 
 def test_rejects_start_after_end(raw_fact):

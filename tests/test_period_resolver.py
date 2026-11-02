@@ -118,6 +118,119 @@ def test_ignores_facts_without_a_start_date(nvidia_company_facts):
     assert fact["val"] == 60_922_000_000
 
 
+def test_matches_sec_fiscal_year_when_fiscal_year_end_crosses_calendar_year():
+    company_facts = {
+        "facts": {
+            "us-gaap": {
+                "Revenues": {
+                    "units": {
+                        "USD": [
+                            {
+                                "start": "2024-02-02",
+                                "end": "2025-02-01",
+                                "form": "10-K",
+                                "fy": 2024,
+                                "fp": "FY",
+                                "filed": "2025-03-01",
+                                "val": 1000,
+                                "accn": "0000000000-25-000001",
+                            },
+                            {
+                                # The prior-year comparison repeated in FY2025.
+                                "start": "2024-02-02",
+                                "end": "2025-02-01",
+                                "form": "10-K",
+                                "fy": 2025,
+                                "fp": "FY",
+                                "filed": "2026-03-01",
+                                "val": 1000,
+                                "accn": "0000000000-26-000001",
+                            },
+                        ]
+                    }
+                }
+            }
+        }
+    }
+
+    fact = find_annual_revenue_fact(company_facts, 2024)
+
+    assert fact["fy"] == 2024
+    assert fact["end"] == "2025-02-01"
+    assert fact["accn"] == "0000000000-25-000001"
+
+
+def test_uses_next_revenue_concept_when_first_standard_tag_is_absent():
+    company_facts = {
+        "facts": {
+            "us-gaap": {
+                "SalesRevenueNet": {
+                    "units": {
+                        "USD": [
+                            {
+                                "start": "2023-01-01",
+                                "end": "2023-12-31",
+                                "form": "10-K",
+                                "fy": 2023,
+                                "fp": "FY",
+                                "filed": "2024-02-01",
+                                "val": 500,
+                                "accn": "0000000000-24-000001",
+                            }
+                        ]
+                    }
+                }
+            }
+        }
+    }
+
+    fact = find_annual_revenue_fact(company_facts, 2023)
+
+    assert fact["concept"] == "SalesRevenueNet"
+    assert fact["val"] == 500
+
+
+def test_resolves_a_single_non_usd_revenue_currency():
+    company_facts = {
+        "facts": {
+            "us-gaap": {
+                "Revenues": {
+                    "units": {
+                        "EUR": [
+                            {
+                                "start": "2023-01-01",
+                                "end": "2023-12-31",
+                                "form": "10-K",
+                                "fy": 2023,
+                                "fp": "FY",
+                                "filed": "2024-02-01",
+                                "val": 250,
+                                "accn": "0000000000-24-000001",
+                            }
+                        ]
+                    }
+                }
+            }
+        }
+    }
+
+    fact = find_annual_revenue_fact(company_facts, 2023)
+
+    assert fact["unit"] == "EUR"
+    assert fact["val"] == 250
+
+    class FakeXBRLService:
+        def get_company_facts(self, _cik):
+            return company_facts
+
+    period = resolve_annual_period(
+        "0000000001",
+        2023,
+        xbrl_service=FakeXBRLService(),
+    )
+    assert period.currency == "EUR"
+
+
 def test_resolver_preserves_original_filing_metadata(
     nvidia_company_facts,
 ):

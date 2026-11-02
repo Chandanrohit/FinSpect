@@ -228,6 +228,7 @@ def load_question_bank():
     return questions
 
 EXAMPLES = [
+    "Calculate Microsoft's revenue growth from FY2024 to FY2025.",
     "Calculate NVIDIA's revenue growth from FY2024 to FY2025.",
     "Calculate NVIDIA's revenue growth from FY2023 to FY2024.",
     "What was NVIDIA's revenue growth from FY2024 to FY2025?",

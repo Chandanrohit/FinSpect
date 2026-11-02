@@ -93,7 +93,7 @@ def test_adapter_rejects_non_numeric_value(raw_sec_fact):
 def test_adapter_rejects_unsupported_unit(raw_sec_fact):
     raw_sec_fact["unit"] = "shares"
 
-    with pytest.raises(ValueError, match="Unsupported unit"):
+    with pytest.raises(ValueError, match="Unsupported currency unit"):
         sec_fact_to_financial_fact(
             raw_sec_fact,
             period_role=PeriodRole.CURRENT,
