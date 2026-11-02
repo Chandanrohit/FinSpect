@@ -12,7 +12,7 @@
     "FAIL": 0
   },
   "accuracy_percentage": null,
-  "accuracy_note": "No overall accuracy percentage is reported: Q01, Q03, Q05, Q07, Q08, and Q13 have fixture-backed checks; the Q01, Q03, Q05, Q07, and Q13 issuer matrices check six cited annual cases each, but neither live SEC retrieval nor the planner was evaluated.",
+  "accuracy_note": "No overall accuracy percentage is reported: Q01, Q03, Q05, Q07, Q08, and Q13 have fixture-backed checks; the Q01, Q03, Q05, Q07, Q08, and Q13 issuer matrices check six cited annual cases each, but neither live SEC retrieval nor the planner was evaluated.",
   "operation_reference_matrices": [
     {
       "matrix_id": "annual-revenue-growth-multi-issuer-v1",
@@ -1393,6 +1393,254 @@
             "prior_conversion_percent_correctness": true,
             "current_conversion_percent_correctness": true,
             "change_percentage_points_correctness": true
+          },
+          "status": "PASS"
+        }
+      ]
+    },
+    {
+      "matrix_id": "annual-receivables-vs-revenue-growth-multi-issuer-v1",
+      "question_id": "Q08",
+      "evaluation_scope": "offline reference cases from SEC 10-K statements; receivables are instant balances while revenue is an annual duration; no live SEC retrieval or query interpretation",
+      "case_count": 6,
+      "pass_count": 6,
+      "fail_count": 0,
+      "issuers": [
+        "AAPL",
+        "MSFT",
+        "NVDA"
+      ],
+      "cases_per_issuer": {
+        "AAPL": 2,
+        "MSFT": 2,
+        "NVDA": 2
+      },
+      "cases": [
+        {
+          "company": {
+            "name": "NVIDIA Corporation",
+            "ticker": "NVDA",
+            "cik": "0001045810"
+          },
+          "fiscal_years": [
+            2023,
+            2024
+          ],
+          "prior_inputs_usd": {
+            "revenue": "26974000000",
+            "receivables": "3827000000"
+          },
+          "current_inputs_usd": {
+            "revenue": "60922000000",
+            "receivables": "9999000000"
+          },
+          "expected_growth_difference_percentage_points": "35.4206236670839957005312571",
+          "actual_growth_difference_percentage_points": "35.4206236670839957005312571",
+          "evidence": [
+            {
+              "accession_number": "0001045810-23-000017",
+              "source_url": "https://www.sec.gov/Archives/edgar/data/1045810/000104581023000017/0001045810-23-000017-index.htm"
+            },
+            {
+              "accession_number": "0001045810-24-000029",
+              "source_url": "https://www.sec.gov/Archives/edgar/data/1045810/000104581024000029/0001045810-24-000029-index.htm"
+            }
+          ],
+          "checks": {
+            "two_ordered_annual_periods": true,
+            "matched_instant_receivable_and_annual_revenue_periods": true,
+            "evidence_provenance": true,
+            "calculation_correctness": true
+          },
+          "status": "PASS"
+        },
+        {
+          "company": {
+            "name": "NVIDIA Corporation",
+            "ticker": "NVDA",
+            "cik": "0001045810"
+          },
+          "fiscal_years": [
+            2024,
+            2025
+          ],
+          "prior_inputs_usd": {
+            "revenue": "60922000000",
+            "receivables": "9999000000"
+          },
+          "current_inputs_usd": {
+            "revenue": "130497000000",
+            "receivables": "23065000000"
+          },
+          "expected_growth_difference_percentage_points": "16.4696596707371075244814787",
+          "actual_growth_difference_percentage_points": "16.4696596707371075244814787",
+          "evidence": [
+            {
+              "accession_number": "0001045810-24-000029",
+              "source_url": "https://www.sec.gov/Archives/edgar/data/1045810/000104581024000029/0001045810-24-000029-index.htm"
+            },
+            {
+              "accession_number": "0001045810-25-000023",
+              "source_url": "https://www.sec.gov/Archives/edgar/data/1045810/000104581025000023/0001045810-25-000023-index.htm"
+            }
+          ],
+          "checks": {
+            "two_ordered_annual_periods": true,
+            "matched_instant_receivable_and_annual_revenue_periods": true,
+            "evidence_provenance": true,
+            "calculation_correctness": true
+          },
+          "status": "PASS"
+        },
+        {
+          "company": {
+            "name": "Microsoft Corporation",
+            "ticker": "MSFT",
+            "cik": "0000789019"
+          },
+          "fiscal_years": [
+            2023,
+            2024
+          ],
+          "prior_inputs_usd": {
+            "revenue": "211915000000",
+            "receivables": "48688000000"
+          },
+          "current_inputs_usd": {
+            "revenue": "245122000000",
+            "receivables": "56924000000"
+          },
+          "expected_growth_difference_percentage_points": "1.24591048117781770788390415",
+          "actual_growth_difference_percentage_points": "1.24591048117781770788390415",
+          "evidence": [
+            {
+              "accession_number": "0000950170-23-035122",
+              "source_url": "https://www.sec.gov/Archives/edgar/data/789019/000095017023035122/0000950170-23-035122-index.htm"
+            },
+            {
+              "accession_number": "0000950170-24-087843",
+              "source_url": "https://www.sec.gov/Archives/edgar/data/789019/000095017024087843/0000950170-24-087843-index.htm"
+            }
+          ],
+          "checks": {
+            "two_ordered_annual_periods": true,
+            "matched_instant_receivable_and_annual_revenue_periods": true,
+            "evidence_provenance": true,
+            "calculation_correctness": true
+          },
+          "status": "PASS"
+        },
+        {
+          "company": {
+            "name": "Microsoft Corporation",
+            "ticker": "MSFT",
+            "cik": "0000789019"
+          },
+          "fiscal_years": [
+            2024,
+            2025
+          ],
+          "prior_inputs_usd": {
+            "revenue": "245122000000",
+            "receivables": "56924000000"
+          },
+          "current_inputs_usd": {
+            "revenue": "281724000000",
+            "receivables": "69905000000"
+          },
+          "expected_growth_difference_percentage_points": "7.87193343100414368855646116",
+          "actual_growth_difference_percentage_points": "7.87193343100414368855646116",
+          "evidence": [
+            {
+              "accession_number": "0000950170-24-087843",
+              "source_url": "https://www.sec.gov/Archives/edgar/data/789019/000095017024087843/0000950170-24-087843-index.htm"
+            },
+            {
+              "accession_number": "0000950170-25-100235",
+              "source_url": "https://www.sec.gov/Archives/edgar/data/789019/000095017025100235/0000950170-25-100235-index.htm"
+            }
+          ],
+          "checks": {
+            "two_ordered_annual_periods": true,
+            "matched_instant_receivable_and_annual_revenue_periods": true,
+            "evidence_provenance": true,
+            "calculation_correctness": true
+          },
+          "status": "PASS"
+        },
+        {
+          "company": {
+            "name": "Apple Inc.",
+            "ticker": "AAPL",
+            "cik": "0000320193"
+          },
+          "fiscal_years": [
+            2023,
+            2024
+          ],
+          "prior_inputs_usd": {
+            "revenue": "383285000000",
+            "receivables": "29508000000"
+          },
+          "current_inputs_usd": {
+            "revenue": "391035000000",
+            "receivables": "33410000000"
+          },
+          "expected_growth_difference_percentage_points": "11.20153852381433195506488610",
+          "actual_growth_difference_percentage_points": "11.20153852381433195506488610",
+          "evidence": [
+            {
+              "accession_number": "0000320193-23-000106",
+              "source_url": "https://www.sec.gov/Archives/edgar/data/320193/000032019323000106/0000320193-23-000106-index.htm"
+            },
+            {
+              "accession_number": "0000320193-24-000123",
+              "source_url": "https://www.sec.gov/Archives/edgar/data/320193/000032019324000123/0000320193-24-000123-index.htm"
+            }
+          ],
+          "checks": {
+            "two_ordered_annual_periods": true,
+            "matched_instant_receivable_and_annual_revenue_periods": true,
+            "evidence_provenance": true,
+            "calculation_correctness": true
+          },
+          "status": "PASS"
+        },
+        {
+          "company": {
+            "name": "Apple Inc.",
+            "ticker": "AAPL",
+            "cik": "0000320193"
+          },
+          "fiscal_years": [
+            2024,
+            2025
+          ],
+          "prior_inputs_usd": {
+            "revenue": "391035000000",
+            "receivables": "33410000000"
+          },
+          "current_inputs_usd": {
+            "revenue": "416161000000",
+            "receivables": "39777000000"
+          },
+          "expected_growth_difference_percentage_points": "12.63165672958869195196821984",
+          "actual_growth_difference_percentage_points": "12.63165672958869195196821984",
+          "evidence": [
+            {
+              "accession_number": "0000320193-24-000123",
+              "source_url": "https://www.sec.gov/Archives/edgar/data/320193/000032019324000123/0000320193-24-000123-index.htm"
+            },
+            {
+              "accession_number": "0000320193-25-000079",
+              "source_url": "https://www.sec.gov/Archives/edgar/data/320193/000032019325000079/0000320193-25-000079-index.htm"
+            }
+          ],
+          "checks": {
+            "two_ordered_annual_periods": true,
+            "matched_instant_receivable_and_annual_revenue_periods": true,
+            "evidence_provenance": true,
+            "calculation_correctness": true
           },
           "status": "PASS"
         }

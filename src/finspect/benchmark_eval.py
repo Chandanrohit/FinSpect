@@ -53,6 +53,9 @@ DEFAULT_EARNINGS_MATRIX = (
 DEFAULT_CASH_CONVERSION_MATRIX = (
     ROOT / "data" / "fixtures" / "annual_cash_conversion_reference_matrix.json"
 )
+DEFAULT_RECEIVABLES_MATRIX = (
+    ROOT / "data" / "fixtures" / "annual_receivables_reference_matrix.json"
+)
 
 
 def evaluate_annual_revenue_matrix(path: Path) -> dict[str, Any]:
@@ -503,6 +506,102 @@ def evaluate_cash_conversion_matrix(path: Path) -> dict[str, Any]:
                     )
                 },
                 "actual_metrics": {key: str(value) for key, value in metrics.items()},
+                "evidence": [
+                    {"accession_number": item["accession_number"], "source_url": item["source_url"]}
+                    for item in (prior, current)
+                ],
+                "checks": checks,
+                "status": "PASS" if all(checks.values()) else "FAIL",
+            })
+    tickers = sorted({case["company"]["ticker"] for case in cases})
+    return {
+        "matrix_id": matrix["matrix_id"],
+        "question_id": matrix["question_id"],
+        "evaluation_scope": matrix["evaluation_scope"],
+        "case_count": len(cases),
+        "pass_count": sum(case["status"] == "PASS" for case in cases),
+        "fail_count": sum(case["status"] == "FAIL" for case in cases),
+        "issuers": tickers,
+        "cases_per_issuer": {
+            ticker: sum(case["company"]["ticker"] == ticker for case in cases)
+            for ticker in tickers
+        },
+        "cases": cases,
+    }
+
+
+def evaluate_receivables_matrix(path: Path) -> dict[str, Any]:
+    """Check receivables growth against revenue growth across issuers."""
+    matrix = json.loads(path.read_text(encoding="utf-8"))
+    if (
+        matrix.get("form") != "10-K"
+        or matrix.get("taxonomy") != "us-gaap"
+        or matrix.get("unit") != "USD"
+        or matrix.get("revenue_concept") != "Revenues"
+        or matrix.get("receivables_concept") != "AccountsReceivableNetCurrent"
+        or matrix.get("revenue_period_kind") != "duration"
+        or matrix.get("receivables_period_kind") != "instant"
+    ):
+        raise ValueError("Q08 matrix must define US-GAAP USD revenue and receivable facts.")
+    cases = []
+    for issuer in matrix["issuers"]:
+        periods_by_year = {item["fiscal_year"]: item for item in issuer["periods"]}
+        for comparison in issuer["comparisons"]:
+            prior = periods_by_year[comparison["prior_year"]]
+            current = periods_by_year[comparison["current_year"]]
+            result = growth_comparison(
+                ar_current=Decimal(current["receivables"]),
+                ar_prior=Decimal(prior["receivables"]),
+                revenue_current=Decimal(current["revenue"]),
+                revenue_prior=Decimal(prior["revenue"]),
+            )
+            checks = {
+                "two_ordered_annual_periods": (
+                    prior["fiscal_year"] < current["fiscal_year"]
+                    and date.fromisoformat(prior["end_date"])
+                    < date.fromisoformat(current["start_date"])
+                    and all(
+                        350 <= (
+                            date.fromisoformat(item["end_date"])
+                            - date.fromisoformat(item["start_date"])
+                        ).days <= 380
+                        and date.fromisoformat(item["filing_date"])
+                        >= date.fromisoformat(item["end_date"])
+                        for item in (prior, current)
+                    )
+                ),
+                "matched_instant_receivable_and_annual_revenue_periods": (
+                    date.fromisoformat(prior["end_date"])
+                    < date.fromisoformat(current["start_date"])
+                    and Decimal(prior["receivables"]) > 0
+                    and Decimal(current["receivables"]) > 0
+                    and Decimal(prior["revenue"]) > 0
+                    and Decimal(current["revenue"]) > 0
+                ),
+                "evidence_provenance": all(
+                    item["accession_number"].replace("-", "") in item["source_url"]
+                    and item["source_url"].startswith(
+                        "https://www.sec.gov/Archives/edgar/data/"
+                    )
+                    for item in (prior, current)
+                ),
+                "calculation_correctness": result.value == Decimal(
+                    comparison["expected_growth_difference_percentage_points"]
+                ),
+            }
+            cases.append({
+                "company": issuer["company"],
+                "fiscal_years": [prior["fiscal_year"], current["fiscal_year"]],
+                "prior_inputs_usd": {
+                    "revenue": prior["revenue"], "receivables": prior["receivables"]
+                },
+                "current_inputs_usd": {
+                    "revenue": current["revenue"], "receivables": current["receivables"]
+                },
+                "expected_growth_difference_percentage_points": comparison[
+                    "expected_growth_difference_percentage_points"
+                ],
+                "actual_growth_difference_percentage_points": str(result.value),
                 "evidence": [
                     {"accession_number": item["accession_number"], "source_url": item["source_url"]}
                     for item in (prior, current)
@@ -1318,6 +1417,7 @@ def evaluate_benchmark(
     cash_conversion_matrix = evaluate_cash_conversion_matrix(
         DEFAULT_CASH_CONVERSION_MATRIX
     )
+    receivables_matrix = evaluate_receivables_matrix(DEFAULT_RECEIVABLES_MATRIX)
     questions = benchmark.question_map()
     if fixture.get("question_id") != "Q01" or "Q01" not in questions:
         raise ValueError("The configured fixture must target benchmark Q01.")
@@ -1438,7 +1538,7 @@ def evaluate_benchmark(
         "accuracy_percentage": None,
         "accuracy_note": (
             "No overall accuracy percentage is reported: Q01, Q03, Q05, Q07, Q08, "
-            "and Q13 have fixture-backed checks; the Q01, Q03, Q05, Q07, and Q13 "
+            "and Q13 have fixture-backed checks; the Q01, Q03, Q05, Q07, Q08, and Q13 "
             "issuer matrices check six cited annual cases each, but neither "
             "live SEC retrieval nor the planner was evaluated."
         ),
@@ -1448,6 +1548,7 @@ def evaluate_benchmark(
             earnings_matrix,
             liquidity_matrix,
             cash_conversion_matrix,
+            receivables_matrix,
         ],
         "questions": report_questions,
     }

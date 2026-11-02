@@ -1,0 +1,50 @@
+{
+  "matrix_id": "annual-receivables-vs-revenue-growth-multi-issuer-v1",
+  "question_id": "Q08",
+  "evaluation_scope": "offline reference cases from SEC 10-K statements; receivables are instant balances while revenue is an annual duration; no live SEC retrieval or query interpretation",
+  "form": "10-K",
+  "taxonomy": "us-gaap",
+  "unit": "USD",
+  "revenue_concept": "Revenues",
+  "receivables_concept": "AccountsReceivableNetCurrent",
+  "revenue_period_kind": "duration",
+  "receivables_period_kind": "instant",
+  "issuers": [
+    {
+      "company": {"name": "NVIDIA Corporation", "ticker": "NVDA", "cik": "0001045810"},
+      "periods": [
+        {"fiscal_year": 2023, "start_date": "2022-01-31", "end_date": "2023-01-29", "filing_date": "2023-02-24", "accession_number": "0001045810-23-000017", "source_url": "https://www.sec.gov/Archives/edgar/data/1045810/000104581023000017/0001045810-23-000017-index.htm", "revenue": "26974000000", "receivables": "3827000000"},
+        {"fiscal_year": 2024, "start_date": "2023-01-30", "end_date": "2024-01-28", "filing_date": "2024-02-21", "accession_number": "0001045810-24-000029", "source_url": "https://www.sec.gov/Archives/edgar/data/1045810/000104581024000029/0001045810-24-000029-index.htm", "revenue": "60922000000", "receivables": "9999000000"},
+        {"fiscal_year": 2025, "start_date": "2024-01-29", "end_date": "2025-01-26", "filing_date": "2025-02-26", "accession_number": "0001045810-25-000023", "source_url": "https://www.sec.gov/Archives/edgar/data/1045810/000104581025000023/0001045810-25-000023-index.htm", "revenue": "130497000000", "receivables": "23065000000"}
+      ],
+      "comparisons": [
+        {"prior_year": 2023, "current_year": 2024, "expected_growth_difference_percentage_points": "35.4206236670839957005312571"},
+        {"prior_year": 2024, "current_year": 2025, "expected_growth_difference_percentage_points": "16.4696596707371075244814787"}
+      ]
+    },
+    {
+      "company": {"name": "Microsoft Corporation", "ticker": "MSFT", "cik": "0000789019"},
+      "periods": [
+        {"fiscal_year": 2023, "start_date": "2022-07-01", "end_date": "2023-06-30", "filing_date": "2023-07-27", "accession_number": "0000950170-23-035122", "source_url": "https://www.sec.gov/Archives/edgar/data/789019/000095017023035122/0000950170-23-035122-index.htm", "revenue": "211915000000", "receivables": "48688000000"},
+        {"fiscal_year": 2024, "start_date": "2023-07-01", "end_date": "2024-06-30", "filing_date": "2024-07-30", "accession_number": "0000950170-24-087843", "source_url": "https://www.sec.gov/Archives/edgar/data/789019/000095017024087843/0000950170-24-087843-index.htm", "revenue": "245122000000", "receivables": "56924000000"},
+        {"fiscal_year": 2025, "start_date": "2024-07-01", "end_date": "2025-06-30", "filing_date": "2025-07-30", "accession_number": "0000950170-25-100235", "source_url": "https://www.sec.gov/Archives/edgar/data/789019/000095017025100235/0000950170-25-100235-index.htm", "revenue": "281724000000", "receivables": "69905000000"}
+      ],
+      "comparisons": [
+        {"prior_year": 2023, "current_year": 2024, "expected_growth_difference_percentage_points": "1.24591048117781770788390415"},
+        {"prior_year": 2024, "current_year": 2025, "expected_growth_difference_percentage_points": "7.87193343100414368855646116"}
+      ]
+    },
+    {
+      "company": {"name": "Apple Inc.", "ticker": "AAPL", "cik": "0000320193"},
+      "periods": [
+        {"fiscal_year": 2023, "start_date": "2022-09-25", "end_date": "2023-09-30", "filing_date": "2023-11-03", "accession_number": "0000320193-23-000106", "source_url": "https://www.sec.gov/Archives/edgar/data/320193/000032019323000106/0000320193-23-000106-index.htm", "revenue": "383285000000", "receivables": "29508000000"},
+        {"fiscal_year": 2024, "start_date": "2023-10-01", "end_date": "2024-09-28", "filing_date": "2024-11-01", "accession_number": "0000320193-24-000123", "source_url": "https://www.sec.gov/Archives/edgar/data/320193/000032019324000123/0000320193-24-000123-index.htm", "revenue": "391035000000", "receivables": "33410000000"},
+        {"fiscal_year": 2025, "start_date": "2024-09-29", "end_date": "2025-09-27", "filing_date": "2025-10-31", "accession_number": "0000320193-25-000079", "source_url": "https://www.sec.gov/Archives/edgar/data/320193/000032019325000079/0000320193-25-000079-index.htm", "revenue": "416161000000", "receivables": "39777000000"}
+      ],
+      "comparisons": [
+        {"prior_year": 2023, "current_year": 2024, "expected_growth_difference_percentage_points": "11.20153852381433195506488610"},
+        {"prior_year": 2024, "current_year": 2025, "expected_growth_difference_percentage_points": "12.63165672958869195196821984"}
+      ]
+    }
+  ]
+}
