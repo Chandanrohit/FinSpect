@@ -10,17 +10,9 @@ from dataclasses import asdict, is_dataclass
 from decimal import Decimal
 from enum import Enum
 from typing import Any
-from pathlib import Path
-
-PROJECT_ROOT = Path(__file__).resolve().parents[2]
-BENCHMARK_PATH = PROJECT_ROOT / "data" / "benchmark.json"
-
 import streamlit as st
-import json
-import os
 
 from finspect.orchestrator import run_query
-from finspect.schema import load_benchmark
 from finspect.gnani_voice import (
     GnaniAPIError,
     GnaniVoiceClient,
@@ -33,7 +25,20 @@ st.set_page_config(
     page_title="FinSpect | Financial Research",
     page_icon="📊",
     layout="wide",
-    initial_sidebar_state="expanded",
+    initial_sidebar_state="collapsed",
+)
+
+st.markdown(
+    """
+    <style>
+    .block-container {max-width: 1120px; padding-top: 2rem; padding-bottom: 3rem;}
+    [data-testid="stAppViewContainer"] {background: #f7f8fa;}
+    [data-testid="stSidebar"] {background: #ffffff;}
+    div[data-testid="stForm"] {background: #ffffff; padding: 1rem 1.2rem 1.2rem; border: 1px solid #e4e8ef; border-radius: 14px;}
+    div[data-testid="stMetric"] {background: #ffffff; border: 1px solid #e4e8ef; padding: 1rem; border-radius: 12px;}
+    </style>
+    """,
+    unsafe_allow_html=True,
 )
 
 
@@ -101,12 +106,11 @@ def display_result(result: Any) -> None:
 
         evidence = answer.get("evidence") or []
         if evidence:
-            st.subheader("Evidence")
-            st.dataframe(
-                evidence,
-                use_container_width=True,
-                hide_index=True,
-            )
+            with st.expander(
+                f"Sources and filing evidence ({len(evidence)})",
+                expanded=True,
+            ):
+                st.dataframe(evidence, use_container_width=True, hide_index=True)
 
     elif hasattr(answer, "text"):
         st.markdown(answer.text)
@@ -119,17 +123,20 @@ def display_result(result: Any) -> None:
 
         evidence = getattr(answer, "evidence", ())
         if evidence:
-            st.subheader("Evidence")
-            st.dataframe(
-                [to_json_safe(item) for item in evidence],
-                use_container_width=True,
-                hide_index=True,
-            )
+            with st.expander(
+                f"Sources and filing evidence ({len(evidence)})",
+                expanded=True,
+            ):
+                st.dataframe(
+                    [to_json_safe(item) for item in evidence],
+                    use_container_width=True,
+                    hide_index=True,
+                )
 
     else:
         st.json(to_json_safe(answer))
 
-    with st.expander("Inspect query plan and pipeline details"):
+    with st.expander("How FinSpect interpreted the question"):
         st.json(to_json_safe(details))
 
 
@@ -153,10 +160,24 @@ def research_and_display(question: str, *, speak: bool = False) -> None:
         display_result(result)
 
         if speak:
-            answer = result.get("answer", {}) if isinstance(result, dict) else {}
+            answer = (
+                result.get("answer", {})
+                if isinstance(result, dict)
+                else getattr(result, "answer", None)
+            )
+            answer_text = (
+                answer.get("text", "")
+                if isinstance(answer, dict)
+                else getattr(answer, "text", "")
+            )
+            answer_unit = (
+                answer.get("result_unit")
+                if isinstance(answer, dict)
+                else getattr(answer, "result_unit", None)
+            )
             summary = prepare_spoken_summary(
-                str(answer.get("text", "")),
-                answer.get("result_unit"),
+                str(answer_text),
+                answer_unit,
             )
             try:
                 api_key = configured_gnani_key()
@@ -182,62 +203,54 @@ def research_and_display(question: str, *, speak: bool = False) -> None:
 
 st.title("📊 FinSpect")
 st.caption(
-    "Evidence-grounded financial research using SEC company filings."
+    "Understand a US public company using evidence from its SEC filings."
 )
 
 with st.sidebar:
-    st.header("About FinSpect")
+    st.header("How to use FinSpect")
     st.markdown(
         """
-        **Research workflow**
-
-        1. Interpret your question with the LLM planner.
-        2. Normalize the company and reporting period.
-        3. Retrieve facts from SEC filings.
-        4. Validate the evidence and calculate deterministically.
-        5. Present the answer and its sources.
+        Ask about a company and reporting period. FinSpect retrieves filing
+        data, checks the periods and units, and shows the sources behind its
+        answer.
         """
     )
 
     st.divider()
     st.info(
-        "Current pipeline support is limited to the operations "
-        "implemented in the orchestrator. Unsupported questions "
-        "should receive an explicit limitation."
+        "Coverage is still expanding. If the filing data or calculation "
+        "cannot be verified, FinSpect should say so instead of guessing."
     )
     st.caption(
-        "FinSpect is a research tool, not personalized investment advice."
+        "For research and learning; not personalized investment advice."
     )
 
-def load_question_bank():
-    if not BENCHMARK_PATH.is_file():
-        return []
-
-    benchmark = load_benchmark(BENCHMARK_PATH)
-
-    questions = []
-    for layer in benchmark.layers:
-        for item in layer.questions:
-            questions.append({
-                "id": item.id,
-                "category": item.category,
-                "track": item.track,
-                "template": item.question_template,
-            })
-
-    return questions
-
 EXAMPLES = [
-    "Calculate Microsoft's revenue growth from FY2024 to FY2025.",
-    "Calculate NVIDIA's revenue growth from FY2024 to FY2025.",
-    "Calculate NVIDIA's revenue growth from FY2023 to FY2024.",
-    "What was NVIDIA's revenue growth from FY2024 to FY2025?",
+    (
+        "Revenue growth · Microsoft",
+        "Calculate Microsoft's revenue growth from FY2024 to FY2025.",
+    ),
+    (
+        "Revenue growth · NVIDIA",
+        "Calculate NVIDIA's revenue growth from FY2024 to FY2025.",
+    ),
+    (
+        "Operating margin · NVIDIA",
+        "How did NVIDIA's operating margin change from FY2024 to FY2025?",
+    ),
+    (
+        "Cash conversion · NVIDIA",
+        "Compare NVIDIA's cash conversion from FY2024 to FY2025.",
+    ),
 ]
 
 if "question" not in st.session_state:
     st.session_state.question = ""
 
-st.subheader("Ask a financial research question")
+st.subheader("What would you like to know?")
+st.caption(
+    "Name a US-listed company and, when relevant, the fiscal years to compare."
+)
 
 with st.expander("Ask by voice with Gnani AI"):
     st.caption(
@@ -302,47 +315,15 @@ with st.expander("Ask by voice with Gnani AI"):
             else:
                 st.warning("The recognized question is empty.")
 
+st.caption("Try a supported example")
 example_cols = st.columns(len(EXAMPLES))
-for index, example in enumerate(EXAMPLES):
+for index, (label, example) in enumerate(EXAMPLES):
     if example_cols[index].button(
-        f"Example {index + 1}",
+        label,
         use_container_width=True,
+        key=f"example_{index}",
     ):
         st.session_state.question = example
-
-question_bank = load_question_bank()
-
-if question_bank:
-    st.subheader("Choose a benchmark question")
-
-    categories = sorted({
-        item["category"] for item in question_bank
-    })
-
-    selected_category = st.selectbox(
-        "Category",
-        ["All categories", *categories],
-    )
-
-    if selected_category == "All categories":
-        visible_questions = question_bank
-    else:
-        visible_questions = [
-            item for item in question_bank
-            if item["category"] == selected_category
-        ]
-
-    selected_question = st.selectbox(
-        "Benchmark question",
-        visible_questions,
-        format_func=lambda item: (
-            f'{item["id"]} · {item["category"]} · '
-            f'{item["template"]}'
-        ),
-    )
-
-    if st.button("Use selected question"):
-        st.session_state.question = selected_question["template"]
 
 with st.form("research_form"):
     question = st.text_area(
@@ -355,7 +336,7 @@ with st.form("research_form"):
         ),
     )
     submitted = st.form_submit_button(
-        "Research question",
+        "Find answer in SEC filings",
         type="primary",
         use_container_width=True,
     )
