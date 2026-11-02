@@ -1060,18 +1060,20 @@
       "matrix_id": "annual-liquid-asset-contribution-multi-issuer-v1",
       "question_id": "Q07",
       "evaluation_scope": "offline reference cases; balance-sheet values are reported current assets and do not imply unrestricted availability",
-      "case_count": 6,
-      "pass_count": 6,
+      "case_count": 8,
+      "pass_count": 8,
       "fail_count": 0,
       "issuers": [
         "AAPL",
         "MSFT",
-        "NVDA"
+        "NVDA",
+        "PEP"
       ],
       "cases_per_issuer": {
         "AAPL": 2,
         "MSFT": 2,
-        "NVDA": 2
+        "NVDA": 2,
+        "PEP": 2
       },
       "cases": [
         {
@@ -1328,6 +1330,94 @@
               "fiscal_year": 2025,
               "accession_number": "0000320193-25-000079",
               "source_url": "https://www.sec.gov/Archives/edgar/data/320193/000032019325000079/0000320193-25-000079-index.htm"
+            }
+          ],
+          "checks": {
+            "two_ordered_periods": true,
+            "instant_usd_facts": true,
+            "evidence_provenance": true,
+            "calculation_correctness": true
+          },
+          "status": "PASS"
+        },
+        {
+          "company": {
+            "name": "PepsiCo, Inc.",
+            "ticker": "PEP",
+            "cik": "0000077476"
+          },
+          "fiscal_years": [
+            2023,
+            2024
+          ],
+          "inputs": {
+            "prior": {
+              "cash": "9711000000",
+              "short_term_investments": "292000000",
+              "total_assets": "100495000000"
+            },
+            "current": {
+              "cash": "8505000000",
+              "short_term_investments": "761000000",
+              "total_assets": "99467000000"
+            }
+          },
+          "expected_contribution_percent": "71.69260700389105058365758755",
+          "actual_contribution_percent": "71.69260700389105058365758755",
+          "evidence": [
+            {
+              "fiscal_year": 2023,
+              "accession_number": "0000077476-24-000008",
+              "source_url": "https://www.sec.gov/Archives/edgar/data/77476/000007747624000008/0000077476-24-000008-index.htm"
+            },
+            {
+              "fiscal_year": 2024,
+              "accession_number": "0000077476-25-000007",
+              "source_url": "https://www.sec.gov/Archives/edgar/data/77476/000007747625000007/0000077476-25-000007-index.htm"
+            }
+          ],
+          "checks": {
+            "two_ordered_periods": true,
+            "instant_usd_facts": true,
+            "evidence_provenance": true,
+            "calculation_correctness": true
+          },
+          "status": "PASS"
+        },
+        {
+          "company": {
+            "name": "PepsiCo, Inc.",
+            "ticker": "PEP",
+            "cik": "0000077476"
+          },
+          "fiscal_years": [
+            2024,
+            2025
+          ],
+          "inputs": {
+            "prior": {
+              "cash": "8505000000",
+              "short_term_investments": "761000000",
+              "total_assets": "99467000000"
+            },
+            "current": {
+              "cash": "9159000000",
+              "short_term_investments": "371000000",
+              "total_assets": "107399000000"
+            }
+          },
+          "expected_contribution_percent": "3.328290468986384266263237519",
+          "actual_contribution_percent": "3.328290468986384266263237519",
+          "evidence": [
+            {
+              "fiscal_year": 2024,
+              "accession_number": "0000077476-25-000007",
+              "source_url": "https://www.sec.gov/Archives/edgar/data/77476/000007747625000007/0000077476-25-000007-index.htm"
+            },
+            {
+              "fiscal_year": 2025,
+              "accession_number": "0000077476-26-000007",
+              "source_url": "https://www.sec.gov/Archives/edgar/data/77476/000007747626000007/0000077476-26-000007-index.htm"
             }
           ],
           "checks": {

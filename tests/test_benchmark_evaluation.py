@@ -41,10 +41,10 @@ def test_benchmark_report_records_fixture_and_unsupported_questions():
 
     liquidity_matrix = report["operation_reference_matrices"][3]
     assert liquidity_matrix["question_id"] == "Q07"
-    assert liquidity_matrix["case_count"] == 6
-    assert liquidity_matrix["pass_count"] == 6
+    assert liquidity_matrix["case_count"] == 8
+    assert liquidity_matrix["pass_count"] == 8
     assert liquidity_matrix["fail_count"] == 0
-    assert liquidity_matrix["issuers"] == ["AAPL", "MSFT", "NVDA"]
+    assert liquidity_matrix["issuers"] == ["AAPL", "MSFT", "NVDA", "PEP"]
     assert set(liquidity_matrix["cases_per_issuer"].values()) == {2}
 
     cash_conversion_matrix = report["operation_reference_matrices"][4]
