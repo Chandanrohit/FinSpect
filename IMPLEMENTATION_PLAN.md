@@ -4,6 +4,8 @@
 
 Build a dependable research assistant for questions answerable from SEC filings of US-listed companies. Answers must use issuer-specific filing evidence, identify the reporting period and units, show calculations, and say when the filing does not support a reliable answer. This is broad coverage, not a promise to answer every possible question for every issuer.
 
+The current product benchmark contains 20 reusable question archetypes in five layers. The target is to support each archetype through reusable operations that handle natural-language paraphrases and issuer data; it is not to hard-code every wording or every company. Where issuers use different valid tags, calendars, or disclosure structures, add evidence-based mappings and test them. Questions outside the benchmark or beyond available filing evidence must be identified as unsupported rather than guessed.
+
 ## Benchmark rules
 
 - Use fixed, versioned cases with a named issuer, filing accession, question, expected inputs, expected result or required evidence, and source links. Generic question templates without gold inputs do not count as evaluated coverage.
@@ -58,9 +60,9 @@ Keep the first screen focused on asking a company question. Use familiar investi
 
 ## Current state and next slice
 
-Overall benchmark report: 6 `PARTIAL`, 14 `UNSUPPORTED`, 0 `PASS`, 0 `FAIL`. Partial cases use fixture data and validated plans, not live retrieval or planner validation. The Q01 revenue-growth, Q03 operating-margin-change, and Q07 liquid-asset-contribution reference matrices each have 6/6 passing offline cases across NVIDIA, Microsoft, and Apple (two annual pairs each), with no live retrieval. No overall accuracy percentage is defensible yet.
+Overall benchmark report: 6 `PARTIAL`, 14 `UNSUPPORTED`, 0 `PASS`, 0 `FAIL`. Partial cases use fixture data and validated plans, not live retrieval or planner validation. The Q01 revenue-growth, Q03 operating-margin-change, Q05 earnings-change relationship, and Q07 liquid-asset-contribution reference matrices each have 6/6 passing offline cases across NVIDIA, Microsoft, and Apple (two annual pairs each), with no live retrieval. No overall accuracy percentage is defensible yet.
 
-Completed slices: benchmark baseline and investor-facing Streamlit home; Q01 annual revenue growth, Q03 annual operating-margin change, and Q07 annual liquid-asset contribution reference matrices across three issuers each. Next: extend Gate 1 with multi-issuer annual net-income or cash-flow comparisons and meet that operation's reference gate before committing it. These gates are offline reference coverage; live SEC, planner, and Gnani evaluation remains in Gate 5.
+Completed slices: benchmark baseline and investor-facing Streamlit home; Q01 annual revenue growth, Q03 annual operating-margin change, Q05 annual earnings-change relationship, and Q07 annual liquid-asset contribution reference matrices across three issuers each. Next: extend Gate 1 with a multi-issuer annual cash-flow or receivables operation and meet its reference gate before committing it. These gates are offline reference coverage; live SEC, planner, and Gnani evaluation remains in Gate 5.
 
 ## Scope limits
 

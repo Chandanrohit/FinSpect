@@ -47,6 +47,9 @@ DEFAULT_ANNUAL_REVENUE_MATRIX = (
 )
 DEFAULT_LIQUIDITY_MATRIX = ROOT / "data" / "fixtures" / "liquidity_reference_matrix.json"
 DEFAULT_MARGIN_MATRIX = ROOT / "data" / "fixtures" / "annual_margin_reference_matrix.json"
+DEFAULT_EARNINGS_MATRIX = (
+    ROOT / "data" / "fixtures" / "annual_earnings_relationship_reference_matrix.json"
+)
 
 
 def evaluate_annual_revenue_matrix(path: Path) -> dict[str, Any]:
@@ -307,6 +310,101 @@ def evaluate_annual_margin_matrix(path: Path) -> dict[str, Any]:
                 "status": "PASS" if all(checks.values()) else "FAIL",
             })
     tickers = sorted({item["company"]["ticker"] for item in cases})
+    return {
+        "matrix_id": matrix["matrix_id"],
+        "question_id": matrix["question_id"],
+        "evaluation_scope": matrix["evaluation_scope"],
+        "case_count": len(cases),
+        "pass_count": sum(case["status"] == "PASS" for case in cases),
+        "fail_count": sum(case["status"] == "FAIL" for case in cases),
+        "issuers": tickers,
+        "cases_per_issuer": {
+            ticker: sum(case["company"]["ticker"] == ticker for case in cases)
+            for ticker in tickers
+        },
+        "cases": cases,
+    }
+
+
+def evaluate_earnings_relationship_matrix(path: Path) -> dict[str, Any]:
+    """Check net-income/operating-income change ratios across issuers."""
+    matrix = json.loads(path.read_text(encoding="utf-8"))
+    if (
+        matrix.get("form") != "10-K"
+        or matrix.get("taxonomy") != "us-gaap"
+        or matrix.get("unit") != "USD"
+        or matrix.get("net_income_concept") != "NetIncomeLoss"
+        or matrix.get("operating_income_concept") != "OperatingIncomeLoss"
+    ):
+        raise ValueError("Q05 matrix must define US-GAAP USD annual statement inputs.")
+    cases = []
+    for issuer in matrix["issuers"]:
+        periods_by_year = {item["fiscal_year"]: item for item in issuer["periods"]}
+        for comparison in issuer["comparisons"]:
+            prior = periods_by_year[comparison["prior_year"]]
+            current = periods_by_year[comparison["current_year"]]
+            income_delta = Decimal(current["operating_income"]) - Decimal(prior["operating_income"])
+            net_delta = Decimal(current["net_income"]) - Decimal(prior["net_income"])
+            checks = {
+                "two_ordered_annual_periods": (
+                    prior["fiscal_year"] < current["fiscal_year"]
+                    and date.fromisoformat(prior["end_date"])
+                    < date.fromisoformat(current["start_date"])
+                    and all(
+                        350 <= (
+                            date.fromisoformat(item["end_date"])
+                            - date.fromisoformat(item["start_date"])
+                        ).days <= 380
+                        and date.fromisoformat(item["filing_date"])
+                        >= date.fromisoformat(item["end_date"])
+                        for item in (prior, current)
+                    )
+                ),
+                "nonzero_operating_income_change": income_delta != 0,
+                "evidence_provenance": all(
+                    item["accession_number"].replace("-", "") in item["source_url"]
+                    and item["source_url"].startswith(
+                        "https://www.sec.gov/Archives/edgar/data/"
+                    )
+                    for item in (prior, current)
+                ),
+            }
+            actual = earnings_change_relationship(
+                net_current=Decimal(current["net_income"]),
+                net_prior=Decimal(prior["net_income"]),
+                operating_current=Decimal(current["operating_income"]),
+                operating_prior=Decimal(prior["operating_income"]),
+            )
+            checks["calculation_correctness"] = actual.value == Decimal(
+                comparison["expected_relationship_percent"]
+            )
+            cases.append({
+                "company": issuer["company"],
+                "fiscal_years": [prior["fiscal_year"], current["fiscal_year"]],
+                "prior_inputs_usd": {
+                    "net_income": prior["net_income"],
+                    "operating_income": prior["operating_income"],
+                },
+                "current_inputs_usd": {
+                    "net_income": current["net_income"],
+                    "operating_income": current["operating_income"],
+                },
+                "input_changes_usd": {
+                    "net_income": str(net_delta),
+                    "operating_income": str(income_delta),
+                },
+                "expected_relationship_percent": comparison[
+                    "expected_relationship_percent"
+                ],
+                "actual_relationship_percent": str(actual.value),
+                "evidence": [
+                    {"accession_number": item["accession_number"], "source_url": item["source_url"]}
+                    for item in (prior, current)
+                ],
+                "checks": checks,
+                "status": "PASS" if all(checks.values()) else "FAIL",
+            })
+    tickers = sorted({case["company"]["ticker"] for case in cases})
     return {
         "matrix_id": matrix["matrix_id"],
         "question_id": matrix["question_id"],
@@ -1110,6 +1208,7 @@ def evaluate_benchmark(
     )
     liquidity_matrix = evaluate_liquidity_reference_matrix(DEFAULT_LIQUIDITY_MATRIX)
     margin_matrix = evaluate_annual_margin_matrix(DEFAULT_MARGIN_MATRIX)
+    earnings_matrix = evaluate_earnings_relationship_matrix(DEFAULT_EARNINGS_MATRIX)
     questions = benchmark.question_map()
     if fixture.get("question_id") != "Q01" or "Q01" not in questions:
         raise ValueError("The configured fixture must target benchmark Q01.")
@@ -1230,13 +1329,14 @@ def evaluate_benchmark(
         "accuracy_percentage": None,
         "accuracy_note": (
             "No overall accuracy percentage is reported: Q01, Q03, Q05, Q07, Q08, "
-            "and Q13 have fixture-backed checks; the Q01, Q03, and Q07 "
+            "and Q13 have fixture-backed checks; the Q01, Q03, Q05, and Q07 "
             "issuer matrices check six cited annual cases each, but neither "
             "live SEC retrieval nor the planner was evaluated."
         ),
         "operation_reference_matrices": [
             annual_revenue_matrix,
             margin_matrix,
+            earnings_matrix,
             liquidity_matrix,
         ],
         "questions": report_questions,

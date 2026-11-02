@@ -31,7 +31,15 @@ def test_benchmark_report_records_fixture_and_unsupported_questions():
     assert margin_matrix["issuers"] == ["AAPL", "MSFT", "NVDA"]
     assert set(margin_matrix["cases_per_issuer"].values()) == {2}
 
-    liquidity_matrix = report["operation_reference_matrices"][2]
+    earnings_matrix = report["operation_reference_matrices"][2]
+    assert earnings_matrix["question_id"] == "Q05"
+    assert earnings_matrix["case_count"] == 6
+    assert earnings_matrix["pass_count"] == 6
+    assert earnings_matrix["fail_count"] == 0
+    assert earnings_matrix["issuers"] == ["AAPL", "MSFT", "NVDA"]
+    assert set(earnings_matrix["cases_per_issuer"].values()) == {2}
+
+    liquidity_matrix = report["operation_reference_matrices"][3]
     assert liquidity_matrix["question_id"] == "Q07"
     assert liquidity_matrix["case_count"] == 6
     assert liquidity_matrix["pass_count"] == 6

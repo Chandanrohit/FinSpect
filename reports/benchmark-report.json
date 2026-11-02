@@ -12,7 +12,7 @@
     "FAIL": 0
   },
   "accuracy_percentage": null,
-  "accuracy_note": "No overall accuracy percentage is reported: Q01, Q03, Q05, Q07, Q08, and Q13 have fixture-backed checks; the Q01, Q03, and Q07 issuer matrices check six cited annual cases each, but neither live SEC retrieval nor the planner was evaluated.",
+  "accuracy_note": "No overall accuracy percentage is reported: Q01, Q03, Q05, Q07, Q08, and Q13 have fixture-backed checks; the Q01, Q03, Q05, and Q07 issuer matrices check six cited annual cases each, but neither live SEC retrieval nor the planner was evaluated.",
   "operation_reference_matrices": [
     {
       "matrix_id": "annual-revenue-growth-multi-issuer-v1",
@@ -527,6 +527,278 @@
             "two_ordered_annual_periods": true,
             "fact_concepts_and_units": true,
             "positive_statement_inputs": true,
+            "evidence_provenance": true,
+            "calculation_correctness": true
+          },
+          "status": "PASS"
+        }
+      ]
+    },
+    {
+      "matrix_id": "annual-net-income-operating-income-change-multi-issuer-v1",
+      "question_id": "Q05",
+      "evaluation_scope": "offline reference cases from SEC 10-K statements; does not measure live SEC retrieval or query interpretation",
+      "case_count": 6,
+      "pass_count": 6,
+      "fail_count": 0,
+      "issuers": [
+        "AAPL",
+        "MSFT",
+        "NVDA"
+      ],
+      "cases_per_issuer": {
+        "AAPL": 2,
+        "MSFT": 2,
+        "NVDA": 2
+      },
+      "cases": [
+        {
+          "company": {
+            "name": "NVIDIA Corporation",
+            "ticker": "NVDA",
+            "cik": "0001045810"
+          },
+          "fiscal_years": [
+            2023,
+            2024
+          ],
+          "prior_inputs_usd": {
+            "net_income": "4368000000",
+            "operating_income": "4224000000"
+          },
+          "current_inputs_usd": {
+            "net_income": "29760000000",
+            "operating_income": "32972000000"
+          },
+          "input_changes_usd": {
+            "net_income": "25392000000",
+            "operating_income": "28748000000"
+          },
+          "expected_relationship_percent": "88.32614442743843049951300960",
+          "actual_relationship_percent": "88.32614442743843049951300960",
+          "evidence": [
+            {
+              "accession_number": "0001045810-23-000017",
+              "source_url": "https://www.sec.gov/Archives/edgar/data/1045810/000104581023000017/0001045810-23-000017-index.htm"
+            },
+            {
+              "accession_number": "0001045810-24-000029",
+              "source_url": "https://www.sec.gov/Archives/edgar/data/1045810/000104581024000029/0001045810-24-000029-index.htm"
+            }
+          ],
+          "checks": {
+            "two_ordered_annual_periods": true,
+            "nonzero_operating_income_change": true,
+            "evidence_provenance": true,
+            "calculation_correctness": true
+          },
+          "status": "PASS"
+        },
+        {
+          "company": {
+            "name": "NVIDIA Corporation",
+            "ticker": "NVDA",
+            "cik": "0001045810"
+          },
+          "fiscal_years": [
+            2024,
+            2025
+          ],
+          "prior_inputs_usd": {
+            "net_income": "29760000000",
+            "operating_income": "32972000000"
+          },
+          "current_inputs_usd": {
+            "net_income": "72880000000",
+            "operating_income": "81453000000"
+          },
+          "input_changes_usd": {
+            "net_income": "43120000000",
+            "operating_income": "48481000000"
+          },
+          "expected_relationship_percent": "88.94205977599471958086673130",
+          "actual_relationship_percent": "88.94205977599471958086673130",
+          "evidence": [
+            {
+              "accession_number": "0001045810-24-000029",
+              "source_url": "https://www.sec.gov/Archives/edgar/data/1045810/000104581024000029/0001045810-24-000029-index.htm"
+            },
+            {
+              "accession_number": "0001045810-25-000023",
+              "source_url": "https://www.sec.gov/Archives/edgar/data/1045810/000104581025000023/0001045810-25-000023-index.htm"
+            }
+          ],
+          "checks": {
+            "two_ordered_annual_periods": true,
+            "nonzero_operating_income_change": true,
+            "evidence_provenance": true,
+            "calculation_correctness": true
+          },
+          "status": "PASS"
+        },
+        {
+          "company": {
+            "name": "Microsoft Corporation",
+            "ticker": "MSFT",
+            "cik": "0000789019"
+          },
+          "fiscal_years": [
+            2023,
+            2024
+          ],
+          "prior_inputs_usd": {
+            "net_income": "72361000000",
+            "operating_income": "88523000000"
+          },
+          "current_inputs_usd": {
+            "net_income": "88136000000",
+            "operating_income": "109433000000"
+          },
+          "input_changes_usd": {
+            "net_income": "15775000000",
+            "operating_income": "20910000000"
+          },
+          "expected_relationship_percent": "75.44237207077953132472501196",
+          "actual_relationship_percent": "75.44237207077953132472501196",
+          "evidence": [
+            {
+              "accession_number": "0000950170-23-035122",
+              "source_url": "https://www.sec.gov/Archives/edgar/data/789019/000095017023035122/0000950170-23-035122-index.htm"
+            },
+            {
+              "accession_number": "0000950170-24-087843",
+              "source_url": "https://www.sec.gov/Archives/edgar/data/789019/000095017024087843/0000950170-24-087843-index.htm"
+            }
+          ],
+          "checks": {
+            "two_ordered_annual_periods": true,
+            "nonzero_operating_income_change": true,
+            "evidence_provenance": true,
+            "calculation_correctness": true
+          },
+          "status": "PASS"
+        },
+        {
+          "company": {
+            "name": "Microsoft Corporation",
+            "ticker": "MSFT",
+            "cik": "0000789019"
+          },
+          "fiscal_years": [
+            2024,
+            2025
+          ],
+          "prior_inputs_usd": {
+            "net_income": "88136000000",
+            "operating_income": "109433000000"
+          },
+          "current_inputs_usd": {
+            "net_income": "101832000000",
+            "operating_income": "128528000000"
+          },
+          "input_changes_usd": {
+            "net_income": "13696000000",
+            "operating_income": "19095000000"
+          },
+          "expected_relationship_percent": "71.72558261324954176485991097",
+          "actual_relationship_percent": "71.72558261324954176485991097",
+          "evidence": [
+            {
+              "accession_number": "0000950170-24-087843",
+              "source_url": "https://www.sec.gov/Archives/edgar/data/789019/000095017024087843/0000950170-24-087843-index.htm"
+            },
+            {
+              "accession_number": "0000950170-25-100235",
+              "source_url": "https://www.sec.gov/Archives/edgar/data/789019/000095017025100235/0000950170-25-100235-index.htm"
+            }
+          ],
+          "checks": {
+            "two_ordered_annual_periods": true,
+            "nonzero_operating_income_change": true,
+            "evidence_provenance": true,
+            "calculation_correctness": true
+          },
+          "status": "PASS"
+        },
+        {
+          "company": {
+            "name": "Apple Inc.",
+            "ticker": "AAPL",
+            "cik": "0000320193"
+          },
+          "fiscal_years": [
+            2023,
+            2024
+          ],
+          "prior_inputs_usd": {
+            "net_income": "96995000000",
+            "operating_income": "114301000000"
+          },
+          "current_inputs_usd": {
+            "net_income": "93736000000",
+            "operating_income": "123216000000"
+          },
+          "input_changes_usd": {
+            "net_income": "-3259000000",
+            "operating_income": "8915000000"
+          },
+          "expected_relationship_percent": "-36.55636567582725743129556927",
+          "actual_relationship_percent": "-36.55636567582725743129556927",
+          "evidence": [
+            {
+              "accession_number": "0000320193-23-000106",
+              "source_url": "https://www.sec.gov/Archives/edgar/data/320193/000032019323000106/0000320193-23-000106-index.htm"
+            },
+            {
+              "accession_number": "0000320193-24-000123",
+              "source_url": "https://www.sec.gov/Archives/edgar/data/320193/000032019324000123/0000320193-24-000123-index.htm"
+            }
+          ],
+          "checks": {
+            "two_ordered_annual_periods": true,
+            "nonzero_operating_income_change": true,
+            "evidence_provenance": true,
+            "calculation_correctness": true
+          },
+          "status": "PASS"
+        },
+        {
+          "company": {
+            "name": "Apple Inc.",
+            "ticker": "AAPL",
+            "cik": "0000320193"
+          },
+          "fiscal_years": [
+            2024,
+            2025
+          ],
+          "prior_inputs_usd": {
+            "net_income": "93736000000",
+            "operating_income": "123216000000"
+          },
+          "current_inputs_usd": {
+            "net_income": "112010000000",
+            "operating_income": "133050000000"
+          },
+          "input_changes_usd": {
+            "net_income": "18274000000",
+            "operating_income": "9834000000"
+          },
+          "expected_relationship_percent": "185.8246898515354891193817368",
+          "actual_relationship_percent": "185.8246898515354891193817368",
+          "evidence": [
+            {
+              "accession_number": "0000320193-24-000123",
+              "source_url": "https://www.sec.gov/Archives/edgar/data/320193/000032019324000123/0000320193-24-000123-index.htm"
+            },
+            {
+              "accession_number": "0000320193-25-000079",
+              "source_url": "https://www.sec.gov/Archives/edgar/data/320193/000032019325000079/0000320193-25-000079-index.htm"
+            }
+          ],
+          "checks": {
+            "two_ordered_annual_periods": true,
+            "nonzero_operating_income_change": true,
             "evidence_provenance": true,
             "calculation_correctness": true
           },
