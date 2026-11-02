@@ -1,4 +1,5 @@
 from decimal import Decimal
+import json
 from pathlib import Path
 
 import pytest
@@ -61,7 +62,7 @@ class FixtureCompanyResolver:
 PERIODS = {
     2024: AnnualPeriod(
         fiscal_year=2024,
-        start_date="2023-01-29",
+        start_date="2023-01-30",
         end_date="2024-01-28",
         form="10-K",
         concept="Revenues",
@@ -89,7 +90,7 @@ FACTS = {
         "label": "Revenue",
         "value": 60_922_000_000,
         "unit": "USD",
-        "start_date": "2023-01-29",
+        "start_date": "2023-01-30",
         "end_date": "2024-01-28",
         "fiscal_year": 2024,
         "form": "10-K",
@@ -283,6 +284,107 @@ def test_q01_supports_microsoft_and_calendar_year_fiscal_periods():
     assert result.plan.company.name == "Microsoft Corporation"
     assert result.plan.company.ticker == "MSFT"
     assert len(result.answer.evidence) == 2
+
+
+_REVENUE_REFERENCE_MATRIX = json.loads(
+    (
+        Path(__file__).resolve().parents[1]
+        / "data"
+        / "fixtures"
+        / "annual_revenue_reference_matrix.json"
+    ).read_text(encoding="utf-8")
+)["cases"]
+
+
+@pytest.mark.parametrize(
+    "reference_case",
+    _REVENUE_REFERENCE_MATRIX,
+    ids=lambda case: (
+        f"{case['company']['ticker']}-FY{case['periods'][0]['fiscal_year']}"
+        f"-FY{case['periods'][1]['fiscal_year']}"
+    ),
+)
+def test_q01_reference_matrix_runs_through_orchestrator(reference_case):
+    company = reference_case["company"]
+    period_rows = reference_case["periods"]
+    periods = {
+        row["fiscal_year"]: AnnualPeriod(
+            fiscal_year=row["fiscal_year"],
+            start_date=row["start_date"],
+            end_date=row["end_date"],
+            form=row["form"],
+            concept=row["concept"],
+            filing_date=row["filing_date"],
+            accession_number=row["accession_number"],
+            currency=row["unit"],
+        )
+        for row in period_rows
+    }
+    prior, current = period_rows
+    question = (
+        f"Calculate {company['name']}'s revenue growth from "
+        f"FY{prior['fiscal_year']} to FY{current['fiscal_year']}."
+    )
+    plan = make_plan().model_copy(update={
+        "original_question": question,
+        "company": CompanyRequest(**company),
+        "period": PeriodRequest(
+            period_label=f"FY{current['fiscal_year']}",
+            period_kind="annual",
+            fiscal_year=current["fiscal_year"],
+            comparison_required=True,
+            comparison_period=f"FY{prior['fiscal_year']}",
+        ),
+    })
+
+    class Planner:
+        def plan(self, _question):
+            return plan
+
+    class CompanyResolver:
+        def resolve(self, **_kwargs):
+            return company
+
+    class FactRetriever:
+        def get_fact(self, *, end_date, **_kwargs):
+            row = next(item for item in period_rows if item["end_date"] == end_date)
+            return {
+                "cik": company["cik"],
+                "company": company["name"],
+                "taxonomy": row["taxonomy"],
+                "concept": row["concept"],
+                "label": "Revenue",
+                "value": row["value"],
+                "unit": row["unit"],
+                "start_date": row["start_date"],
+                "end_date": row["end_date"],
+                "fiscal_year": row["fiscal_year"],
+                "form": row["form"],
+                "filing_date": row["filing_date"],
+                "accession_number": row["accession_number"],
+                "primary_document": row.get("primary_document"),
+            }
+
+    result = FinSpectOrchestrator(
+        planner=Planner(),
+        normalizer=normalize_query_plan,
+        period_resolver=lambda _cik, year: periods[year],
+        fact_retriever=FactRetriever(),
+        company_resolver=CompanyResolver(),
+    ).run(question)
+
+    assert result.plan.company.cik == company["cik"]
+    assert result.plan.company.ticker == company["ticker"]
+    assert result.answer.result_value == reference_case["expected_growth_percent"]
+    assert [item.accession_number for item in result.answer.evidence] == [
+        item["accession_number"] for item in period_rows
+    ]
+    assert all(
+        item.source_url
+        and item.source_url.startswith("https://www.sec.gov/Archives/edgar/data/")
+        and item.accession_number.replace("-", "") in item.source_url
+        for item in result.answer.evidence
+    )
 
 
 def test_q03_nvidia_operating_margin_change_end_to_end_fixture():

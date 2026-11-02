@@ -15,6 +15,14 @@ def test_benchmark_report_records_fixture_and_unsupported_questions():
     assert report["live_sec_integration_tested"] is False
     assert report["live_query_planner_tested"] is False
 
+    revenue_matrix = report["operation_reference_matrices"][0]
+    assert revenue_matrix["question_id"] == "Q01"
+    assert revenue_matrix["case_count"] == 6
+    assert revenue_matrix["pass_count"] == 6
+    assert revenue_matrix["fail_count"] == 0
+    assert revenue_matrix["issuers"] == ["AAPL", "MSFT", "NVDA"]
+    assert set(revenue_matrix["cases_per_issuer"].values()) == {2}
+
     questions = {item["question_id"]: item for item in report["questions"]}
     q01 = questions["Q01"]
     assert q01["overall_status"] == "PARTIAL"

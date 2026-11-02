@@ -58,9 +58,9 @@ Keep the first screen focused on asking a company question. Use familiar investi
 
 ## Current state and next slice
 
-Baseline report: 5 `PARTIAL`, 15 `UNSUPPORTED`, 0 `PASS`, 0 `FAIL`. The five partial cases are NVIDIA fixture calculations, not live retrieval or planner validation. The report has no defensible accuracy percentage.
+Overall benchmark report: 5 `PARTIAL`, 15 `UNSUPPORTED`, 0 `PASS`, 0 `FAIL`. The five partial cases use fixture data and validated plans, not live retrieval or planner validation. The Q01 reference matrix separately has 6/6 passing offline cases across NVIDIA, Microsoft, and Apple (two annual pairs each), also with no live retrieval. No overall accuracy percentage is defensible yet.
 
-Next slice: Gate 0 benchmark foundation, then Gate 1 multi-issuer annual revenue growth as the first end-to-end operation. Do not expand to more formulas until company, period, unit, and evidence checks pass on the reference cases.
+Completed slices: benchmark baseline and investor-facing Streamlit home; Q01 annual revenue growth reference matrix across three issuers. Next: extend Gate 1 to one additional annual financial statement operation and meet its own multi-issuer reference gate before committing it.
 
 ## Scope limits
 

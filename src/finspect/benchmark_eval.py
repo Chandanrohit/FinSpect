@@ -41,6 +41,80 @@ DEFAULT_Q03_FIXTURE = ROOT / "data" / "fixtures" / "nvidia_q03_fy2024_fy2025.jso
 DEFAULT_Q08_FIXTURE = ROOT / "data" / "fixtures" / "nvidia_q08_fy2024_fy2025.json"
 DEFAULT_Q13_FIXTURE = ROOT / "data" / "fixtures" / "nvidia_q13_fy2024_fy2025.json"
 DEFAULT_Q05_FIXTURE = ROOT / "data" / "fixtures" / "nvidia_q05_fy2024_fy2025.json"
+DEFAULT_ANNUAL_REVENUE_MATRIX = (
+    ROOT / "data" / "fixtures" / "annual_revenue_reference_matrix.json"
+)
+
+
+def evaluate_annual_revenue_matrix(path: Path) -> dict[str, Any]:
+    """Check annual revenue calculations against fixed, cited issuer cases."""
+    matrix = json.loads(path.read_text(encoding="utf-8"))
+    cases = []
+    for reference in matrix["cases"]:
+        periods = reference["periods"]
+        company = reference["company"]
+        checks = {
+            "two_ordered_periods": len(periods) == 2
+            and periods[0]["fiscal_year"] < periods[1]["fiscal_year"],
+            "annual_usd_inputs": all(
+                item.get("form") == "10-K"
+                and item.get("unit") == "USD"
+                and item.get("taxonomy") == "us-gaap"
+                and item.get("concept") == "Revenues"
+                and (date.fromisoformat(item["end_date"])
+                     - date.fromisoformat(item["start_date"])).days in range(350, 380)
+                for item in periods
+            ),
+            "evidence_provenance": all(
+                item["accession_number"]
+                and item["source_url"].startswith(
+                    "https://www.sec.gov/Archives/edgar/data/"
+                )
+                and item["accession_number"].replace("-", "")
+                in item["source_url"]
+                for item in periods
+            ),
+            "issuer_metadata": all(
+                str(company.get(key, "")).strip()
+                for key in ("name", "ticker", "cik")
+            ),
+        }
+        actual = revenue_growth(
+            current=Decimal(periods[1]["value"]),
+            prior=Decimal(periods[0]["value"]),
+        )
+        checks["calculation_correctness"] = (
+            actual.value == Decimal(reference["expected_growth_percent"])
+        )
+        passed = all(checks.values())
+        cases.append({
+            "company": company,
+            "fiscal_years": [item["fiscal_year"] for item in periods],
+            "input_values_usd": [item["value"] for item in periods],
+            "expected_growth_percent": reference["expected_growth_percent"],
+            "actual_growth_percent": str(actual.value),
+            "evidence": [
+                {"accession_number": item["accession_number"],
+                 "source_url": item["source_url"]}
+                for item in periods
+            ],
+            "checks": checks,
+            "status": "PASS" if passed else "FAIL",
+        })
+    return {
+        "matrix_id": matrix["matrix_id"],
+        "question_id": matrix["question_id"],
+        "evaluation_scope": matrix["evaluation_scope"],
+        "case_count": len(cases),
+        "pass_count": sum(item["status"] == "PASS" for item in cases),
+        "fail_count": sum(item["status"] == "FAIL" for item in cases),
+        "issuers": sorted({item["company"]["ticker"] for item in cases}),
+        "cases_per_issuer": {
+            ticker: sum(item["company"]["ticker"] == ticker for item in cases)
+            for ticker in sorted({item["company"]["ticker"] for item in cases})
+        },
+        "cases": cases,
+    }
 
 
 def _evaluate_q01(question: Any, fixture: dict[str, Any]) -> dict[str, Any]:
@@ -816,6 +890,7 @@ def evaluate_benchmark(
     q08_fixture_path: Path = DEFAULT_Q08_FIXTURE,
     q13_fixture_path: Path = DEFAULT_Q13_FIXTURE,
     q05_fixture_path: Path = DEFAULT_Q05_FIXTURE,
+    annual_revenue_matrix_path: Path = DEFAULT_ANNUAL_REVENUE_MATRIX,
 ) -> dict[str, Any]:
     """Evaluate the current supported fixture and explicitly classify the rest."""
     benchmark = load_benchmark(benchmark_path)
@@ -824,6 +899,9 @@ def evaluate_benchmark(
     q08_fixture = json.loads(q08_fixture_path.read_text(encoding="utf-8"))
     q13_fixture = json.loads(q13_fixture_path.read_text(encoding="utf-8"))
     q05_fixture = json.loads(q05_fixture_path.read_text(encoding="utf-8"))
+    annual_revenue_matrix = evaluate_annual_revenue_matrix(
+        annual_revenue_matrix_path
+    )
     questions = benchmark.question_map()
     if fixture.get("question_id") != "Q01" or "Q01" not in questions:
         raise ValueError("The configured fixture must target benchmark Q01.")
@@ -905,9 +983,12 @@ def evaluate_benchmark(
         "aggregate_counts": counts,
         "accuracy_percentage": None,
         "accuracy_note": (
-            "No accuracy percentage is reported: the benchmark is company-agnostic, "
-            "only Q01, Q03, Q05, Q08, and Q13 have checked-in filing snapshots, and the planner was not run live."
+            "No overall accuracy percentage is reported: Q01, Q03, Q05, Q08, "
+            "and Q13 have fixture-backed pipeline checks; the separate Q01 "
+            "issuer matrix checks six cited annual revenue cases, but neither "
+            "live SEC retrieval nor the planner was evaluated."
         ),
+        "operation_reference_matrices": [annual_revenue_matrix],
         "questions": report_questions,
     }
 
