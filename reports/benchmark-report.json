@@ -2434,16 +2434,18 @@
       "matrix_id": "annual-share-repurchase-to-cash-flow-multi-issuer-v1",
       "question_id": "Q10",
       "evaluation_scope": "offline annual SEC 10-K references; share repurchase cash amounts use the standard cash-flow tag magnitude and do not measure live retrieval or interpretation",
-      "case_count": 6,
-      "pass_count": 6,
+      "case_count": 8,
+      "pass_count": 8,
       "fail_count": 0,
       "issuers": [
         "AAPL",
+        "CVS",
         "MSFT",
         "NVDA"
       ],
       "cases_per_issuer": {
         "AAPL": 2,
+        "CVS": 2,
         "MSFT": 2,
         "NVDA": 2
       },
@@ -2677,6 +2679,86 @@
               "fiscal_year": 2025,
               "accession_number": "0000320193-25-000079",
               "source_url": "https://www.sec.gov/Archives/edgar/data/320193/000032019325000079/0000320193-25-000079-index.htm"
+            }
+          ],
+          "checks": {
+            "ordered_annual_periods": true,
+            "us_gaap_currency_facts": true,
+            "filing_dates_and_provenance": true,
+            "current_ratio_correctness": true,
+            "spend_change_correctness": true
+          },
+          "status": "PASS"
+        },
+        {
+          "company": {
+            "name": "CVS Health Corporation",
+            "ticker": "CVS",
+            "cik": "0000064803"
+          },
+          "fiscal_years": [
+            2023,
+            2024
+          ],
+          "inputs_usd": {
+            "prior_share_repurchase_cash": "2012000000",
+            "current_share_repurchase_cash": "3023000000",
+            "current_operating_cash_flow": "9107000000"
+          },
+          "expected_current_ratio_percent": "33.19424618425387064895135610",
+          "actual_current_ratio_percent": "33.19424618425387064895135610",
+          "expected_change_amount": "1011000000",
+          "actual_change_amount": "1011000000",
+          "evidence": [
+            {
+              "fiscal_year": 2023,
+              "accession_number": "0000064803-24-000007",
+              "source_url": "https://www.sec.gov/Archives/edgar/data/64803/000006480324000007/0000064803-24-000007-index.htm"
+            },
+            {
+              "fiscal_year": 2024,
+              "accession_number": "0000064803-25-000007",
+              "source_url": "https://www.sec.gov/Archives/edgar/data/64803/000006480325000007/0000064803-25-000007-index.htm"
+            }
+          ],
+          "checks": {
+            "ordered_annual_periods": true,
+            "us_gaap_currency_facts": true,
+            "filing_dates_and_provenance": true,
+            "current_ratio_correctness": true,
+            "spend_change_correctness": true
+          },
+          "status": "PASS"
+        },
+        {
+          "company": {
+            "name": "CVS Health Corporation",
+            "ticker": "CVS",
+            "cik": "0000064803"
+          },
+          "fiscal_years": [
+            2024,
+            2025
+          ],
+          "inputs_usd": {
+            "prior_share_repurchase_cash": "3023000000",
+            "current_share_repurchase_cash": "0",
+            "current_operating_cash_flow": "10639000000"
+          },
+          "expected_current_ratio_percent": "0",
+          "actual_current_ratio_percent": "0",
+          "expected_change_amount": "-3023000000",
+          "actual_change_amount": "-3023000000",
+          "evidence": [
+            {
+              "fiscal_year": 2024,
+              "accession_number": "0000064803-25-000007",
+              "source_url": "https://www.sec.gov/Archives/edgar/data/64803/000006480325000007/0000064803-25-000007-index.htm"
+            },
+            {
+              "fiscal_year": 2025,
+              "accession_number": "0000064803-26-000010",
+              "source_url": "https://www.sec.gov/Archives/edgar/data/64803/000006480326000010/0000064803-26-000010-index.htm"
             }
           ],
           "checks": {

@@ -79,10 +79,18 @@ def test_benchmark_report_records_fixture_and_unsupported_questions():
 
     repurchase_matrix = report["operation_reference_matrices"][8]
     assert repurchase_matrix["question_id"] == "Q10"
-    assert repurchase_matrix["case_count"] == repurchase_matrix["pass_count"] == 6
+    assert repurchase_matrix["case_count"] == repurchase_matrix["pass_count"] == 8
     assert repurchase_matrix["fail_count"] == 0
-    assert repurchase_matrix["issuers"] == ["AAPL", "MSFT", "NVDA"]
+    assert repurchase_matrix["issuers"] == ["AAPL", "CVS", "MSFT", "NVDA"]
     assert set(repurchase_matrix["cases_per_issuer"].values()) == {2}
+    cvs_zero_spend = next(
+        case for case in repurchase_matrix["cases"]
+        if case["company"]["ticker"] == "CVS"
+        and case["fiscal_years"] == [2024, 2025]
+    )
+    assert cvs_zero_spend["status"] == "PASS"
+    assert cvs_zero_spend["actual_current_ratio_percent"] == "0"
+    assert cvs_zero_spend["actual_change_amount"] == "-3023000000"
 
     questions = {item["question_id"]: item for item in report["questions"]}
     q01 = questions["Q01"]

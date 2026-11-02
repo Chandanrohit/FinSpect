@@ -199,6 +199,70 @@
       "expected_current_ratio_percent": "81.36829263917044904110080551",
       "expected_change_amount": "-4238000000",
       "expected_change_percent": "-4.463448798828844958872657953"
+    },
+    {
+      "company": {
+        "name": "CVS Health Corporation",
+        "ticker": "CVS",
+        "cik": "0000064803"
+      },
+      "periods": [
+        {
+          "fiscal_year": 2023,
+          "start_date": "2023-01-01",
+          "end_date": "2023-12-31",
+          "filing_date": "2024-02-07",
+          "accession_number": "0000064803-24-000007",
+          "source_url": "https://www.sec.gov/Archives/edgar/data/64803/000006480324000007/0000064803-24-000007-index.htm",
+          "share_repurchase_cash": "2012000000",
+          "operating_cash_flow": "13426000000"
+        },
+        {
+          "fiscal_year": 2024,
+          "start_date": "2024-01-01",
+          "end_date": "2024-12-31",
+          "filing_date": "2025-02-12",
+          "accession_number": "0000064803-25-000007",
+          "source_url": "https://www.sec.gov/Archives/edgar/data/64803/000006480325000007/0000064803-25-000007-index.htm",
+          "share_repurchase_cash": "3023000000",
+          "operating_cash_flow": "9107000000"
+        }
+      ],
+      "expected_current_ratio_percent": "33.19424618425387064895135610",
+      "expected_change_amount": "1011000000",
+      "expected_change_percent": "50.24850894632206759443339960"
+    },
+    {
+      "company": {
+        "name": "CVS Health Corporation",
+        "ticker": "CVS",
+        "cik": "0000064803"
+      },
+      "periods": [
+        {
+          "fiscal_year": 2024,
+          "start_date": "2024-01-01",
+          "end_date": "2024-12-31",
+          "filing_date": "2025-02-12",
+          "accession_number": "0000064803-25-000007",
+          "source_url": "https://www.sec.gov/Archives/edgar/data/64803/000006480325000007/0000064803-25-000007-index.htm",
+          "share_repurchase_cash": "3023000000",
+          "operating_cash_flow": "9107000000"
+        },
+        {
+          "fiscal_year": 2025,
+          "start_date": "2025-01-01",
+          "end_date": "2025-12-31",
+          "filing_date": "2026-02-11",
+          "accession_number": "0000064803-26-000010",
+          "source_url": "https://www.sec.gov/Archives/edgar/data/64803/000006480326000010/0000064803-26-000010-index.htm",
+          "share_repurchase_cash": "0",
+          "operating_cash_flow": "10639000000"
+        }
+      ],
+      "expected_current_ratio_percent": "0",
+      "expected_change_amount": "-3023000000",
+      "expected_change_percent": "-100"
     }
   ]
 }
