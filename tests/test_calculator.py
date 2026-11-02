@@ -6,6 +6,7 @@ import pytest
 from finspect.calculator import (
     FormulaError,
     absolute_change,
+    largest_component_contribution,
     revenue_growth,
     share_repurchase_comparison,
 )
@@ -169,3 +170,23 @@ def test_share_repurchase_comparison_rejects_nonpositive_operating_cash_flow():
             prior_amount=Decimal("80"),
             current_operating_cash_flow=Decimal("0"),
         )
+
+
+def test_largest_equity_component_uses_absolute_size_and_preserves_sign():
+    name, result = largest_component_contribution(
+        {
+            "Net income": Decimal("80"),
+            "Share repurchases": Decimal("-120"),
+            "Dividends": Decimal("-30"),
+        },
+        Decimal("60"),
+    )
+
+    assert name == "Share repurchases"
+    assert result.value == Decimal("-200")
+    assert result.inputs["Share repurchases"] == Decimal("-120")
+
+
+def test_largest_equity_component_requires_disclosed_components():
+    with pytest.raises(FormulaError, match="At least one disclosed equity component"):
+        largest_component_contribution({}, Decimal("100"))

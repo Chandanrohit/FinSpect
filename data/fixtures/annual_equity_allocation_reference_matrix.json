@@ -1,0 +1,145 @@
+{
+  "matrix_id": "annual-equity-allocation-multi-issuer-v1",
+  "question_id": "Q12",
+  "evaluation_scope": "offline SEC 10-K statement-of-equity rows; values are normalized to USD millions; no live retrieval or question interpretation",
+  "unit": "USD millions",
+  "selection_policy": "Select the single disclosed equity-change row with the largest absolute amount; retain its reported sign and divide by ending shareholders equity. Do not aggregate differently labeled rows or imply that this is the only meaningful view of equity changes.",
+  "cases": [
+    {
+      "company": {"name": "NVIDIA Corporation", "ticker": "NVDA", "cik": "0001045810"},
+      "fiscal_year": 2024,
+      "start_date": "2023-01-30",
+      "end_date": "2024-01-28",
+      "filing_date": "2024-02-21",
+      "accession_number": "0001045810-24-000029",
+      "source_url": "https://www.sec.gov/Archives/edgar/data/1045810/000104581024000029/0001045810-24-000029-index.htm",
+      "ending_equity": "42978",
+      "components": [
+        {"label": "Net income", "value": "29760"},
+        {"label": "Other comprehensive income", "value": "70"},
+        {"label": "Issuance of common stock from stock plans", "value": "403"},
+        {"label": "Tax withholding related to vesting of restricted stock units", "value": "-2783"},
+        {"label": "Shares repurchased", "value": "-9746"},
+        {"label": "Cash dividends declared and paid", "value": "-395"},
+        {"label": "Stock-based compensation", "value": "3568"}
+      ],
+      "expected_largest_component": "Net income",
+      "expected_largest_component_amount": "29760",
+      "expected_contribution_percent": "69.24472986178975289683093676"
+    },
+    {
+      "company": {"name": "NVIDIA Corporation", "ticker": "NVDA", "cik": "0001045810"},
+      "fiscal_year": 2025,
+      "start_date": "2024-01-29",
+      "end_date": "2025-01-26",
+      "filing_date": "2025-02-26",
+      "accession_number": "0001045810-25-000023",
+      "source_url": "https://www.sec.gov/Archives/edgar/data/1045810/000104581025000023/0001045810-25-000023-index.htm",
+      "ending_equity": "79327",
+      "components": [
+        {"label": "Net income", "value": "72880"},
+        {"label": "Other comprehensive income", "value": "1"},
+        {"label": "Issuance of common stock from stock plans", "value": "490"},
+        {"label": "Tax withholding related to vesting of restricted stock units", "value": "-6930"},
+        {"label": "Shares repurchased", "value": "-34015"},
+        {"label": "Cash dividends declared and paid", "value": "-834"},
+        {"label": "Stock-based compensation", "value": "4757"}
+      ],
+      "expected_largest_component": "Net income",
+      "expected_largest_component_amount": "72880",
+      "expected_contribution_percent": "91.87288060811577394834041373"
+    },
+    {
+      "company": {"name": "Microsoft Corporation", "ticker": "MSFT", "cik": "0000789019"},
+      "fiscal_year": 2024,
+      "start_date": "2023-07-01",
+      "end_date": "2024-06-30",
+      "filing_date": "2024-07-30",
+      "accession_number": "0000950170-24-087843",
+      "source_url": "https://www.sec.gov/Archives/edgar/data/789019/000095017024087843/0000950170-24-087843-index.htm",
+      "ending_equity": "268477",
+      "components": [
+        {"label": "Net income", "value": "88136"},
+        {"label": "Common stock issued", "value": "2002"},
+        {"label": "Common stock repurchased from paid-in capital", "value": "-5712"},
+        {"label": "Stock-based compensation expense", "value": "10734"},
+        {"label": "Other, net", "value": "181"},
+        {"label": "Common stock cash dividends", "value": "-22293"},
+        {"label": "Common stock repurchased from retained earnings", "value": "-11547"},
+        {"label": "Other comprehensive income", "value": "753"}
+      ],
+      "expected_largest_component": "Net income",
+      "expected_largest_component_amount": "88136",
+      "expected_contribution_percent": "32.82813797829981711655002104"
+    },
+    {
+      "company": {"name": "Microsoft Corporation", "ticker": "MSFT", "cik": "0000789019"},
+      "fiscal_year": 2025,
+      "start_date": "2024-07-01",
+      "end_date": "2025-06-30",
+      "filing_date": "2025-07-30",
+      "accession_number": "0000950170-25-100235",
+      "source_url": "https://www.sec.gov/Archives/edgar/data/789019/000095017025100235/0000950170-25-100235-index.htm",
+      "ending_equity": "343479",
+      "components": [
+        {"label": "Net income", "value": "101832"},
+        {"label": "Common stock issued", "value": "2056"},
+        {"label": "Common stock repurchased from paid-in capital", "value": "-5856"},
+        {"label": "Stock-based compensation expense", "value": "11974"},
+        {"label": "Other, net", "value": "-2"},
+        {"label": "Common stock cash dividends", "value": "-24677"},
+        {"label": "Common stock repurchased from retained earnings", "value": "-12568"},
+        {"label": "Other comprehensive income", "value": "2243"}
+      ],
+      "expected_largest_component": "Net income",
+      "expected_largest_component_amount": "101832",
+      "expected_contribution_percent": "29.64722734140951848584629628"
+    },
+    {
+      "company": {"name": "Apple Inc.", "ticker": "AAPL", "cik": "0000320193"},
+      "fiscal_year": 2024,
+      "start_date": "2023-10-01",
+      "end_date": "2024-09-28",
+      "filing_date": "2024-11-01",
+      "accession_number": "0000320193-24-000123",
+      "source_url": "https://www.sec.gov/Archives/edgar/data/320193/000032019324000123/0000320193-24-000123-index.htm",
+      "ending_equity": "56950",
+      "components": [
+        {"label": "Net income", "value": "93736"},
+        {"label": "Common stock issued", "value": "1423"},
+        {"label": "Common stock withheld related to net share settlement of equity awards - paid-in capital", "value": "-3993"},
+        {"label": "Share-based compensation", "value": "12034"},
+        {"label": "Dividends and dividend equivalents declared", "value": "-15218"},
+        {"label": "Common stock withheld related to net share settlement of equity awards - accumulated deficit", "value": "-1612"},
+        {"label": "Common stock repurchased", "value": "-95846"},
+        {"label": "Other comprehensive income", "value": "4280"}
+      ],
+      "expected_largest_component": "Common stock repurchased",
+      "expected_largest_component_amount": "-95846",
+      "expected_contribution_percent": "-168.2985074626865671641791045"
+    },
+    {
+      "company": {"name": "Apple Inc.", "ticker": "AAPL", "cik": "0000320193"},
+      "fiscal_year": 2025,
+      "start_date": "2024-09-29",
+      "end_date": "2025-09-27",
+      "filing_date": "2025-10-31",
+      "accession_number": "0000320193-25-000079",
+      "source_url": "https://www.sec.gov/Archives/edgar/data/320193/000032019325000079/0000320193-25-000079-index.htm",
+      "ending_equity": "73733",
+      "components": [
+        {"label": "Net income", "value": "112010"},
+        {"label": "Common stock issued", "value": "1498"},
+        {"label": "Common stock withheld related to net share settlement of equity awards - paid-in capital", "value": "-4452"},
+        {"label": "Share-based compensation", "value": "13246"},
+        {"label": "Dividends and dividend equivalents declared", "value": "-15413"},
+        {"label": "Common stock withheld related to net share settlement of equity awards - accumulated deficit", "value": "-1655"},
+        {"label": "Common stock repurchased", "value": "-90052"},
+        {"label": "Other comprehensive income", "value": "1601"}
+      ],
+      "expected_largest_component": "Net income",
+      "expected_largest_component_amount": "112010",
+      "expected_contribution_percent": "151.9129833317510476991306471"
+    }
+  ]
+}

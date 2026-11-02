@@ -370,7 +370,9 @@
           ],
           "track": "advanced_filing_calculation",
           "calculation": {
-            "type": "equity_component_contribution"
+            "type": "equity_component_contribution",
+            "formula": "largest_disclosed_equity_change / ending_shareholders_equity * 100",
+            "selection_policy": "Select the single statement-of-equity change row with the greatest absolute reported amount; retain its sign. Do not silently aggregate separate rows."
           }
         }
       ]

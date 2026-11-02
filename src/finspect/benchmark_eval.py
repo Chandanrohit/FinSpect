@@ -20,6 +20,7 @@ from finspect.calculator import (
     earnings_change_relationship,
     growth_comparison,
     inventory_revenue_growth_comparison,
+    largest_component_contribution,
     liquid_asset_contribution,
     margin_change,
     revenue_growth,
@@ -62,6 +63,95 @@ DEFAULT_RECEIVABLES_MATRIX = (
 DEFAULT_INVENTORY_MATRIX = ROOT / "data" / "fixtures" / "annual_inventory_reference_matrix.json"
 DEFAULT_DILUTION_MATRIX = ROOT / "data" / "fixtures" / "annual_share_dilution_reference_matrix.json"
 DEFAULT_REPURCHASE_MATRIX = ROOT / "data" / "fixtures" / "annual_share_repurchase_reference_matrix.json"
+DEFAULT_EQUITY_MATRIX = ROOT / "data" / "fixtures" / "annual_equity_allocation_reference_matrix.json"
+
+
+def evaluate_equity_allocation_matrix(path: Path) -> dict[str, Any]:
+    """Validate Q12 selection and signed contribution against SEC equity statements."""
+    matrix = json.loads(path.read_text(encoding="utf-8"))
+    cases = []
+    for reference in matrix["cases"]:
+        company = reference["company"]
+        start = date.fromisoformat(reference["start_date"])
+        end = date.fromisoformat(reference["end_date"])
+        filed = date.fromisoformat(reference["filing_date"])
+        components = reference["components"]
+        labels = [item["label"] for item in components]
+        values = {item["label"]: Decimal(item["value"]) for item in components}
+        selected_name, result = largest_component_contribution(
+            values, Decimal(reference["ending_equity"])
+        )
+        checks = {
+            "annual_period_and_filing": (
+                start < end
+                and 300 <= (end - start).days <= 400
+                and filed >= end
+            ),
+            "source_provenance": (
+                reference["accession_number"].replace("-", "")
+                in reference["source_url"]
+                and reference["source_url"].startswith(
+                    "https://www.sec.gov/Archives/edgar/data/"
+                )
+                and f"/{int(company['cik'])}/" in reference["source_url"]
+            ),
+            "component_rows_are_labeled_and_unique": (
+                len(labels) >= 3
+                and all(label.strip() for label in labels)
+                and len(labels) == len(set(labels))
+            ),
+            "largest_absolute_component_correct": (
+                selected_name == reference["expected_largest_component"]
+                and result.inputs[selected_name]
+                == Decimal(reference["expected_largest_component_amount"])
+            ),
+            "signed_contribution_correct": (
+                result.value
+                == Decimal(reference["expected_contribution_percent"])
+            ),
+            "ending_equity_positive": Decimal(reference["ending_equity"]) > 0,
+        }
+        cases.append({
+            "company": company,
+            "fiscal_year": reference["fiscal_year"],
+            "ending_equity": reference["ending_equity"],
+            "unit": matrix["unit"],
+            "disclosed_components": components,
+            "expected_largest_component": reference["expected_largest_component"],
+            "expected_largest_component_amount": reference[
+                "expected_largest_component_amount"
+            ],
+            "actual_largest_component": selected_name,
+            "actual_largest_component_amount": str(result.inputs[selected_name]),
+            "expected_contribution_percent": reference[
+                "expected_contribution_percent"
+            ],
+            "actual_contribution_percent": str(result.value),
+            "accession_number": reference["accession_number"],
+            "source_url": reference["source_url"],
+            "checks": checks,
+            "status": "PASS" if all(checks.values()) else "FAIL",
+        })
+    tickers = sorted({item["company"]["ticker"] for item in cases})
+    counts = {
+        ticker: sum(item["company"]["ticker"] == ticker for item in cases)
+        for ticker in tickers
+    }
+    return {
+        "matrix_id": matrix["matrix_id"],
+        "question_id": matrix["question_id"],
+        "evaluation_scope": matrix["evaluation_scope"],
+        "selection_policy": matrix["selection_policy"],
+        "case_count": len(cases),
+        "pass_count": sum(item["status"] == "PASS" for item in cases),
+        "fail_count": sum(item["status"] == "FAIL" for item in cases),
+        "issuers": tickers,
+        "cases_per_issuer": counts,
+        "minimum_gate_coverage_met": len(tickers) >= 3 and all(
+            count >= 2 for count in counts.values()
+        ),
+        "cases": cases,
+    }
 
 
 def evaluate_annual_revenue_matrix(path: Path) -> dict[str, Any]:
@@ -1646,6 +1736,7 @@ def evaluate_benchmark(
     inventory_matrix = evaluate_inventory_matrix(inventory_matrix_path)
     dilution_matrix = evaluate_share_dilution_matrix(DEFAULT_DILUTION_MATRIX)
     repurchase_matrix = evaluate_share_repurchase_matrix(DEFAULT_REPURCHASE_MATRIX)
+    equity_matrix = evaluate_equity_allocation_matrix(DEFAULT_EQUITY_MATRIX)
     inventory_reference = json.loads(inventory_matrix_path.read_text(encoding="utf-8"))
     questions = benchmark.question_map()
     if fixture.get("question_id") != "Q01" or "Q01" not in questions:
@@ -1861,6 +1952,83 @@ def evaluate_benchmark(
             })
             continue
 
+        if question_id == "Q12":
+            equity_reference = json.loads(
+                DEFAULT_EQUITY_MATRIX.read_text(encoding="utf-8")
+            )
+            reference = next(
+                item for item in equity_reference["cases"]
+                if item["company"]["ticker"] == "NVDA"
+                and item["fiscal_year"] == 2025
+            )
+            component_values = {
+                item["label"]: Decimal(item["value"])
+                for item in reference["components"]
+            }
+            component_name, result = largest_component_contribution(
+                component_values, Decimal(reference["ending_equity"])
+            )
+            matrix_pass = (
+                equity_matrix["minimum_gate_coverage_met"]
+                and equity_matrix["pass_count"] == equity_matrix["case_count"]
+            )
+            evidence = [{
+                "fiscal_year": reference["fiscal_year"],
+                "ending_equity": reference["ending_equity"],
+                "unit": equity_reference["unit"],
+                "components": reference["components"],
+                "accession_number": reference["accession_number"],
+                "source_url": reference["source_url"],
+            }]
+            report_questions.append({
+                "question_id": question_id,
+                "question": question.question_template,
+                "company": reference["company"],
+                "filings": evidence,
+                "reporting_periods": [{
+                    "fiscal_year": reference["fiscal_year"],
+                    "end_date": reference["end_date"],
+                }],
+                "expected_concepts": question.required_concepts,
+                "retrieval_mode": "offline_SEC_statement_of_equity_reference_matrix",
+                "retrieved_inputs": evidence,
+                "selected_evidence": evidence,
+                "calculation_formula": result.expression,
+                "selection_policy": equity_reference["selection_policy"],
+                "expected_answer": {
+                    "largest_component": reference["expected_largest_component"],
+                    "largest_component_amount": reference[
+                        "expected_largest_component_amount"
+                    ],
+                    "contribution_percent": reference[
+                        "expected_contribution_percent"
+                    ],
+                },
+                "actual_answer": {
+                    "largest_component": component_name,
+                    "largest_component_amount": str(result.inputs[component_name]),
+                    "ending_equity": reference["ending_equity"],
+                    "result_value": str(result.value),
+                    "result_unit": result.unit,
+                    "disclosed_components": reference["components"],
+                },
+                "checks": {
+                    "reference_matrix_cases_pass": matrix_pass,
+                    "signed_component_preserved": (
+                        result.value == 0
+                        or (result.inputs[component_name] > 0) == (result.value > 0)
+                    ),
+                    "live_retrieval": "not_evaluated",
+                    "query_interpretation": "not_evaluated",
+                },
+                "overall_status": "PARTIAL" if matrix_pass else "FAIL",
+                "failure_reason": (
+                    "Offline statement-of-equity references and calculation only; "
+                    "live SEC retrieval and question interpretation remain untested."
+                ),
+            })
+            continue
+
         reason = (
             "No complete retrieval-to-answer path is implemented for "
             f"{question_id}; calculator registration alone is not support."
@@ -1912,7 +2080,7 @@ def evaluate_benchmark(
         "accuracy_percentage": None,
         "accuracy_note": (
             "No overall accuracy percentage is reported: Q01, Q03, Q05, Q07, Q08, Q09, "
-            "Q10, Q11, and Q13 have fixture-backed checks; issuer matrix case counts and "
+            "Q10, Q11, Q12, and Q13 have fixture-backed checks; issuer matrix case counts and "
             "individual checks are reported per operation, but neither "
             "live SEC retrieval nor the planner was evaluated."
         ),
@@ -1926,6 +2094,7 @@ def evaluate_benchmark(
             inventory_matrix,
             dilution_matrix,
             repurchase_matrix,
+            equity_matrix,
         ],
         "questions": report_questions,
     }

@@ -7,8 +7,8 @@ def test_benchmark_report_records_fixture_and_unsupported_questions():
     assert report["question_count"] == 20
     assert report["aggregate_counts"] == {
         "PASS": 0,
-        "PARTIAL": 9,
-        "UNSUPPORTED": 11,
+        "PARTIAL": 10,
+        "UNSUPPORTED": 10,
         "FAIL": 0,
     }
     assert report["accuracy_percentage"] is None
@@ -92,6 +92,30 @@ def test_benchmark_report_records_fixture_and_unsupported_questions():
     assert cvs_zero_spend["actual_current_ratio_percent"] == "0"
     assert cvs_zero_spend["actual_change_amount"] == "-3023000000"
 
+    equity_matrix = report["operation_reference_matrices"][9]
+    assert equity_matrix["question_id"] == "Q12"
+    assert equity_matrix["case_count"] == equity_matrix["pass_count"] == 6
+    assert equity_matrix["fail_count"] == 0
+    assert equity_matrix["issuers"] == ["AAPL", "MSFT", "NVDA"]
+    assert equity_matrix["minimum_gate_coverage_met"] is True
+    assert set(equity_matrix["cases_per_issuer"].values()) == {2}
+    apple_case = next(
+        case for case in equity_matrix["cases"]
+        if case["company"]["ticker"] == "AAPL"
+        and case["fiscal_year"] == 2025
+    )
+    assert apple_case["actual_largest_component"] == "Net income"
+    assert apple_case["actual_contribution_percent"] == (
+        "151.9129833317510476991306471"
+    )
+    apple_buyback_case = next(
+        case for case in equity_matrix["cases"]
+        if case["company"]["ticker"] == "AAPL"
+        and case["fiscal_year"] == 2024
+    )
+    assert apple_buyback_case["actual_largest_component"] == "Common stock repurchased"
+    assert apple_buyback_case["actual_contribution_percent"].startswith("-168.29")
+
     questions = {item["question_id"]: item for item in report["questions"]}
     q01 = questions["Q01"]
     assert q01["overall_status"] == "PARTIAL"
@@ -159,6 +183,16 @@ def test_benchmark_report_records_fixture_and_unsupported_questions():
     assert q10["checks"]["reference_matrix_cases_pass"] is True
     assert len(q10["selected_evidence"]) == 2
 
+    q12 = questions["Q12"]
+    assert q12["overall_status"] == "PARTIAL"
+    assert q12["actual_answer"]["largest_component"] == "Net income"
+    assert q12["actual_answer"]["result_value"] == (
+        "91.87288060811577394834041373"
+    )
+    assert q12["checks"]["reference_matrix_cases_pass"] is True
+    assert q12["checks"]["signed_component_preserved"] is True
+    assert "no live" in q12["failure_reason"].lower() or "live SEC" in q12["failure_reason"]
+
     q09 = questions["Q09"]
     assert q09["overall_status"] == "PARTIAL"
     assert q09["actual_answer"]["result_unit"] == "percentage_points"
@@ -168,7 +202,7 @@ def test_benchmark_report_records_fixture_and_unsupported_questions():
     for question_id in [
         f"Q{number:02d}"
         for number in range(2, 21)
-        if number not in {3, 5, 7, 8, 9, 10, 11, 13}
+        if number not in {3, 5, 7, 8, 9, 10, 11, 12, 13}
     ]:
         question = questions[question_id]
         assert question["overall_status"] == "UNSUPPORTED"

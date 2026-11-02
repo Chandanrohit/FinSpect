@@ -240,9 +240,9 @@ def equity_component_contribution(component_amount: Decimal, ending_equity: Deci
                                    *, component_name: str = "component") -> CalculationResult:
     c, e = dec(component_amount), dec(ending_equity)
     return _result("Q12", _pct(c, e, label="equity component contribution"), "percent",
-                   "largest_equity_component / ending_equity * 100",
-                   {component_name: c, "ending_equity": e}, FormulaSource.BENCHMARK_DERIVED,
-                   "Benchmark names this calculation but does not define the equation; provide the selected component amount.")
+                   "largest_disclosed_equity_change / ending_shareholders_equity * 100",
+                   {component_name: c, "ending_equity": e}, FormulaSource.BENCHMARK,
+                   "The largest component is selected by absolute reported amount; its filing sign is retained.")
 
 
 def cash_conversion(operating_cash_flow: Decimal, net_income: Decimal) -> CalculationResult:
