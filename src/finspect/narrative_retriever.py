@@ -46,6 +46,10 @@ SECTION_KEYWORDS: dict[str, tuple[str, ...]] = {
         "cash flows",
         "revenue growth",
         "market risk",
+        "inventory",
+        "inventories",
+        "inventory provision",
+        "inventory levels",
     ),
     "market_risk": (
         "market risk",

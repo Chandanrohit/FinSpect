@@ -199,6 +199,58 @@ def test_q01_nvidia_fy2024_fy2025_end_to_end_fixture():
                for item in result.answer.evidence)
 
 
+def test_q09_uses_matching_inventory_balances_and_exact_filing_narrative():
+    question = "How did inventory change relative to revenue from FY2024 to FY2025, and what factors does management disclose?"
+    plan = make_plan().model_copy(update={
+        "original_question": question,
+        "benchmark_id": "Q09",
+        "metrics": [
+            MetricRequest(name="total_revenue", role="primary", sources=["xbrl"]),
+            MetricRequest(name="inventory", role="supporting", sources=["xbrl"]),
+        ],
+        "operation": "inventory_revenue_growth_comparison",
+    })
+
+    class Planner:
+        def plan(self, _question):
+            return plan
+
+    class Facts:
+        def get_fact(self, *, concept, end_date, **kwargs):
+            value = FACTS[2024 if end_date == "2024-01-28" else 2025]
+            if concept == "InventoryNet":
+                value = {**value, "concept": concept, "label": "Inventory", "value": 5_282_000_000 if end_date == "2024-01-28" else 10_080_000_000, "start_date": None}
+            return {**value, "concept": concept}
+
+    accession = PERIODS[2025].accession_number
+    filing_url = "https://www.sec.gov/Archives/edgar/data/1045810/000104581025000023/nvda-20250126.htm"
+
+    class Submissions:
+        def get_filing_url(self, **_kwargs):
+            return filing_url
+
+    class Filings:
+        submissions = Submissions()
+        def get_filing(self, *, cik, accession_number, form):
+            assert cik == CIK and accession_number == accession and form == "10-K"
+            return {"primary_document": "nvda-20250126.htm", "html": "<html><body><p>Item 7. Management's Discussion and Analysis</p><p>Our expanding product portfolio may lead to increased inventory levels as demand changes.</p></body></html>"}
+
+    result = FinSpectOrchestrator(
+        planner=Planner(), normalizer=normalize_query_plan,
+        period_resolver=lambda _cik, year: PERIODS[year],
+        fact_retriever=Facts(), company_resolver=FixtureCompanyResolver(),
+        filing_retriever=Filings(),
+        filing_parser=__import__("finspect.edgar.parser", fromlist=["FilingParser"]).FilingParser(),
+        narrative_retriever=__import__("finspect.narrative_retriever", fromlist=["NarrativeRetriever"]).NarrativeRetriever(),
+    ).run(question)
+
+    assert result.answer.formula_id == "Q09"
+    assert result.answer.result_unit == "percentage_points"
+    assert "increased inventory levels" in result.answer.text
+    assert filing_url in result.answer.text
+    assert result.answer.limitations
+
+
 def test_q01_supports_microsoft_and_calendar_year_fiscal_periods():
     question = "Calculate Microsoft's revenue growth from FY2024 to FY2025."
     microsoft_cik = "0000789019"
@@ -1301,7 +1353,7 @@ def make_unsupported_benchmark_plan(question):
     [
         f"Q{number:02d}"
         for number in range(2, 21)
-        if number not in {3, 5, 7, 8, 13}
+        if number not in {3, 5, 7, 8, 9, 13}
     ],
 )
 def test_other_benchmark_operations_are_explicitly_unsupported(question_id):

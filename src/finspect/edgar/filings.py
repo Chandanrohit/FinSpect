@@ -52,3 +52,31 @@ class FilingRetriever:
             "cik": str(cik).zfill(10),
             "html": html,
         }
+
+    def get_filing(
+        self,
+        *,
+        cik: str | int,
+        accession_number: str,
+        form: str = "10-K",
+    ) -> dict[str, Any]:
+        """Return a filing only when its exact accession is in SEC submissions."""
+        filings = self.submissions.get_recent_filings(cik=cik, form=form)
+        selected = next(
+            (item for item in filings
+             if item.get("accession_number") == accession_number),
+            None,
+        )
+        if selected is None:
+            raise FilingRetrievalError(
+                f"SEC submissions did not contain {form} accession {accession_number}."
+            )
+        return {
+            **selected,
+            "cik": str(cik).zfill(10),
+            "html": self.submissions.get_filing_html(
+                cik=cik,
+                accession_number=accession_number,
+                primary_document=selected["primary_document"],
+            ),
+        }

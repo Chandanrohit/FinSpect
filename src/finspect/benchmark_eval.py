@@ -18,6 +18,7 @@ from finspect.calculator import (
     cash_conversion_comparison,
     earnings_change_relationship,
     growth_comparison,
+    inventory_revenue_growth_comparison,
     liquid_asset_contribution,
     margin_change,
     revenue_growth,
@@ -56,6 +57,7 @@ DEFAULT_CASH_CONVERSION_MATRIX = (
 DEFAULT_RECEIVABLES_MATRIX = (
     ROOT / "data" / "fixtures" / "annual_receivables_reference_matrix.json"
 )
+DEFAULT_INVENTORY_MATRIX = ROOT / "data" / "fixtures" / "annual_inventory_reference_matrix.json"
 
 
 def evaluate_annual_revenue_matrix(path: Path) -> dict[str, Any]:
@@ -622,6 +624,60 @@ def evaluate_receivables_matrix(path: Path) -> dict[str, Any]:
             ticker: sum(case["company"]["ticker"] == ticker for case in cases)
             for ticker in tickers
         },
+        "cases": cases,
+    }
+
+
+def evaluate_inventory_matrix(path: Path) -> dict[str, Any]:
+    """Check Q09 instant inventory versus annual revenue across issuers."""
+    matrix = json.loads(path.read_text(encoding="utf-8"))
+    cases = []
+    for issuer in matrix["issuers"]:
+        periods_by_year = {item["fiscal_year"]: item for item in issuer["periods"]}
+        for comparison in issuer["comparisons"]:
+            prior = periods_by_year[comparison["prior_year"]]
+            current = periods_by_year[comparison["current_year"]]
+            result = inventory_revenue_growth_comparison(
+                inventory_current=Decimal(current["inventory"]),
+                inventory_prior=Decimal(prior["inventory"]),
+                revenue_current=Decimal(current["revenue"]),
+                revenue_prior=Decimal(prior["revenue"]),
+            )
+            source_items = (prior, current)
+            checks = {
+                "two_ordered_annual_periods": prior["fiscal_year"] < current["fiscal_year"] and
+                    date.fromisoformat(prior["end_date"]) < date.fromisoformat(current["start_date"]),
+                "aligned_instant_inventory_and_annual_revenue": all(
+                    Decimal(item["inventory"]) > 0 and Decimal(item["revenue"]) > 0
+                    and 300 <= (date.fromisoformat(item["end_date"]) - date.fromisoformat(item["start_date"])).days <= 400
+                    for item in source_items
+                ),
+                "exact_filing_provenance": all(
+                    item["accession_number"].replace("-", "") in item["source_url"]
+                    and item["source_url"].startswith("https://www.sec.gov/Archives/edgar/data/")
+                    for item in source_items
+                ),
+                "narrative_evidence_present": bool(current.get("narrative_excerpt")) and
+                    current.get("narrative_source_url", "").startswith("https://www.sec.gov/Archives/edgar/data/") and
+                    current["accession_number"].replace("-", "") in current["narrative_source_url"],
+                "calculation_correctness": result.value == Decimal(comparison["expected_growth_difference_percentage_points"]),
+            }
+            cases.append({
+                "company": issuer["company"],
+                "fiscal_years": [prior["fiscal_year"], current["fiscal_year"]],
+                "expected_growth_difference_percentage_points": comparison["expected_growth_difference_percentage_points"],
+                "actual_growth_difference_percentage_points": str(result.value),
+                "checks": checks,
+                "status": "PASS" if all(checks.values()) else "FAIL",
+            })
+    tickers = sorted({case["company"]["ticker"] for case in cases})
+    return {
+        "matrix_id": matrix["matrix_id"], "question_id": "Q09",
+        "evaluation_scope": matrix["evaluation_scope"], "case_count": len(cases),
+        "pass_count": sum(case["status"] == "PASS" for case in cases),
+        "fail_count": sum(case["status"] == "FAIL" for case in cases),
+        "issuers": tickers,
+        "cases_per_issuer": {ticker: sum(case["company"]["ticker"] == ticker for case in cases) for ticker in tickers},
         "cases": cases,
     }
 
@@ -1400,6 +1456,7 @@ def evaluate_benchmark(
     q13_fixture_path: Path = DEFAULT_Q13_FIXTURE,
     q05_fixture_path: Path = DEFAULT_Q05_FIXTURE,
     annual_revenue_matrix_path: Path = DEFAULT_ANNUAL_REVENUE_MATRIX,
+    inventory_matrix_path: Path = DEFAULT_INVENTORY_MATRIX,
 ) -> dict[str, Any]:
     """Evaluate the current supported fixture and explicitly classify the rest."""
     benchmark = load_benchmark(benchmark_path)
@@ -1418,6 +1475,8 @@ def evaluate_benchmark(
         DEFAULT_CASH_CONVERSION_MATRIX
     )
     receivables_matrix = evaluate_receivables_matrix(DEFAULT_RECEIVABLES_MATRIX)
+    inventory_matrix = evaluate_inventory_matrix(inventory_matrix_path)
+    inventory_reference = json.loads(inventory_matrix_path.read_text(encoding="utf-8"))
     questions = benchmark.question_map()
     if fixture.get("question_id") != "Q01" or "Q01" not in questions:
         raise ValueError("The configured fixture must target benchmark Q01.")
@@ -1483,6 +1542,28 @@ def evaluate_benchmark(
         if question_id == "Q08":
             report_questions.append(_evaluate_q08(question, q08_fixture))
             continue
+        if question_id == "Q09":
+            issuer = next(item for item in inventory_reference["issuers"] if item["company"]["ticker"] == "NVDA")
+            prior, current = issuer["periods"][1:3]
+            comparison = next(item for item in issuer["comparisons"] if item["prior_year"] == prior["fiscal_year"] and item["current_year"] == current["fiscal_year"])
+            result = inventory_revenue_growth_comparison(
+                inventory_current=Decimal(current["inventory"]), inventory_prior=Decimal(prior["inventory"]),
+                revenue_current=Decimal(current["revenue"]), revenue_prior=Decimal(prior["revenue"]),
+            )
+            report_questions.append({
+                "question_id": question_id, "question": question.question_template,
+                "company": issuer["company"], "retrieval_mode": "offline_SEC_reference_matrix_not_live_retrieval",
+                "reporting_periods": [{"fiscal_year": p["fiscal_year"], "end_date": p["end_date"]} for p in (prior, current)],
+                "selected_evidence": [{"fiscal_year": p["fiscal_year"], "revenue": p["revenue"], "inventory": p["inventory"], "unit": "USD", "accession_number": p["accession_number"], "source_url": p["source_url"]} for p in (prior, current)],
+                "narrative_evidence": {"excerpt": current["narrative_excerpt"], "source_url": current["narrative_source_url"]},
+                "calculation_formula": result.expression,
+                "actual_answer": {"result_value": str(result.value), "result_unit": result.unit},
+                "expected_answer": {"growth_difference_percentage_points": comparison["expected_growth_difference_percentage_points"]},
+                "checks": {"matrix_cases_pass": inventory_matrix["pass_count"] == inventory_matrix["case_count"], "live_retrieval": "not_evaluated", "query_interpretation": "not_evaluated"},
+                "overall_status": "PARTIAL" if inventory_matrix["pass_count"] == inventory_matrix["case_count"] else "FAIL",
+                "failure_reason": "Offline reference and narrative fixture checks only; live SEC retrieval and query interpretation were not evaluated.",
+            })
+            continue
         if question_id == "Q13":
             report_questions.append(_evaluate_q13(question, q13_fixture))
             continue
@@ -1537,8 +1618,8 @@ def evaluate_benchmark(
         "aggregate_counts": counts,
         "accuracy_percentage": None,
         "accuracy_note": (
-            "No overall accuracy percentage is reported: Q01, Q03, Q05, Q07, Q08, "
-            "and Q13 have fixture-backed checks; the Q01, Q03, Q05, Q07, Q08, and Q13 "
+            "No overall accuracy percentage is reported: Q01, Q03, Q05, Q07, Q08, Q09, "
+            "and Q13 have fixture-backed checks; the Q01, Q03, Q05, Q07, Q08, Q09, and Q13 "
             "issuer matrices check six cited annual cases each, but neither "
             "live SEC retrieval nor the planner was evaluated."
         ),
@@ -1549,6 +1630,7 @@ def evaluate_benchmark(
             liquidity_matrix,
             cash_conversion_matrix,
             receivables_matrix,
+            inventory_matrix,
         ],
         "questions": report_questions,
     }
@@ -1593,6 +1675,12 @@ def main() -> int:
         help="Path to the deterministic Q05 filing snapshot.",
     )
     parser.add_argument(
+        "--q09-matrix",
+        type=Path,
+        default=DEFAULT_INVENTORY_MATRIX,
+        help="Path to the fixed Q09 annual inventory reference matrix.",
+    )
+    parser.add_argument(
         "--output",
         type=Path,
         default=ROOT / "reports" / "benchmark-report.json",
@@ -1607,6 +1695,8 @@ def main() -> int:
         args.q08_fixture,
         args.q13_fixture,
         args.q05_fixture,
+        annual_revenue_matrix_path=DEFAULT_ANNUAL_REVENUE_MATRIX,
+        inventory_matrix_path=args.q09_matrix,
     )
     args.output.parent.mkdir(parents=True, exist_ok=True)
     args.output.write_text(json.dumps(report, indent=2) + "\n", encoding="utf-8")

@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import os
 from functools import lru_cache
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from datetime import date
 from decimal import Decimal
 from typing import Any, Callable, Protocol
@@ -22,9 +22,13 @@ from finspect.calculator import (
     liquid_asset_contribution,
     margin_change,
     revenue_growth,
+    inventory_revenue_growth_comparison,
 )
 from finspect.edgar.client import EdgarClient
 from finspect.edgar.facts import FactRetrievalError, FinancialFactRetriever
+from finspect.edgar.filings import FilingRetriever, FilingRetrievalError
+from finspect.edgar.parser import FilingParser
+from finspect.narrative_retriever import NarrativeRetriever
 from finspect.query_planner import QueryPlan
 from finspect.edgar.xbrl import XBRLService
 from finspect.llm_planner import planner_from_environment
@@ -95,12 +99,18 @@ class FinSpectOrchestrator:
         period_resolver: PeriodResolver,
         fact_retriever: FinancialFactRetriever,
         company_resolver: SECCompanyResolver | None = None,
+        filing_retriever: FilingRetriever | None = None,
+        filing_parser: FilingParser | None = None,
+        narrative_retriever: NarrativeRetriever | None = None,
     ) -> None:
         self.planner = planner
         self.normalizer = normalizer
         self.period_resolver = period_resolver
         self.fact_retriever = fact_retriever
         self.company_resolver = company_resolver
+        self.filing_retriever = filing_retriever
+        self.filing_parser = filing_parser
+        self.narrative_retriever = narrative_retriever
 
     def run(self, question: str) -> PipelineResult:
         question = question.strip()
@@ -135,6 +145,7 @@ class FinSpectOrchestrator:
             metric_names
             & {"accounts receivable", "receivables", "accounts receivable net"}
         )
+        has_inventory = bool(metric_names & {"inventory", "inventories"})
         has_net_income = bool(metric_names & {"net income", "net income loss"})
         has_operating_cash_flow = bool(
             metric_names
@@ -183,6 +194,11 @@ class FinSpectOrchestrator:
                 "accounts receivable net",
             }
         )
+        is_supported_inventory_operation = (
+            plan.operation == "inventory_revenue_growth_comparison"
+            and has_revenue and has_inventory
+            and metric_names <= {"total revenue", "revenue", "inventory", "inventories"}
+        )
         is_supported_cash_conversion = (
             plan.operation == "cash_conversion"
             and has_net_income
@@ -228,6 +244,7 @@ class FinSpectOrchestrator:
             is_supported_revenue_operation
             or is_supported_margin_operation
             or is_supported_receivables_operation
+            or is_supported_inventory_operation
             or is_supported_cash_conversion
             or is_supported_earnings_change
             or is_supported_liquidity
@@ -327,6 +344,8 @@ class FinSpectOrchestrator:
                 "AccountsReceivableNetCurrent",
                 True,
             )
+        elif is_supported_inventory_operation:
+            concept_specs["inventory"] = (("InventoryNet",), True)
         elif is_supported_cash_conversion:
             concept_specs["net_income"] = ("NetIncomeLoss", False)
             concept_specs["operating_cash_flow"] = (
@@ -519,6 +538,23 @@ class FinSpectOrchestrator:
                 revenue_current=revenue_current.normalized_value,
                 revenue_prior=revenue_prior.normalized_value,
             )
+        elif is_supported_inventory_operation:
+            revenue_prior, revenue_current = canonical_by_metric["revenue"]
+            inventory_prior, inventory_current = canonical_by_metric["inventory"]
+            validate_growth_inputs(revenue_current, revenue_prior)
+            validate_instant_growth_inputs(inventory_current, inventory_prior)
+            if (inventory_current.period.end_date != revenue_current.period.end_date
+                    or inventory_prior.period.end_date != revenue_prior.period.end_date):
+                raise ValueError("Inventory balances must align with revenue fiscal year ends.")
+            require_compatible_facts(inventory_current, revenue_current, require_same_period=False)
+            require_compatible_facts(inventory_prior, revenue_prior, require_same_period=False)
+            validate_currency_inputs(inventory_current, inventory_prior, revenue_current, revenue_prior)
+            calculation = inventory_revenue_growth_comparison(
+                inventory_current=inventory_current.normalized_value,
+                inventory_prior=inventory_prior.normalized_value,
+                revenue_current=revenue_current.normalized_value,
+                revenue_prior=revenue_prior.normalized_value,
+            )
         elif is_supported_cash_conversion:
             net_income_prior, net_income_current = canonical_by_metric["net_income"]
             cash_flow_prior, cash_flow_current = canonical_by_metric[
@@ -659,6 +695,85 @@ class FinSpectOrchestrator:
             ),
         )
 
+        if is_supported_inventory_operation:
+            if not all((self.filing_retriever, self.filing_parser, self.narrative_retriever)):
+                return PipelineResult(
+                    plan=plan,
+                    answer=build_unsupported_answer(
+                        question,
+                        "The inventory comparison was calculated, but filing narrative retrieval is not configured, so management's disclosed factors cannot be verified.",
+                    ),
+                    facts=facts,
+                    canonical_facts=canonical_facts,
+                )
+            current_period = periods[1]
+            try:
+                filing = self.filing_retriever.get_filing(
+                    cik=cik,
+                    accession_number=current_period.accession_number or "",
+                    form="10-K",
+                )
+            except FilingRetrievalError as exc:
+                return PipelineResult(
+                    plan=plan,
+                    answer=build_unsupported_answer(
+                        question, f"Could not verify the exact annual filing for narrative evidence: {exc}"
+                    ),
+                    facts=facts,
+                    canonical_facts=canonical_facts,
+                )
+            parsed = self.filing_parser.parse(filing["html"], filing_metadata=filing)
+            narrative_sections: dict[str, str] = {}
+            for section in parsed["sections"]:
+                heading = section["heading"].upper()
+                if heading.startswith("ITEM 7 "):
+                    narrative_sections["management_discussion"] = section["text"]
+                elif heading.startswith("ITEM 1A "):
+                    narrative_sections["risk_factors"] = section["text"]
+            filing_url = self.filing_retriever.submissions.get_filing_url(
+                cik=cik,
+                accession_number=current_period.accession_number or "",
+                primary_document=filing["primary_document"],
+            )
+            passages = self.narrative_retriever.retrieve(
+                narrative_sections,
+                "inventory change factors demand supply product transitions excess obsolete inventory",
+                top_k=5,
+                accession_number=current_period.accession_number,
+                filing_url=filing_url,
+            )
+            relevant = [
+                passage for passage in passages
+                if any(term in passage.text.casefold() for term in ("inventory", "inventories"))
+                and passage.filing_url == filing_url
+                and passage.accession_number == current_period.accession_number
+            ]
+            if not relevant:
+                return PipelineResult(
+                    plan=plan,
+                    answer=build_unsupported_answer(
+                        question,
+                        "The exact 10-K was retrieved, but no relevant inventory factor passage was found in Item 7 or Item 1A.",
+                    ),
+                    facts=facts,
+                    canonical_facts=canonical_facts,
+                )
+            excerpt_lines = [
+                "Filing disclosures (verbatim excerpts; consult the filing for context):"
+            ]
+            for passage in relevant[:2]:
+                excerpt_lines.append(
+                    f"- **{passage.section.replace('_', ' ').title()}:** “{passage.text}” [SEC Form 10-K]({filing_url})"
+                )
+            limitation = (
+                "The growth-rate difference is descriptive. These disclosures may describe possible or related drivers and do not by themselves establish that a factor caused the reported inventory change.",
+            )
+            answer = replace(
+                answer,
+                text=answer.text + "\n\n" + "\n\n".join(excerpt_lines),
+                limitations=answer.limitations + limitation,
+            )
+
         return PipelineResult(
             plan=plan,
             answer=answer,
@@ -769,6 +884,8 @@ def get_orchestrator() -> FinSpectOrchestrator:
     client = EdgarClient(user_agent=user_agent)
     xbrl_service = XBRLService(client)
     fact_retriever = FinancialFactRetriever(xbrl_service=xbrl_service)
+    from finspect.edgar.submissions import SubmissionService
+    filing_retriever = FilingRetriever(SubmissionService(client))
 
     def resolve_period(cik: str, fiscal_year: int) -> AnnualPeriod:
         period = resolve_sec_annual_period(
@@ -793,6 +910,9 @@ def get_orchestrator() -> FinSpectOrchestrator:
         period_resolver=resolve_period,
         fact_retriever=fact_retriever,
         company_resolver = SECCompanyResolver(client),
+        filing_retriever=filing_retriever,
+        filing_parser=FilingParser(),
+        narrative_retriever=NarrativeRetriever(),
     )
 
 

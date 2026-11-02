@@ -7,8 +7,8 @@ def test_benchmark_report_records_fixture_and_unsupported_questions():
     assert report["question_count"] == 20
     assert report["aggregate_counts"] == {
         "PASS": 0,
-        "PARTIAL": 6,
-        "UNSUPPORTED": 14,
+        "PARTIAL": 7,
+        "UNSUPPORTED": 13,
         "FAIL": 0,
     }
     assert report["accuracy_percentage"] is None
@@ -63,6 +63,13 @@ def test_benchmark_report_records_fixture_and_unsupported_questions():
     assert receivables_matrix["issuers"] == ["AAPL", "MSFT", "NVDA"]
     assert set(receivables_matrix["cases_per_issuer"].values()) == {2}
 
+    inventory_matrix = report["operation_reference_matrices"][6]
+    assert inventory_matrix["question_id"] == "Q09"
+    assert inventory_matrix["case_count"] == inventory_matrix["pass_count"] == 6
+    assert inventory_matrix["fail_count"] == 0
+    assert inventory_matrix["issuers"] == ["AAPL", "MSFT", "NVDA"]
+    assert set(inventory_matrix["cases_per_issuer"].values()) == {2}
+
     questions = {item["question_id"]: item for item in report["questions"]}
     q01 = questions["Q01"]
     assert q01["overall_status"] == "PARTIAL"
@@ -113,10 +120,16 @@ def test_benchmark_report_records_fixture_and_unsupported_questions():
     assert q13["checks"]["calculation_correctness"] is True
     assert len(q13["selected_evidence"]) == 4
 
+    q09 = questions["Q09"]
+    assert q09["overall_status"] == "PARTIAL"
+    assert q09["actual_answer"]["result_unit"] == "percentage_points"
+    assert q09["checks"]["matrix_cases_pass"] is True
+    assert q09["narrative_evidence"]["source_url"].startswith("https://www.sec.gov/")
+
     for question_id in [
         f"Q{number:02d}"
         for number in range(2, 21)
-        if number not in {3, 5, 7, 8, 13}
+        if number not in {3, 5, 7, 8, 9, 13}
     ]:
         question = questions[question_id]
         assert question["overall_status"] == "UNSUPPORTED"

@@ -103,7 +103,7 @@ class FilingParser:
         current_lines: list[str] = []
 
         def flush() -> None:
-            text = self._clean_text(" ".join(current_lines))
+            text = "\n\n".join(current_lines).strip()
             if text:
                 sections.append({
                     "section_id": f"section_{len(sections) + 1:04d}",

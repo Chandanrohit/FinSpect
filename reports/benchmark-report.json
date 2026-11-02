@@ -7,12 +7,12 @@
   "question_count": 20,
   "aggregate_counts": {
     "PASS": 0,
-    "PARTIAL": 6,
-    "UNSUPPORTED": 14,
+    "PARTIAL": 7,
+    "UNSUPPORTED": 13,
     "FAIL": 0
   },
   "accuracy_percentage": null,
-  "accuracy_note": "No overall accuracy percentage is reported: Q01, Q03, Q05, Q07, Q08, and Q13 have fixture-backed checks; the Q01, Q03, Q05, Q07, Q08, and Q13 issuer matrices check six cited annual cases each, but neither live SEC retrieval nor the planner was evaluated.",
+  "accuracy_note": "No overall accuracy percentage is reported: Q01, Q03, Q05, Q07, Q08, Q09, and Q13 have fixture-backed checks; the Q01, Q03, Q05, Q07, Q08, Q09, and Q13 issuer matrices check six cited annual cases each, but neither live SEC retrieval nor the planner was evaluated.",
   "operation_reference_matrices": [
     {
       "matrix_id": "annual-revenue-growth-multi-issuer-v1",
@@ -1645,6 +1645,152 @@
           "status": "PASS"
         }
       ]
+    },
+    {
+      "matrix_id": "annual-inventory-vs-revenue-growth-and-filing-disclosures-v1",
+      "question_id": "Q09",
+      "evaluation_scope": "Six offline SEC 10-K reference cases across three issuers; instant inventory compared with annual revenue and current filing narrative passage presence; no live retrieval or planner evaluation.",
+      "case_count": 6,
+      "pass_count": 6,
+      "fail_count": 0,
+      "issuers": [
+        "AAPL",
+        "MSFT",
+        "NVDA"
+      ],
+      "cases_per_issuer": {
+        "AAPL": 2,
+        "MSFT": 2,
+        "NVDA": 2
+      },
+      "cases": [
+        {
+          "company": {
+            "name": "NVIDIA Corporation",
+            "ticker": "NVDA",
+            "cik": "0001045810"
+          },
+          "fiscal_years": [
+            2023,
+            2024
+          ],
+          "expected_growth_difference_percentage_points": "-123.4703435999543140858879951",
+          "actual_growth_difference_percentage_points": "-123.4703435999543140858879951",
+          "checks": {
+            "two_ordered_annual_periods": true,
+            "aligned_instant_inventory_and_annual_revenue": true,
+            "exact_filing_provenance": true,
+            "narrative_evidence_present": true,
+            "calculation_correctness": true
+          },
+          "status": "PASS"
+        },
+        {
+          "company": {
+            "name": "NVIDIA Corporation",
+            "ticker": "NVDA",
+            "cik": "0001045810"
+          },
+          "fiscal_years": [
+            2024,
+            2025
+          ],
+          "expected_growth_difference_percentage_points": "-23.36660339517569352465031826",
+          "actual_growth_difference_percentage_points": "-23.36660339517569352465031826",
+          "checks": {
+            "two_ordered_annual_periods": true,
+            "aligned_instant_inventory_and_annual_revenue": true,
+            "exact_filing_provenance": true,
+            "narrative_evidence_present": true,
+            "calculation_correctness": true
+          },
+          "status": "PASS"
+        },
+        {
+          "company": {
+            "name": "Microsoft Corporation",
+            "ticker": "MSFT",
+            "cik": "0000789019"
+          },
+          "fiscal_years": [
+            2023,
+            2024
+          ],
+          "expected_growth_difference_percentage_points": "-65.82996201307127857867541231",
+          "actual_growth_difference_percentage_points": "-65.82996201307127857867541231",
+          "checks": {
+            "two_ordered_annual_periods": true,
+            "aligned_instant_inventory_and_annual_revenue": true,
+            "exact_filing_provenance": true,
+            "narrative_evidence_present": true,
+            "calculation_correctness": true
+          },
+          "status": "PASS"
+        },
+        {
+          "company": {
+            "name": "Microsoft Corporation",
+            "ticker": "MSFT",
+            "cik": "0000789019"
+          },
+          "fiscal_years": [
+            2024,
+            2025
+          ],
+          "expected_growth_difference_percentage_points": "-39.65125735600222553703824071",
+          "actual_growth_difference_percentage_points": "-39.65125735600222553703824071",
+          "checks": {
+            "two_ordered_annual_periods": true,
+            "aligned_instant_inventory_and_annual_revenue": true,
+            "exact_filing_provenance": true,
+            "narrative_evidence_present": true,
+            "calculation_correctness": true
+          },
+          "status": "PASS"
+        },
+        {
+          "company": {
+            "name": "Apple Inc.",
+            "ticker": "AAPL",
+            "cik": "0000320193"
+          },
+          "fiscal_years": [
+            2023,
+            2024
+          ],
+          "expected_growth_difference_percentage_points": "13.06251074005024447325104518",
+          "actual_growth_difference_percentage_points": "13.06251074005024447325104518",
+          "checks": {
+            "two_ordered_annual_periods": true,
+            "aligned_instant_inventory_and_annual_revenue": true,
+            "exact_filing_provenance": true,
+            "narrative_evidence_present": true,
+            "calculation_correctness": true
+          },
+          "status": "PASS"
+        },
+        {
+          "company": {
+            "name": "Apple Inc.",
+            "ticker": "AAPL",
+            "cik": "0000320193"
+          },
+          "fiscal_years": [
+            2024,
+            2025
+          ],
+          "expected_growth_difference_percentage_points": "-27.94623646029636763469916217",
+          "actual_growth_difference_percentage_points": "-27.94623646029636763469916217",
+          "checks": {
+            "two_ordered_annual_periods": true,
+            "aligned_instant_inventory_and_annual_revenue": true,
+            "exact_filing_provenance": true,
+            "narrative_evidence_present": true,
+            "calculation_correctness": true
+          },
+          "status": "PASS"
+        }
+      ]
     }
   ],
   "questions": [
@@ -2411,29 +2557,59 @@
     {
       "question_id": "Q09",
       "question": "How did inventory change relative to revenue over the comparable periods, and what inventory-related factors does management disclose as affecting the change?",
-      "company": null,
-      "filings": [],
-      "reporting_periods": [],
-      "expected_concepts": [
-        "inventory",
-        "revenue"
-      ],
-      "retrieval_mode": "not_run",
-      "retrieved_inputs": [],
-      "selected_evidence": [],
-      "calculation_formula": null,
-      "expected_answer": null,
-      "actual_answer": "I cannot answer this request reliably yet: No complete retrieval-to-answer path is implemented for Q09; calculator registration alone is not support.\n\nYour question: How did inventory change relative to revenue over the comparable periods, and what inventory-related factors does management disclose as affecting the change?",
-      "checks": {
-        "input_retrieval_correctness": null,
-        "period_correctness": null,
-        "unit_correctness": null,
-        "calculation_correctness": null,
-        "evidence_correctness": null,
-        "query_interpretation_correctness": null
+      "company": {
+        "name": "NVIDIA Corporation",
+        "ticker": "NVDA",
+        "cik": "0001045810"
       },
-      "overall_status": "UNSUPPORTED",
-      "failure_reason": "No complete retrieval-to-answer path is implemented for Q09; calculator registration alone is not support."
+      "retrieval_mode": "offline_SEC_reference_matrix_not_live_retrieval",
+      "reporting_periods": [
+        {
+          "fiscal_year": 2024,
+          "end_date": "2024-01-28"
+        },
+        {
+          "fiscal_year": 2025,
+          "end_date": "2025-01-26"
+        }
+      ],
+      "selected_evidence": [
+        {
+          "fiscal_year": 2024,
+          "revenue": "60922000000",
+          "inventory": "5282000000",
+          "unit": "USD",
+          "accession_number": "0001045810-24-000029",
+          "source_url": "https://www.sec.gov/Archives/edgar/data/1045810/000104581024000029/0001045810-24-000029-index.htm"
+        },
+        {
+          "fiscal_year": 2025,
+          "revenue": "130497000000",
+          "inventory": "10080000000",
+          "unit": "USD",
+          "accession_number": "0001045810-25-000023",
+          "source_url": "https://www.sec.gov/Archives/edgar/data/1045810/000104581025000023/0001045810-25-000023-index.htm"
+        }
+      ],
+      "narrative_evidence": {
+        "excerpt": "Our expanding product portfolio and varying component compatibility and quality may lead to increased inventory levels. We may incur inventory provisions or impairments if our inventory or supply or capacity commitments exceed demand for our products or demand declines.",
+        "source_url": "https://www.sec.gov/Archives/edgar/data/1045810/000104581025000023/nvda-20250126.htm"
+      },
+      "calculation_formula": "inventory_growth - revenue_growth",
+      "actual_answer": {
+        "result_value": "-23.36660339517569352465031826",
+        "result_unit": "percentage_points"
+      },
+      "expected_answer": {
+        "growth_difference_percentage_points": "-23.36660339517569352465031826"
+      },
+      "checks": {
+        "matrix_cases_pass": true,
+        "live_retrieval": "not_evaluated",
+        "query_interpretation": "not_evaluated"
+      },
+      "overall_status": "PARTIAL",
+      "failure_reason": "Offline reference and narrative fixture checks only; live SEC retrieval and query interpretation were not evaluated."
     },
     {
       "question_id": "Q10",
