@@ -50,6 +50,9 @@ DEFAULT_MARGIN_MATRIX = ROOT / "data" / "fixtures" / "annual_margin_reference_ma
 DEFAULT_EARNINGS_MATRIX = (
     ROOT / "data" / "fixtures" / "annual_earnings_relationship_reference_matrix.json"
 )
+DEFAULT_CASH_CONVERSION_MATRIX = (
+    ROOT / "data" / "fixtures" / "annual_cash_conversion_reference_matrix.json"
+)
 
 
 def evaluate_annual_revenue_matrix(path: Path) -> dict[str, Any]:
@@ -397,6 +400,109 @@ def evaluate_earnings_relationship_matrix(path: Path) -> dict[str, Any]:
                     "expected_relationship_percent"
                 ],
                 "actual_relationship_percent": str(actual.value),
+                "evidence": [
+                    {"accession_number": item["accession_number"], "source_url": item["source_url"]}
+                    for item in (prior, current)
+                ],
+                "checks": checks,
+                "status": "PASS" if all(checks.values()) else "FAIL",
+            })
+    tickers = sorted({case["company"]["ticker"] for case in cases})
+    return {
+        "matrix_id": matrix["matrix_id"],
+        "question_id": matrix["question_id"],
+        "evaluation_scope": matrix["evaluation_scope"],
+        "case_count": len(cases),
+        "pass_count": sum(case["status"] == "PASS" for case in cases),
+        "fail_count": sum(case["status"] == "FAIL" for case in cases),
+        "issuers": tickers,
+        "cases_per_issuer": {
+            ticker: sum(case["company"]["ticker"] == ticker for case in cases)
+            for ticker in tickers
+        },
+        "cases": cases,
+    }
+
+
+def evaluate_cash_conversion_matrix(path: Path) -> dict[str, Any]:
+    """Check annual cash conversion calculations against cited SEC filings."""
+    matrix = json.loads(path.read_text(encoding="utf-8"))
+    if (
+        matrix.get("form") != "10-K"
+        or matrix.get("taxonomy") != "us-gaap"
+        or matrix.get("unit") != "USD"
+        or matrix.get("net_income_concept") != "NetIncomeLoss"
+        or matrix.get("operating_cash_flow_concept")
+        != "NetCashProvidedByUsedInOperatingActivities"
+    ):
+        raise ValueError("Q13 matrix must define US-GAAP USD annual cash-flow inputs.")
+    cases = []
+    for issuer in matrix["issuers"]:
+        periods_by_year = {item["fiscal_year"]: item for item in issuer["periods"]}
+        for comparison in issuer["comparisons"]:
+            prior = periods_by_year[comparison["prior_year"]]
+            current = periods_by_year[comparison["current_year"]]
+            result = cash_conversion_comparison(
+                operating_cash_flow_current=Decimal(current["operating_cash_flow"]),
+                net_income_current=Decimal(current["net_income"]),
+                operating_cash_flow_prior=Decimal(prior["operating_cash_flow"]),
+                net_income_prior=Decimal(prior["net_income"]),
+            )
+            metrics = result.metrics
+            checks = {
+                "two_ordered_annual_periods": (
+                    prior["fiscal_year"] < current["fiscal_year"]
+                    and date.fromisoformat(prior["end_date"])
+                    < date.fromisoformat(current["start_date"])
+                    and all(
+                        350 <= (
+                            date.fromisoformat(item["end_date"])
+                            - date.fromisoformat(item["start_date"])
+                        ).days <= 380
+                        and date.fromisoformat(item["filing_date"])
+                        >= date.fromisoformat(item["end_date"])
+                        for item in (prior, current)
+                    )
+                ),
+                "positive_net_income_inputs": all(
+                    Decimal(item["net_income"]) > 0 for item in (prior, current)
+                ),
+                "evidence_provenance": all(
+                    item["accession_number"].replace("-", "") in item["source_url"]
+                    and item["source_url"].startswith(
+                        "https://www.sec.gov/Archives/edgar/data/"
+                    )
+                    for item in (prior, current)
+                ),
+            }
+            for key, expected_key in (
+                ("prior_conversion_percent", "expected_prior_conversion_percent"),
+                ("current_conversion_percent", "expected_current_conversion_percent"),
+                ("change_percentage_points", "expected_change_percentage_points"),
+            ):
+                checks[f"{key}_correctness"] = (
+                    metrics[key] == Decimal(comparison[expected_key])
+                )
+            cases.append({
+                "company": issuer["company"],
+                "fiscal_years": [prior["fiscal_year"], current["fiscal_year"]],
+                "prior_inputs_usd": {
+                    "net_income": prior["net_income"],
+                    "operating_cash_flow": prior["operating_cash_flow"],
+                },
+                "current_inputs_usd": {
+                    "net_income": current["net_income"],
+                    "operating_cash_flow": current["operating_cash_flow"],
+                },
+                "expected_metrics": {
+                    key: comparison[expected_key]
+                    for key, expected_key in (
+                        ("prior_conversion_percent", "expected_prior_conversion_percent"),
+                        ("current_conversion_percent", "expected_current_conversion_percent"),
+                        ("change_percentage_points", "expected_change_percentage_points"),
+                    )
+                },
+                "actual_metrics": {key: str(value) for key, value in metrics.items()},
                 "evidence": [
                     {"accession_number": item["accession_number"], "source_url": item["source_url"]}
                     for item in (prior, current)
@@ -1209,6 +1315,9 @@ def evaluate_benchmark(
     liquidity_matrix = evaluate_liquidity_reference_matrix(DEFAULT_LIQUIDITY_MATRIX)
     margin_matrix = evaluate_annual_margin_matrix(DEFAULT_MARGIN_MATRIX)
     earnings_matrix = evaluate_earnings_relationship_matrix(DEFAULT_EARNINGS_MATRIX)
+    cash_conversion_matrix = evaluate_cash_conversion_matrix(
+        DEFAULT_CASH_CONVERSION_MATRIX
+    )
     questions = benchmark.question_map()
     if fixture.get("question_id") != "Q01" or "Q01" not in questions:
         raise ValueError("The configured fixture must target benchmark Q01.")
@@ -1329,7 +1438,7 @@ def evaluate_benchmark(
         "accuracy_percentage": None,
         "accuracy_note": (
             "No overall accuracy percentage is reported: Q01, Q03, Q05, Q07, Q08, "
-            "and Q13 have fixture-backed checks; the Q01, Q03, Q05, and Q07 "
+            "and Q13 have fixture-backed checks; the Q01, Q03, Q05, Q07, and Q13 "
             "issuer matrices check six cited annual cases each, but neither "
             "live SEC retrieval nor the planner was evaluated."
         ),
@@ -1338,6 +1447,7 @@ def evaluate_benchmark(
             margin_matrix,
             earnings_matrix,
             liquidity_matrix,
+            cash_conversion_matrix,
         ],
         "questions": report_questions,
     }

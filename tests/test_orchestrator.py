@@ -507,6 +507,107 @@ def test_q03_margin_reference_matrix_runs_through_orchestrator(issuer, compariso
     }
 
 
+_CASH_CONVERSION_MATRIX = json.loads(
+    (
+        Path(__file__).resolve().parents[1]
+        / "data"
+        / "fixtures"
+        / "annual_cash_conversion_reference_matrix.json"
+    ).read_text(encoding="utf-8")
+)["issuers"]
+_CASH_CONVERSION_CASES = [
+    (issuer, comparison)
+    for issuer in _CASH_CONVERSION_MATRIX
+    for comparison in issuer["comparisons"]
+]
+
+
+@pytest.mark.parametrize(
+    ("issuer", "comparison"),
+    _CASH_CONVERSION_CASES,
+    ids=lambda parameter: parameter.get("company", {}).get("ticker")
+    if isinstance(parameter, dict) and "company" in parameter
+    else f"FY{parameter['prior_year']}-FY{parameter['current_year']}",
+)
+def test_q13_cash_conversion_matrix_runs_through_orchestrator(
+    issuer, comparison
+):
+    company = issuer["company"]
+    periods_by_year = {row["fiscal_year"]: row for row in issuer["periods"]}
+    prior = periods_by_year[comparison["prior_year"]]
+    current = periods_by_year[comparison["current_year"]]
+    question = (
+        f"What percentage of {company['name']}'s net income was converted into "
+        f"operating cash flow in FY{current['fiscal_year']} compared with "
+        f"FY{prior['fiscal_year']}?"
+    )
+    periods = {
+        row["fiscal_year"]: AnnualPeriod(
+            fiscal_year=row["fiscal_year"], start_date=row["start_date"],
+            end_date=row["end_date"], form="10-K", concept="Revenues",
+            filing_date=row["filing_date"],
+            accession_number=row["accession_number"], currency="USD",
+        )
+        for row in issuer["periods"]
+    }
+    plan = make_plan().model_copy(update={
+        "original_question": question,
+        "company": CompanyRequest(**company),
+        "period": PeriodRequest(
+            period_label=f"FY{current['fiscal_year']}",
+            period_kind="annual", fiscal_year=current["fiscal_year"],
+            comparison_required=True,
+            comparison_period=f"FY{prior['fiscal_year']}",
+        ),
+        "operation": "cash_conversion",
+        "metrics": [
+            MetricRequest(name="net_income", role="primary", sources=["xbrl"]),
+            MetricRequest(name="operating_cash_flow", role="supporting", sources=["xbrl"]),
+        ],
+    })
+
+    class Planner:
+        def plan(self, _question):
+            return plan
+
+    class CompanyResolver:
+        def resolve(self, **_kwargs):
+            return company
+
+    class FactRetriever:
+        def get_fact(self, *, concept, end_date, **_kwargs):
+            row = next(item for item in issuer["periods"] if item["end_date"] == end_date)
+            is_net_income = concept == "NetIncomeLoss"
+            value = row["net_income"] if is_net_income else row["operating_cash_flow"]
+            return {
+                "cik": company["cik"], "company": company["name"],
+                "taxonomy": "us-gaap", "concept": concept,
+                "label": "Net income" if is_net_income else "Operating cash flow",
+                "value": value, "unit": "USD", "start_date": row["start_date"],
+                "end_date": row["end_date"], "fiscal_year": row["fiscal_year"],
+                "form": "10-K", "filing_date": row["filing_date"],
+                "accession_number": row["accession_number"],
+            }
+
+    result = FinSpectOrchestrator(
+        planner=Planner(), normalizer=normalize_query_plan,
+        period_resolver=lambda _cik, year: periods[year],
+        fact_retriever=FactRetriever(), company_resolver=CompanyResolver(),
+    ).run(question)
+
+    assert result.plan.company.cik == company["cik"]
+    assert result.plan.company.ticker == company["ticker"]
+    assert Decimal(result.answer.result_value) == Decimal(
+        comparison["expected_current_conversion_percent"]
+    )
+    assert result.answer.result_unit == "percent"
+    assert "percentage-point" in result.answer.text
+    assert len(result.answer.evidence) == 4
+    assert {item.accession_number for item in result.answer.evidence} == {
+        prior["accession_number"], current["accession_number"]
+    }
+
+
 _EARNINGS_MATRIX = json.loads(
     (
         Path(__file__).resolve().parents[1]
