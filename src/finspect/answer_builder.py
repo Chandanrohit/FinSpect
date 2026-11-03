@@ -96,6 +96,16 @@ def build_calculation_answer(
             f"The largest disclosed equity change was {component_name} at "
             f"${amount:,.0f}, or {_format_result(result.value, 'percent')} of ending equity."
         )
+    elif result.formula_id == "Q02":
+        selected_segment = next(
+            note.removeprefix("selected_segment=")
+            for note in result.notes
+            if note.startswith("selected_segment=")
+        )
+        result_line = (
+            f"{selected_segment} had the largest disclosed business-segment revenue increase, "
+            f"contributing {_format_result(result.value, 'percent')} of the total revenue increase."
+        )
     elif result.formula_id == "Q14":
         allocated = sum(
             result.inputs[name]

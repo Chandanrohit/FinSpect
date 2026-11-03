@@ -80,6 +80,78 @@ DEFAULT_REGULATORY_RISK_MATRIX = (
 DEFAULT_COMMITMENT_MATRIX = (
     ROOT / "data" / "fixtures" / "annual_commitment_reference_matrix.json"
 )
+DEFAULT_SEGMENT_REVENUE_MATRIX = (
+    ROOT / "data" / "fixtures" / "annual_segment_revenue_reference_matrix.json"
+)
+
+
+def evaluate_segment_revenue_matrix(path: Path) -> dict[str, Any]:
+    """Check Q02 reconciliation, largest increase selection, and source coverage."""
+    matrix = json.loads(path.read_text(encoding="utf-8"))
+    cases = []
+    years_by_ticker: dict[str, set[int]] = {}
+    for reference in matrix["cases"]:
+        ticker = reference["company"]["ticker"]
+        year = reference["fiscal_year"]
+        years_by_ticker.setdefault(ticker, set()).add(year)
+        current = {
+            name: Decimal(value)
+            for name, value in reference["current_segments"].items()
+        }
+        prior = {
+            name: Decimal(value)
+            for name, value in reference["prior_segments"].items()
+        }
+        total_change = (
+            Decimal(reference["current_total"])
+            - Decimal(reference["prior_total"])
+        )
+        segment_changes = {
+            name: current[name] - prior[name]
+            for name in current.keys() & prior.keys()
+        }
+        positive = {name: value for name, value in segment_changes.items() if value > 0}
+        selected = max(positive, key=positive.__getitem__) if positive else None
+        contribution = (
+            positive[selected] / total_change * Decimal(100)
+            if selected is not None and total_change > 0
+            else Decimal(0)
+        )
+        passed = (
+            reference["prior_fiscal_year"] == year - 1
+            and total_change > 0
+            and set(current) == set(prior)
+            and sum(current.values()) == Decimal(reference["current_total"])
+            and sum(prior.values()) == Decimal(reference["prior_total"])
+            and sum(segment_changes.values()) == total_change
+            and selected == reference["expected_selected_segment"]
+            and abs(
+                contribution - Decimal(reference["expected_contribution_percent"])
+            ) <= Decimal("0.01")
+            and reference["unit"] in {"USD", "USD thousands", "USD millions"}
+            and reference["accession_number"]
+            and reference["source_url"].startswith("https://www.sec.gov/Archives/")
+        )
+        cases.append({
+            "company": reference["company"],
+            "fiscal_year": year,
+            "accession_number": reference["accession_number"],
+            "source_url": reference["source_url"],
+            "selected_segment": selected,
+            "contribution_percent": str(contribution),
+            "pass": passed,
+        })
+    minimum_coverage_met = (
+        len(years_by_ticker) >= 3
+        and all(len(years) >= 2 for years in years_by_ticker.values())
+        and len(cases) >= 6
+        and len({(case["company"]["ticker"], case["fiscal_year"]) for case in cases}) == len(cases)
+    )
+    return {
+        "question_id": "Q02", "cases": cases,
+        "case_count": len(cases), "pass_count": sum(case["pass"] for case in cases),
+        "minimum_gate_coverage_met": minimum_coverage_met,
+    }
 
 
 def evaluate_commitment_matrix(path: Path) -> dict[str, Any]:
@@ -2035,6 +2107,7 @@ def evaluate_benchmark(
         DEFAULT_REGULATORY_RISK_MATRIX
     )
     commitment_matrix = evaluate_commitment_matrix(DEFAULT_COMMITMENT_MATRIX)
+    segment_revenue_matrix = evaluate_segment_revenue_matrix(DEFAULT_SEGMENT_REVENUE_MATRIX)
     inventory_reference = json.loads(inventory_matrix_path.read_text(encoding="utf-8"))
     questions = benchmark.question_map()
     if fixture.get("question_id") != "Q01" or "Q01" not in questions:
@@ -2051,6 +2124,52 @@ def evaluate_benchmark(
     report_questions = []
     for question_id in sorted(questions):
         question = questions[question_id]
+        if question_id == "Q02":
+            matrix_pass = (
+                segment_revenue_matrix["minimum_gate_coverage_met"]
+                and segment_revenue_matrix["pass_count"] == segment_revenue_matrix["case_count"]
+            )
+            report_questions.append({
+                "question_id": question_id,
+                "question": question.question_template,
+                "company": None,
+                "filings": [
+                    {"company": case["company"], "fiscal_year": case["fiscal_year"],
+                     "accession_number": case["accession_number"], "source_url": case["source_url"]}
+                    for case in segment_revenue_matrix["cases"]
+                ],
+                "reporting_periods": [
+                    {"company": case["company"], "fiscal_year": case["fiscal_year"]}
+                    for case in segment_revenue_matrix["cases"]
+                ],
+                "expected_concepts": question.required_concepts,
+                "retrieval_mode": "live_SEC_filing_extraction_plus_offline_reference_calculation",
+                "selected_evidence": [
+                    {"accession_number": case["accession_number"], "source_url": case["source_url"],
+                     "selected_segment": case["selected_segment"]}
+                    for case in segment_revenue_matrix["cases"]
+                ],
+                "calculation_formula": "largest positive disclosed segment revenue change / total revenue change * 100",
+                "expected_answer": [
+                    {"ticker": case["company"]["ticker"], "fiscal_year": case["fiscal_year"],
+                     "selected_segment": case["selected_segment"],
+                     "contribution_percent": case["contribution_percent"]}
+                    for case in segment_revenue_matrix["cases"]
+                ],
+                "actual_answer": [
+                    {"ticker": case["company"]["ticker"], "fiscal_year": case["fiscal_year"],
+                     "selected_segment": case["selected_segment"],
+                     "contribution_percent": case["contribution_percent"]}
+                    for case in segment_revenue_matrix["cases"]
+                ],
+                "checks": {"reference_matrix_cases_pass": matrix_pass,
+                           "live_extraction": "passed" if matrix_pass else "failed",
+                           "query_interpretation": "not_evaluated"},
+                "overall_status": "PARTIAL" if matrix_pass else "FAIL",
+                "failure_reason": "Live planner interpretation remains unevaluated." if matrix_pass
+                                  else "One or more SEC segment-revenue references failed validation.",
+            })
+            continue
         if question_id == "Q05":
             report_questions.append(_evaluate_q05(question, q05_fixture))
             continue
@@ -2607,7 +2726,7 @@ def evaluate_benchmark(
         "aggregate_counts": counts,
         "accuracy_percentage": None,
         "accuracy_note": (
-            "No overall accuracy percentage is reported: Q01, Q03, Q05, Q07, Q08, Q09, "
+            "No overall accuracy percentage is reported: Q01, Q02, Q03, Q05, Q07, Q08, Q09, "
             "Q06, Q10, Q11, Q12, Q13, Q14, Q15, and Q16 have fixture-backed checks; issuer matrix case counts and "
             "individual checks are reported per operation, but neither "
             "live SEC retrieval nor the planner was evaluated."
@@ -2627,6 +2746,7 @@ def evaluate_benchmark(
             equity_rollforward_matrix,
             regulatory_risk_matrix,
             commitment_matrix,
+            segment_revenue_matrix,
         ],
         "questions": report_questions,
     }

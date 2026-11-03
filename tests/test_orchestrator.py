@@ -2360,7 +2360,7 @@ def make_unsupported_benchmark_plan(question):
     [
         f"Q{number:02d}"
         for number in range(2, 21)
-        if number not in {3, 5, 7, 8, 9, 10, 11, 13}
+        if number not in {2, 3, 5, 7, 8, 9, 10, 11, 13}
     ],
 )
 def test_other_benchmark_operations_are_explicitly_unsupported(question_id):
@@ -2385,3 +2385,66 @@ def test_other_benchmark_operations_are_explicitly_unsupported(question_id):
     assert result.answer.formula_id is None
     assert result.answer.evidence == ()
     assert "cannot answer this request reliably" in result.answer.text.lower()
+
+
+def test_q02_retrieves_exact_10k_and_reports_largest_segment_contribution():
+    from types import SimpleNamespace
+
+    plan = QueryPlan(
+        original_question="Which reportable segment drove revenue growth?",
+        company=CompanyRequest(name="NVIDIA", ticker="NVDA", cik=CIK),
+        period=PeriodRequest(
+            period_kind="annual", fiscal_year=2025,
+            comparison_required=True, comparison_period="FY2024",
+        ),
+        benchmark_id="Q02", task_type="calculation",
+        metrics=[
+            MetricRequest(name="total_revenue", role="primary", sources=["segment_disclosure"]),
+            MetricRequest(name="segment_revenue", role="primary", sources=["segment_disclosure"]),
+        ],
+        operation="growth_contribution", retrieval={"sources": ["segment_disclosure"]},
+    )
+    html = """
+    <p>Reportable segment revenue (in millions)</p>
+    <table><tr><th></th><th>2025</th><th>2024</th></tr>
+    <tr><td>Segment A</td><td>200</td><td>100</td></tr>
+    <tr><td>Segment B</td><td>100</td><td>100</td></tr>
+    <tr><td>Total net sales</td><td>300</td><td>200</td></tr></table>
+    """
+    url = "https://www.sec.gov/Archives/edgar/data/example.htm"
+
+    class ExactFilingRetriever:
+        submissions = SimpleNamespace(
+            get_filing_url=lambda **_kwargs: url,
+        )
+
+        def get_filing(self, *, cik, accession_number, form):
+            assert cik == CIK
+            assert accession_number == PERIODS[2025].accession_number
+            assert form == "10-K"
+            return {
+                "form": "10-K", "cik": CIK,
+                "accession_number": PERIODS[2025].accession_number,
+                "filing_date": PERIODS[2025].filing_date,
+                "report_date": PERIODS[2025].end_date,
+                "primary_document": "nvda-20250126.htm", "html": html,
+            }
+
+    class Q02Planner:
+        def plan(self, _question):
+            return plan
+
+    orchestrator = FinSpectOrchestrator(
+        planner=Q02Planner(), normalizer=normalize_query_plan,
+        period_resolver=lambda _cik, year: PERIODS[year],
+        fact_retriever=FixtureFactRetriever(),
+        company_resolver=FixtureCompanyResolver(),
+        filing_retriever=ExactFilingRetriever(),
+    )
+    result = orchestrator.run(plan.original_question)
+
+    assert result.answer.formula_id == "Q02"
+    assert result.answer.result_value == "100"
+    assert "Segment A" in result.answer.text
+    assert result.facts[0]["accession_number"] == PERIODS[2025].accession_number
+    assert all(item.source_url == url for item in result.answer.evidence)

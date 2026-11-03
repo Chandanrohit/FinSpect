@@ -21,6 +21,7 @@ from finspect.calculator import (
     cash_conversion_comparison,
     cash_allocation,
     commitment_liquidity,
+    largest_increase_contributor,
     dilution_ratio,
     earnings_change_relationship,
     growth_comparison,
@@ -39,6 +40,7 @@ from finspect.edgar.equity_statement import (
     EquityStatementExtractor,
 )
 from finspect.edgar.commitments import CommitmentScheduleError, CommitmentScheduleExtractor
+from finspect.edgar.segment_revenue import SegmentRevenueError, SegmentRevenueExtractor
 from finspect.narrative_retriever import NarrativeRetriever
 from finspect.query_planner import QueryPlan
 from finspect.edgar.xbrl import XBRLService
@@ -387,6 +389,15 @@ class FinSpectOrchestrator:
             and plan.period.fiscal_year is not None
             and not plan.period.comparison_required
         )
+        is_supported_segment_growth = (
+            plan.operation == "growth_contribution"
+            and bool(metric_names & {"segment revenue", "reportable segments"})
+            and bool(metric_names & {"total revenue", "revenue"})
+            and metric_names <= {"segment revenue", "reportable segments", "total revenue", "revenue"}
+            and plan.period.period_kind == "annual"
+            and plan.period.fiscal_year is not None
+            and plan.period.comparison_required
+        )
 
         if not (
             is_supported_revenue_operation
@@ -403,6 +414,7 @@ class FinSpectOrchestrator:
             or is_supported_equity_rollforward
             or is_supported_regulatory_risk
             or is_supported_commitments
+            or is_supported_segment_growth
         ):
             answer = build_unsupported_answer(
                 question=question,
@@ -417,7 +429,9 @@ class FinSpectOrchestrator:
                     "repurchase analysis, and annual equity-change analysis "
                     "when an exact 10-K statement of equity is available, "
                     "plus annual shareholder-return and capital-expenditure "
-                    "allocation when all cash-flow inputs are available."
+                    "allocation when all cash-flow inputs are available. "
+                    "Segment revenue contribution is supported when the exact "
+                    "annual 10-K contains one reconciled reportable-segment revenue schedule."
                 ),
             )
             return PipelineResult(plan=plan, answer=answer)
@@ -447,6 +461,8 @@ class FinSpectOrchestrator:
             fiscal_years = (plan.period.fiscal_year,)
         if is_supported_commitments:
             fiscal_years = (plan.period.fiscal_year,)
+        if is_supported_segment_growth:
+            fiscal_years = self._get_two_annual_years(plan)
         if fiscal_years is None:
             answer = build_unsupported_answer(
                 question=question,
@@ -612,6 +628,99 @@ class FinSpectOrchestrator:
                 "total_commitments": str(total_commitments), "near_term_commitments": str(near_commitments),
                 "liquid_resources": str(liquid_resources), "coverage_x": str(calculation.value),
                 "accession_number": current_period.accession_number, "source_url": filing_url,
+            },))
+
+        if is_supported_segment_growth:
+            current_period = periods[-1]
+            if not self.filing_retriever:
+                return PipelineResult(plan=plan, answer=build_unsupported_answer(
+                    question, "Exact 10-K retrieval is required for reportable-segment revenue analysis."
+                ))
+            try:
+                filing = self.filing_retriever.get_filing(
+                    cik=cik, accession_number=current_period.accession_number, form="10-K"
+                )
+                if (
+                    filing.get("form") != "10-K"
+                    or str(filing.get("cik", "")).zfill(10) != cik
+                    or filing.get("accession_number") != current_period.accession_number
+                    or filing.get("filing_date") != current_period.filing_date
+                    or filing.get("report_date") != current_period.end_date
+                    or not filing.get("primary_document")
+                    or not filing.get("html")
+                ):
+                    raise FilingRetrievalError(
+                        "Retrieved filing does not match the requested issuer and exact annual period."
+                    )
+                schedule = SegmentRevenueExtractor().extract(
+                    filing["html"],
+                    current_year=current_period.fiscal_year,
+                    prior_year=periods[0].fiscal_year,
+                )
+                total_change = schedule.current_total - schedule.prior_total
+                segment_changes = {
+                    name: schedule.current_segments[name] - schedule.prior_segments[name]
+                    for name in schedule.current_segments
+                    if name in schedule.prior_segments
+                }
+                if sum(segment_changes.values()) != total_change:
+                    raise SegmentRevenueError(
+                        "Disclosed segment revenue changes do not reconcile to total revenue change."
+                    )
+                selected_segment, calculation = largest_increase_contributor(
+                    segment_changes, total_change
+                )
+            except (FilingRetrievalError, SegmentRevenueError, KeyError, ValueError, ArithmeticError) as exc:
+                return PipelineResult(plan=plan, answer=build_unsupported_answer(
+                    question, f"Could not calculate segment revenue contribution reliably: {exc}"
+                ))
+
+            filing_url = self.filing_retriever.submissions.get_filing_url(
+                cik=cik,
+                accession_number=current_period.accession_number,
+                primary_document=filing["primary_document"],
+            )
+            evidence = [
+                AnswerEvidence(
+                    f"{name} reportable-segment revenue",
+                    amount,
+                    schedule.unit,
+                    f"FY{year}",
+                    current_period.filing_date,
+                    current_period.accession_number,
+                    filing_url,
+                )
+                for values, year in (
+                    (schedule.current_segments, current_period.fiscal_year),
+                    (schedule.prior_segments, periods[0].fiscal_year),
+                )
+                for name, amount in values.items()
+            ]
+            evidence.extend((
+                AnswerEvidence("Total revenue", schedule.current_total, schedule.unit,
+                               f"FY{current_period.fiscal_year}", current_period.filing_date,
+                               current_period.accession_number, filing_url),
+                AnswerEvidence("Total revenue", schedule.prior_total, schedule.unit,
+                               f"FY{periods[0].fiscal_year}", current_period.filing_date,
+                               current_period.accession_number, filing_url),
+            ))
+            answer = build_calculation_answer(
+                company_name=resolved["name"], question=question, result=calculation,
+                evidence=evidence,
+                limitations=(
+                    "The calculation compares reportable-segment revenue disclosed in the selected 10-K; segment definitions can change between years.",
+                    "The percentage is based on reported values from the same schedule; dollar scale cancels in the contribution ratio.",
+                ),
+            )
+            return PipelineResult(plan=plan, answer=answer, facts=({
+                "company": resolved["name"], "fiscal_year": current_period.fiscal_year,
+                "prior_fiscal_year": periods[0].fiscal_year,
+                "selected_segment": selected_segment,
+                "segment_changes": {name: str(value) for name, value in segment_changes.items()},
+                "total_revenue_change": str(total_change),
+                "contribution_percent": str(calculation.value),
+                "accession_number": current_period.accession_number,
+                "source_url": filing_url,
             },))
 
         if is_supported_equity_allocation:

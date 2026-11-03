@@ -7,12 +7,12 @@
   "question_count": 20,
   "aggregate_counts": {
     "PASS": 0,
-    "PARTIAL": 14,
-    "UNSUPPORTED": 6,
+    "PARTIAL": 15,
+    "UNSUPPORTED": 5,
     "FAIL": 0
   },
   "accuracy_percentage": null,
-  "accuracy_note": "No overall accuracy percentage is reported: Q01, Q03, Q05, Q07, Q08, Q09, Q06, Q10, Q11, Q12, Q13, Q14, Q15, and Q16 have fixture-backed checks; issuer matrix case counts and individual checks are reported per operation, but neither live SEC retrieval nor the planner was evaluated.",
+  "accuracy_note": "No overall accuracy percentage is reported: Q01, Q02, Q03, Q05, Q07, Q08, Q09, Q06, Q10, Q11, Q12, Q13, Q14, Q15, and Q16 have fixture-backed checks; issuer matrix case counts and individual checks are reported per operation, but neither live SEC retrieval nor the planner was evaluated.",
   "operation_reference_matrices": [
     {
       "matrix_id": "annual-revenue-growth-multi-issuer-v2-healthcare",
@@ -4047,6 +4047,92 @@
       "case_count": 6,
       "pass_count": 6,
       "minimum_gate_coverage_met": true
+    },
+    {
+      "question_id": "Q02",
+      "cases": [
+        {
+          "company": {
+            "name": "Microsoft Corporation",
+            "ticker": "MSFT",
+            "cik": "0000789019"
+          },
+          "fiscal_year": 2024,
+          "accession_number": "0000950170-24-087843",
+          "source_url": "https://www.sec.gov/Archives/edgar/data/789019/000095017024087843/msft-20240630.htm",
+          "selected_segment": "Intelligent Cloud",
+          "contribution_percent": "52.56421838768934260848616256",
+          "pass": true
+        },
+        {
+          "company": {
+            "name": "Microsoft Corporation",
+            "ticker": "MSFT",
+            "cik": "0000789019"
+          },
+          "fiscal_year": 2025,
+          "accession_number": "0000950170-25-100235",
+          "source_url": "https://www.sec.gov/Archives/edgar/data/789019/000095017025100235/msft-20250630.htm",
+          "selected_segment": "Intelligent Cloud",
+          "contribution_percent": "51.36604557128025790940385771",
+          "pass": true
+        },
+        {
+          "company": {
+            "name": "Apple Inc.",
+            "ticker": "AAPL",
+            "cik": "0000320193"
+          },
+          "fiscal_year": 2024,
+          "accession_number": "0000320193-24-000123",
+          "source_url": "https://www.sec.gov/Archives/edgar/data/320193/000032019324000123/aapl-20240928.htm",
+          "selected_segment": "Europe",
+          "contribution_percent": "90.76129032258064516129032258",
+          "pass": true
+        },
+        {
+          "company": {
+            "name": "Apple Inc.",
+            "ticker": "AAPL",
+            "cik": "0000320193"
+          },
+          "fiscal_year": 2025,
+          "accession_number": "0000320193-25-000079",
+          "source_url": "https://www.sec.gov/Archives/edgar/data/320193/000032019325000079/aapl-20250927.htm",
+          "selected_segment": "Americas",
+          "contribution_percent": "45.00517392342593329618721643",
+          "pass": true
+        },
+        {
+          "company": {
+            "name": "Amazon.com, Inc.",
+            "ticker": "AMZN",
+            "cik": "0001018724"
+          },
+          "fiscal_year": 2024,
+          "accession_number": "0001018724-25-000004",
+          "source_url": "https://www.sec.gov/Archives/edgar/data/1018724/000101872425000004/amzn-20241231.htm",
+          "selected_segment": "North America",
+          "contribution_percent": "54.87858929306360211479406085",
+          "pass": true
+        },
+        {
+          "company": {
+            "name": "Amazon.com, Inc.",
+            "ticker": "AMZN",
+            "cik": "0001018724"
+          },
+          "fiscal_year": 2025,
+          "accession_number": "0001018724-26-000004",
+          "source_url": "https://www.sec.gov/Archives/edgar/data/1018724/000101872426000004/amzn-20251231.htm",
+          "selected_segment": "North America",
+          "contribution_percent": "49.14582409928449312986766289",
+          "pass": true
+        }
+      ],
+      "case_count": 6,
+      "pass_count": 6,
+      "minimum_gate_coverage_met": true
     }
   ],
   "questions": [
@@ -4151,28 +4237,239 @@
       "question_id": "Q02",
       "question": "Which disclosed business segment contributed the largest amount to the company's year-over-year revenue increase, and what percentage of the total revenue increase did it represent?",
       "company": null,
-      "filings": [],
-      "reporting_periods": [],
+      "filings": [
+        {
+          "company": {
+            "name": "Microsoft Corporation",
+            "ticker": "MSFT",
+            "cik": "0000789019"
+          },
+          "fiscal_year": 2024,
+          "accession_number": "0000950170-24-087843",
+          "source_url": "https://www.sec.gov/Archives/edgar/data/789019/000095017024087843/msft-20240630.htm"
+        },
+        {
+          "company": {
+            "name": "Microsoft Corporation",
+            "ticker": "MSFT",
+            "cik": "0000789019"
+          },
+          "fiscal_year": 2025,
+          "accession_number": "0000950170-25-100235",
+          "source_url": "https://www.sec.gov/Archives/edgar/data/789019/000095017025100235/msft-20250630.htm"
+        },
+        {
+          "company": {
+            "name": "Apple Inc.",
+            "ticker": "AAPL",
+            "cik": "0000320193"
+          },
+          "fiscal_year": 2024,
+          "accession_number": "0000320193-24-000123",
+          "source_url": "https://www.sec.gov/Archives/edgar/data/320193/000032019324000123/aapl-20240928.htm"
+        },
+        {
+          "company": {
+            "name": "Apple Inc.",
+            "ticker": "AAPL",
+            "cik": "0000320193"
+          },
+          "fiscal_year": 2025,
+          "accession_number": "0000320193-25-000079",
+          "source_url": "https://www.sec.gov/Archives/edgar/data/320193/000032019325000079/aapl-20250927.htm"
+        },
+        {
+          "company": {
+            "name": "Amazon.com, Inc.",
+            "ticker": "AMZN",
+            "cik": "0001018724"
+          },
+          "fiscal_year": 2024,
+          "accession_number": "0001018724-25-000004",
+          "source_url": "https://www.sec.gov/Archives/edgar/data/1018724/000101872425000004/amzn-20241231.htm"
+        },
+        {
+          "company": {
+            "name": "Amazon.com, Inc.",
+            "ticker": "AMZN",
+            "cik": "0001018724"
+          },
+          "fiscal_year": 2025,
+          "accession_number": "0001018724-26-000004",
+          "source_url": "https://www.sec.gov/Archives/edgar/data/1018724/000101872426000004/amzn-20251231.htm"
+        }
+      ],
+      "reporting_periods": [
+        {
+          "company": {
+            "name": "Microsoft Corporation",
+            "ticker": "MSFT",
+            "cik": "0000789019"
+          },
+          "fiscal_year": 2024
+        },
+        {
+          "company": {
+            "name": "Microsoft Corporation",
+            "ticker": "MSFT",
+            "cik": "0000789019"
+          },
+          "fiscal_year": 2025
+        },
+        {
+          "company": {
+            "name": "Apple Inc.",
+            "ticker": "AAPL",
+            "cik": "0000320193"
+          },
+          "fiscal_year": 2024
+        },
+        {
+          "company": {
+            "name": "Apple Inc.",
+            "ticker": "AAPL",
+            "cik": "0000320193"
+          },
+          "fiscal_year": 2025
+        },
+        {
+          "company": {
+            "name": "Amazon.com, Inc.",
+            "ticker": "AMZN",
+            "cik": "0001018724"
+          },
+          "fiscal_year": 2024
+        },
+        {
+          "company": {
+            "name": "Amazon.com, Inc.",
+            "ticker": "AMZN",
+            "cik": "0001018724"
+          },
+          "fiscal_year": 2025
+        }
+      ],
       "expected_concepts": [
         "total_revenue",
         "segment_revenue"
       ],
-      "retrieval_mode": "not_run",
-      "retrieved_inputs": [],
-      "selected_evidence": [],
-      "calculation_formula": "(segment_current - segment_prior) / (total_current - total_prior) * 100",
-      "expected_answer": null,
-      "actual_answer": "I cannot answer this request reliably yet: No complete retrieval-to-answer path is implemented for Q02; calculator registration alone is not support.\n\nYour question: Which disclosed business segment contributed the largest amount to the company's year-over-year revenue increase, and what percentage of the total revenue increase did it represent?",
+      "retrieval_mode": "live_SEC_filing_extraction_plus_offline_reference_calculation",
+      "selected_evidence": [
+        {
+          "accession_number": "0000950170-24-087843",
+          "source_url": "https://www.sec.gov/Archives/edgar/data/789019/000095017024087843/msft-20240630.htm",
+          "selected_segment": "Intelligent Cloud"
+        },
+        {
+          "accession_number": "0000950170-25-100235",
+          "source_url": "https://www.sec.gov/Archives/edgar/data/789019/000095017025100235/msft-20250630.htm",
+          "selected_segment": "Intelligent Cloud"
+        },
+        {
+          "accession_number": "0000320193-24-000123",
+          "source_url": "https://www.sec.gov/Archives/edgar/data/320193/000032019324000123/aapl-20240928.htm",
+          "selected_segment": "Europe"
+        },
+        {
+          "accession_number": "0000320193-25-000079",
+          "source_url": "https://www.sec.gov/Archives/edgar/data/320193/000032019325000079/aapl-20250927.htm",
+          "selected_segment": "Americas"
+        },
+        {
+          "accession_number": "0001018724-25-000004",
+          "source_url": "https://www.sec.gov/Archives/edgar/data/1018724/000101872425000004/amzn-20241231.htm",
+          "selected_segment": "North America"
+        },
+        {
+          "accession_number": "0001018724-26-000004",
+          "source_url": "https://www.sec.gov/Archives/edgar/data/1018724/000101872426000004/amzn-20251231.htm",
+          "selected_segment": "North America"
+        }
+      ],
+      "calculation_formula": "largest positive disclosed segment revenue change / total revenue change * 100",
+      "expected_answer": [
+        {
+          "ticker": "MSFT",
+          "fiscal_year": 2024,
+          "selected_segment": "Intelligent Cloud",
+          "contribution_percent": "52.56421838768934260848616256"
+        },
+        {
+          "ticker": "MSFT",
+          "fiscal_year": 2025,
+          "selected_segment": "Intelligent Cloud",
+          "contribution_percent": "51.36604557128025790940385771"
+        },
+        {
+          "ticker": "AAPL",
+          "fiscal_year": 2024,
+          "selected_segment": "Europe",
+          "contribution_percent": "90.76129032258064516129032258"
+        },
+        {
+          "ticker": "AAPL",
+          "fiscal_year": 2025,
+          "selected_segment": "Americas",
+          "contribution_percent": "45.00517392342593329618721643"
+        },
+        {
+          "ticker": "AMZN",
+          "fiscal_year": 2024,
+          "selected_segment": "North America",
+          "contribution_percent": "54.87858929306360211479406085"
+        },
+        {
+          "ticker": "AMZN",
+          "fiscal_year": 2025,
+          "selected_segment": "North America",
+          "contribution_percent": "49.14582409928449312986766289"
+        }
+      ],
+      "actual_answer": [
+        {
+          "ticker": "MSFT",
+          "fiscal_year": 2024,
+          "selected_segment": "Intelligent Cloud",
+          "contribution_percent": "52.56421838768934260848616256"
+        },
+        {
+          "ticker": "MSFT",
+          "fiscal_year": 2025,
+          "selected_segment": "Intelligent Cloud",
+          "contribution_percent": "51.36604557128025790940385771"
+        },
+        {
+          "ticker": "AAPL",
+          "fiscal_year": 2024,
+          "selected_segment": "Europe",
+          "contribution_percent": "90.76129032258064516129032258"
+        },
+        {
+          "ticker": "AAPL",
+          "fiscal_year": 2025,
+          "selected_segment": "Americas",
+          "contribution_percent": "45.00517392342593329618721643"
+        },
+        {
+          "ticker": "AMZN",
+          "fiscal_year": 2024,
+          "selected_segment": "North America",
+          "contribution_percent": "54.87858929306360211479406085"
+        },
+        {
+          "ticker": "AMZN",
+          "fiscal_year": 2025,
+          "selected_segment": "North America",
+          "contribution_percent": "49.14582409928449312986766289"
+        }
+      ],
       "checks": {
-        "input_retrieval_correctness": null,
-        "period_correctness": null,
-        "unit_correctness": null,
-        "calculation_correctness": null,
-        "evidence_correctness": null,
-        "query_interpretation_correctness": null
+        "reference_matrix_cases_pass": true,
+        "live_extraction": "passed",
+        "query_interpretation": "not_evaluated"
       },
-      "overall_status": "UNSUPPORTED",
-      "failure_reason": "No complete retrieval-to-answer path is implemented for Q02; calculator registration alone is not support."
+      "overall_status": "PARTIAL",
+      "failure_reason": "Live planner interpretation remains unevaluated."
     },
     {
       "question_id": "Q03",

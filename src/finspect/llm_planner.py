@@ -70,6 +70,11 @@ Rules:
     or marketable securities for the same 10-K. Do not request a comparison.
     The pipeline will use the issuer's next-fiscal-year commitment bucket and
     must report unsupported when the schedule or units are ambiguous.
+21. For Q02 segment-revenue contribution questions, require an explicit current
+    and prior annual fiscal year, use operation "growth_contribution", and
+    request total revenue plus reportable-segment revenue from one comparable
+    segment disclosure. Do not mix product, geographic, or operating-segment
+    classifications unless the filing identifies them as reportable segments.
 """
 
 

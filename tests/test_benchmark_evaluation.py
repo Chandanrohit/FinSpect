@@ -1,4 +1,8 @@
-from finspect.benchmark_eval import evaluate_benchmark, evaluate_commitment_matrix
+from finspect.benchmark_eval import (
+    evaluate_benchmark,
+    evaluate_commitment_matrix,
+    evaluate_segment_revenue_matrix,
+)
 from pathlib import Path
 
 
@@ -9,14 +13,21 @@ def test_commitment_reference_matrix_covers_three_issuers_and_two_years():
     assert result["minimum_gate_coverage_met"] is True
 
 
+def test_segment_revenue_reference_matrix_covers_three_issuers_and_two_years():
+    path = Path(__file__).resolve().parents[1] / "data" / "fixtures" / "annual_segment_revenue_reference_matrix.json"
+    result = evaluate_segment_revenue_matrix(path)
+    assert result["case_count"] == result["pass_count"] == 6
+    assert result["minimum_gate_coverage_met"] is True
+
+
 def test_benchmark_report_records_fixture_and_unsupported_questions():
     report = evaluate_benchmark()
 
     assert report["question_count"] == 20
     assert report["aggregate_counts"] == {
         "PASS": 0,
-        "PARTIAL": 14,
-        "UNSUPPORTED": 6,
+        "PARTIAL": 15,
+        "UNSUPPORTED": 5,
         "FAIL": 0,
     }
     assert report["accuracy_percentage"] is None
@@ -243,6 +254,12 @@ def test_benchmark_report_records_fixture_and_unsupported_questions():
     assert q15["checks"]["reference_matrix_cases_pass"] is True
     assert len(q15["actual_answer"]) == 6
 
+    q02 = questions["Q02"]
+    assert q02["overall_status"] == "PARTIAL"
+    assert q02["checks"]["reference_matrix_cases_pass"] is True
+    assert q02["checks"]["live_extraction"] == "passed"
+    assert len(q02["actual_answer"]) == 6
+
     q06 = questions["Q06"]
     assert q06["overall_status"] == "PARTIAL"
     assert q06["checks"]["reference_matrix_cases_pass"] is True
@@ -264,7 +281,7 @@ def test_benchmark_report_records_fixture_and_unsupported_questions():
     for question_id in [
         f"Q{number:02d}"
         for number in range(2, 21)
-        if number not in {3, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16}
+        if number not in {2, 3, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16}
     ]:
         question = questions[question_id]
         assert question["overall_status"] == "UNSUPPORTED"

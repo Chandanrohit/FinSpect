@@ -1,0 +1,67 @@
+{
+  "matrix_id": "annual-reportable-segment-revenue-contribution-v1",
+  "question_id": "Q02",
+  "evaluation_scope": "Six exact annual SEC 10-K cases across Apple, Microsoft, and Amazon. Revenue schedules were retrieved live from SEC filings and reconciled to consolidated revenue; offline calculations do not establish live planner accuracy.",
+  "cases": [
+    {
+      "company": {"name": "Microsoft Corporation", "ticker": "MSFT", "cik": "0000789019"},
+      "fiscal_year": 2024, "prior_fiscal_year": 2023, "filing_date": "2024-07-30",
+      "accession_number": "0000950170-24-087843",
+      "source_url": "https://www.sec.gov/Archives/edgar/data/789019/000095017024087843/msft-20240630.htm",
+      "unit": "USD millions", "current_total": "245122", "prior_total": "211915",
+      "current_segments": {"Productivity and Business Processes": "77728", "Intelligent Cloud": "105362", "More Personal Computing": "62032"},
+      "prior_segments": {"Productivity and Business Processes": "69274", "Intelligent Cloud": "87907", "More Personal Computing": "54734"},
+      "expected_selected_segment": "Intelligent Cloud", "expected_contribution_percent": "52.56"
+    },
+    {
+      "company": {"name": "Microsoft Corporation", "ticker": "MSFT", "cik": "0000789019"},
+      "fiscal_year": 2025, "prior_fiscal_year": 2024, "filing_date": "2025-07-30",
+      "accession_number": "0000950170-25-100235",
+      "source_url": "https://www.sec.gov/Archives/edgar/data/789019/000095017025100235/msft-20250630.htm",
+      "unit": "USD millions", "current_total": "281724", "prior_total": "245122",
+      "current_segments": {"Productivity and Business Processes": "120810", "Intelligent Cloud": "106265", "More Personal Computing": "54649"},
+      "prior_segments": {"Productivity and Business Processes": "106820", "Intelligent Cloud": "87464", "More Personal Computing": "50838"},
+      "expected_selected_segment": "Intelligent Cloud", "expected_contribution_percent": "51.37"
+    },
+    {
+      "company": {"name": "Apple Inc.", "ticker": "AAPL", "cik": "0000320193"},
+      "fiscal_year": 2024, "prior_fiscal_year": 2023, "filing_date": "2024-11-01",
+      "accession_number": "0000320193-24-000123",
+      "source_url": "https://www.sec.gov/Archives/edgar/data/320193/000032019324000123/aapl-20240928.htm",
+      "unit": "USD millions", "current_total": "391035", "prior_total": "383285",
+      "current_segments": {"Americas": "167045", "Europe": "101328", "Greater China": "66952", "Japan": "25052", "Rest of Asia Pacific": "30658"},
+      "prior_segments": {"Americas": "162560", "Europe": "94294", "Greater China": "72559", "Japan": "24257", "Rest of Asia Pacific": "29615"},
+      "expected_selected_segment": "Europe", "expected_contribution_percent": "90.76"
+    },
+    {
+      "company": {"name": "Apple Inc.", "ticker": "AAPL", "cik": "0000320193"},
+      "fiscal_year": 2025, "prior_fiscal_year": 2024, "filing_date": "2025-10-31",
+      "accession_number": "0000320193-25-000079",
+      "source_url": "https://www.sec.gov/Archives/edgar/data/320193/000032019325000079/aapl-20250927.htm",
+      "unit": "USD millions", "current_total": "416161", "prior_total": "391035",
+      "current_segments": {"Americas": "178353", "Europe": "111032", "Greater China": "64377", "Japan": "28703", "Rest of Asia Pacific": "33696"},
+      "prior_segments": {"Americas": "167045", "Europe": "101328", "Greater China": "66952", "Japan": "25052", "Rest of Asia Pacific": "30658"},
+      "expected_selected_segment": "Americas", "expected_contribution_percent": "45.01"
+    },
+    {
+      "company": {"name": "Amazon.com, Inc.", "ticker": "AMZN", "cik": "0001018724"},
+      "fiscal_year": 2024, "prior_fiscal_year": 2023, "filing_date": "2025-02-07",
+      "accession_number": "0001018724-25-000004",
+      "source_url": "https://www.sec.gov/Archives/edgar/data/1018724/000101872425000004/amzn-20241231.htm",
+      "unit": "USD millions", "current_total": "637959", "prior_total": "574785",
+      "current_segments": {"North America": "387497", "International": "142906", "AWS": "107556"},
+      "prior_segments": {"North America": "352828", "International": "131200", "AWS": "90757"},
+      "expected_selected_segment": "North America", "expected_contribution_percent": "54.88"
+    },
+    {
+      "company": {"name": "Amazon.com, Inc.", "ticker": "AMZN", "cik": "0001018724"},
+      "fiscal_year": 2025, "prior_fiscal_year": 2024, "filing_date": "2026-02-06",
+      "accession_number": "0001018724-26-000004",
+      "source_url": "https://www.sec.gov/Archives/edgar/data/1018724/000101872426000004/amzn-20251231.htm",
+      "unit": "USD millions", "current_total": "716924", "prior_total": "637959",
+      "current_segments": {"North America": "426305", "International": "161894", "AWS": "128725"},
+      "prior_segments": {"North America": "387497", "International": "142906", "AWS": "107556"},
+      "expected_selected_segment": "North America", "expected_contribution_percent": "49.15"
+    }
+  ]
+}
