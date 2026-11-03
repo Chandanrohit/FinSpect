@@ -1,132 +1,110 @@
 # FinSpect
 
-FinSpect is an experimental financial research system. It uses a language model to interpret a question, SEC filing data to supply financial inputs, validation rules to reject incompatible facts, and deterministic Python calculations to produce an answer with its periods and sources.
+FinSpect is an experimental financial research assistant for information in US SEC filings. A local Ollama model turns a question into a structured plan; FinSpect retrieves SEC evidence, checks company and period metadata, and uses deterministic Python calculations for supported numeric questions. Answers include periods and source evidence, and unsupported or ambiguous requests should fail closed.
 
-> **Prototype status:** 17 of 20 benchmark archetypes have reference-backed annual implementations. The latest deterministic report is **17 PARTIAL, 3 UNSUPPORTED, 0 FAIL**; PARTIAL means offline references pass and does not represent overall live accuracy. Planner/live integration and broader issuer coverage remain outstanding. See [`reports/benchmark-report.json`](reports/benchmark-report.json).
+> **Status: research prototype.** The deterministic report covers 20 question archetypes, currently classified as **20 PARTIAL, 0 PASS, 0 UNSUPPORTED, 0 FAIL**. PARTIAL means there is offline reference and pipeline coverage, but it is not a live accuracy score. A separate Q1 year-over-year revenue gate passes **3/3** reference cases (NVIDIA, Microsoft, Apple). SEC retrieval and planner interpretation have not been evaluated together across the benchmark. See [`reports/benchmark-report.json`](reports/benchmark-report.json) and [`IMPLEMENTATION_PLAN.md`](IMPLEMENTATION_PLAN.md).
 
-## Problem
-
-Financial research requires finding the right company, concept, reporting period, and unit across filings before doing any calculation. A general-purpose LLM can mix periods, select the wrong metric, or invent values and citations. FinSpect separates those responsibilities:
-
-**LLMs interpret questions. Validated filing data and deterministic code calculate.**
-
-## Architecture
+## How it works
 
 ```mermaid
 flowchart LR
-    U[Research question] --> P[Ollama query planner]
-    P --> N[Plan normalization]
-    N --> C[Company and annual period resolution]
-    C --> S[SEC EDGAR Company Facts]
-    S --> V[Fact, unit, period, identity and provenance validation]
-    V --> D[Decimal calculation]
-    D --> A[Answer with formula, inputs and SEC evidence]
+    Q[Question] --> P[Local Ollama planner]
+    P --> N[Validated query plan]
+    N --> R[SEC company and filing retrieval]
+    R --> V[Period, unit, identity and evidence checks]
+    V --> C[Deterministic calculation or filing extraction]
+    C --> A[Answer with periods and SEC sources]
 ```
 
-The Streamlit application calls the same orchestrator. It displays the structured plan and evidence returned by the pipeline; it does not calculate financial values in the UI.
+The Streamlit interface presents the plan, answer, and evidence from the same research pipeline. It does not calculate financial values in the browser.
 
-## Current capabilities
+## Run locally (Windows PowerShell)
 
-- SEC company and filing metadata retrieval, plus XBRL Company Facts retrieval.
-- Structured query plans validated with Pydantic.
-- Deterministic company identity, annual period, unit, entity, and provenance checks.
-- Company resolution through SEC metadata, with unique short-name matching; no company-specific CIK registry is used.
-- Fiscal-year resolution from each issuer's SEC 10-K metadata, including fiscal years ending in the following calendar year.
-- Q01 annual revenue growth and absolute annual revenue change in the orchestrator.
-- Q03 annual operating margin change from SEC revenue and operating-income facts.
-- Q05 the change in net income as a percentage of the change in operating income.
-- Q08 annual receivables growth compared with revenue growth, with matching fiscal year ends.
-- Q13 annual operating cash flow divided by net income for the current and comparable prior year, with both ratios and their percentage-point change.
-- Optional Gnani Prisma v2.5 voice question input and Timbre v2.5 spoken result summary; the full written answer and SEC evidence remain visible.
-- Decimal-based calculator functions for benchmark formulas; registration does **not** mean an operation is wired end to end.
-- Evidence-bearing answers with reporting periods, filing dates, accession numbers, and SEC URLs.
-- Annual statement, segment, cash-allocation, equity, commitment, risk-factor, and geographic-revenue retrieval-to-answer paths for Q01–Q17; unsupported or ambiguous evidence fails closed. Q17 geographic revenue passed exact SEC extraction for six NVIDIA, Microsoft, and Apple annual filings while preserving each issuer's classification basis and caveats.
-
-## Setup
+### 1. Install the project
 
 Use Python 3.11 or newer. From the repository root:
 
 ```powershell
+python -m venv .venv
+.\.venv\Scripts\Activate.ps1
+python -m pip install --upgrade pip
 python -m pip install -e ".[dev]"
 ```
 
-Set a descriptive SEC User-Agent and start a local Ollama server with a model that supports structured JSON output. SEC's public data APIs do not require an API key; the User-Agent identifies your application and contact email.
+### 2. Configure SEC access and Ollama
+
+SEC's public endpoints do not use an API key. SEC asks clients to identify themselves with a descriptive User-Agent and contact email. Set your own contact value in the terminal where Streamlit will run:
 
 ```powershell
-$env:SEC_USER_AGENT = "FinSpect/0.1 contact you@example.com"
+$env:SEC_USER_AGENT = "FinSpect/0.1 contact your-email@example.com"
 $env:FINSPECT_OLLAMA_MODEL = "qwen2.5-coder:3b"
 ```
 
-Run the app:
+Install the default model once if needed:
+
+```powershell
+ollama pull qwen2.5-coder:3b
+```
+
+Make sure Ollama is running. If it is not already running as a service, open another PowerShell window and run `ollama serve`. The default endpoint is `http://localhost:11434`; set `FINSPECT_OLLAMA_URL` if yours is different.
+
+### 3. (Optional) Configure Gnani voice
+
+Text questions need no Gnani key. For optional voice input and spoken summaries, create `.streamlit/secrets.toml` in the repository root:
+
+```toml
+GNANI_API_KEY_ID = "your Gnani key ID"
+```
+
+This file is ignored by Git. Keep the key in this local file or a deployment secrets manager; do not put it in source code, browser UI, chat, screenshots, or commits. The app sends it server-side in Gnani's `X-API-Key-ID` header. Real STT/TTS account calls have not yet been verified.
+
+### 4. Start Streamlit
+
+In the PowerShell window with the SEC settings, run:
 
 ```powershell
 python -m streamlit run src/finspect/app.py
 ```
 
-The text workflow needs internet access for SEC requests and a reachable Ollama endpoint. `FINSPECT_OLLAMA_URL` can override the default local endpoint. Voice input/output additionally needs `GNANI_API_KEY_ID`; text research continues to work without it.
+Open the local URL Streamlit prints, usually `http://localhost:8501`. Try a bounded supported question such as:
 
-## Tests and benchmark evaluation
+> For NVIDIA, what was the year-over-year revenue growth in fiscal Q1 2025 compared with fiscal Q1 2024?
 
-Run deterministic tests:
+The quarterly reference gate covers Q1 revenue only. For annual examples, try Microsoft's FY2024-to-FY2025 revenue growth or an NVIDIA annual operation. Check the result's periods, values, units, and SEC filing links before relying on it.
+
+## Check whether it is working
+
+Run the automated suite and regenerate the deterministic benchmark report from the repository root:
 
 ```powershell
 python -m pytest -q
-```
-
-Generate the benchmark report:
-
-```powershell
 python -m finspect.benchmark_eval --output reports/benchmark-report.json
 ```
 
-GitHub Actions runs the test suite on Python 3.11 and 3.12 for pushes and pull requests targeting `main`.
+The expected current baseline is **298 passing tests** and a report with **20 PARTIAL, 0 FAIL**. The report includes per-operation reference matrices; check their case counts and failed checks, not just the aggregate. For the Q1 revenue slice, expect 3 cases and 3 passes for NVDA, MSFT, and AAPL. These checks use fixed references and mocks, so they do not prove that today's SEC response or an LLM plan will be correct.
 
-The end-to-end suite includes both NVIDIA and Microsoft annual-revenue fixtures. The application resolves the requested issuer from SEC metadata at runtime; calculations require matching annual US-GAAP facts in a common currency and return an explicit unsupported result when the facts are missing or ambiguous.
+For a local live smoke check, verify that (1) Ollama is reachable and has the selected model, (2) the app starts without a configuration error, (3) a question returns a plan and answer, and (4) each cited filing, period, unit, and calculation agrees with the SEC filing. A live SEC request needs internet access and a valid `SEC_USER_AGENT`. Stop if the planner picks the wrong issuer, fiscal period, metric, or evidence; record the question and result as a benchmark case before treating the issue as fixed.
 
-The checked-in NVIDIA FY2024/FY2025 snapshots provide repeatable Q01, Q03, Q05, Q08, and Q13 checks. Revenue inputs are USD 60.922 billion and USD 130.497 billion, producing **114.20%** growth. Operating income is USD 32.972 billion and USD 81.453 billion; the operating margin increased **8.30 percentage points**. Net income rose from USD 29.760 billion to USD 72.880 billion, equal to **88.94%** of the operating-income increase. Receivables are USD 9.999 billion and USD 23.065 billion; their growth exceeded revenue growth by **16.47 percentage points**. Operating cash flow was USD 28.090 billion and USD 64.089 billion; cash conversion was **94.39%** in FY2024 and **87.94%** in FY2025, a **6.45 percentage-point decrease**. Values and filing provenance are from the [FY2024 Form 10-K](https://www.sec.gov/Archives/edgar/data/1045810/0001045810-24-000029-index.htm) and [FY2025 Form 10-K](https://www.sec.gov/Archives/edgar/data/1045810/0001045810-25-000023-index.htm).
+## Current coverage and limits
 
-The benchmark has 20 question archetypes across five layers. The intended design uses shared retrieval and calculation paths for supported operations, so each wording does not need its own implementation; company-specific mappings are added only when filing evidence shows a real tag or disclosure difference. Queries outside supported archetypes or without sufficient evidence must fail closed.
+- The annual pipeline supports the implemented Q01–Q20 archetypes across financial statements, segments, cash allocation, equity, commitments, risks, legal proceedings, market-risk disclosures, and selected narrative questions. Support and reference depth vary by operation; the benchmark report and [`data/benchmark`](data/benchmark) are the source of truth for individual cases.
+- Q1 year-over-year revenue growth supports standalone Q1 10-Q periods and has NVIDIA, Microsoft, and Apple references across different fiscal calendars. Q2/Q3 standalone derivation and Q4 or quarter-to-quarter comparisons are not implemented.
+- Annual reference matrices include NVIDIA, Microsoft, Apple, CVS Health, PepsiCo, and Amazon across operations. Coverage is uneven and remains limited; it does not establish support for every US-listed company or every question.
+- Live SEC retrieval and Ollama planning have not been comprehensively tested together against the reference benchmark. The checked-in report is deterministic and does not make an overall accuracy claim.
+- Q20 topic matching is bounded and is not an exhaustive risk analysis or validated materiality ranking. Narrative extraction has heuristic limits.
+- Custom issuer tags, IFRS data, FX conversion, and disclosures that are missing, ambiguous, or incompatible with the requested periods may be unsupported. FinSpect is a prototype, not financial advice; verify important results against the cited filing.
 
-The benchmark records 20 **PARTIAL** question types, 0 **UNSUPPORTED**, and 0 **PASS**. Reference matrices validate named issuers, exact accessions, periods, units, calculations, and disclosures. Q17 passed live SEC HTML extraction for NVIDIA, Microsoft, and Apple FY2024/FY2025. Q18 has three FY2025 reference cases and mocked end-to-end pipeline coverage for NVIDIA, Microsoft, and Apple. Q19 has three FY2025 legal-proceeding and contingency references with mocked exact-filing pipeline checks across those issuers. Q20 links FY2025 Item 7 results passages to shared topics in risk factors across NVIDIA, Microsoft, and Apple; mocked exact-filing pipeline coverage verifies all three issuer filings, excerpt provenance, and table context where available. Q20 uses a bounded topic vocabulary, reports evidence links without asserting causation, and does not claim to exhaustively judge materiality. A separate Q1 year-over-year revenue reference gate passes 3/3 cases across NVIDIA, Microsoft, and Apple, whose fiscal Q1 periods end in April, September, and December; its mocked pipeline checks exact 10-Q periods and accession metadata. The offline report does not re-fetch SEC or evaluate planner interpretation. Most matrices remain concentrated in large technology companies, so broader sector coverage is still needed. No overall benchmark accuracy percentage is claimed.
+## Next implementation priorities
 
-Q07 measures the change in cash plus current short-term investments divided by the change in total assets. It can be negative or exceed 100% when the denominator is negative or smaller than the liquid-asset change. The result is a contribution ratio, not a liquidity ratio or measure of unrestricted cash; reported current investments may include restricted amounts.
+1. Extend the quarterly resolver to Q2/Q3 using period-safe standalone-quarter derivation from SEC year-to-date facts; add references spanning fiscal calendars and amended filings.
+2. Add source-backed cases for more sectors and less-covered operations, and test both live SEC retrieval and planner interpretation against expected references.
+3. Complete a Streamlit research-flow smoke check and Gnani STT/TTS account check with secrets configured locally; document any deployment-specific setup.
+4. Expand only after a question type has clear reference cases. Keep unsupported behavior explicit instead of guessing.
 
-## Demo
+See [`IMPLEMENTATION_PLAN.md`](IMPLEMENTATION_PLAN.md) for the ordered benchmark gates and exit criteria.
 
-1. Install the project and set `SEC_USER_AGENT` and the Ollama model as shown above.
-2. Start the application with Streamlit.
-3. Try `Calculate Microsoft's revenue growth from FY2024 to FY2025.` or one of the NVIDIA examples: operating margin change, net-income/operating-income change relationship, receivables versus revenue growth, or cash conversion.
-4. Inspect the plan, result, periods, formula, and SEC evidence shown with the answer.
-5. For deterministic reference checks of implemented benchmark operations, regenerate the benchmark report.
-6. To try voice input and spoken playback, set `GNANI_API_KEY_ID`; review the transcript before running the financial research query.
+## Gnani API notes
 
-The live demo depends on Ollama and SEC availability. The benchmark snapshot is the reproducible demonstration when those services are unavailable.
+The optional voice flow uses Gnani Prisma v2.5 for speech-to-text (`/stt/v3`) and Timbre v2.5 for text-to-speech (`/api/v1/tts/inference`). The app shows the transcript for review before research and speaks only a concise result summary; written answers and SEC evidence remain visible. See the [Gnani STT guide](https://docs.gnani.ai/api/STT/speech-to-text) and [Gnani TTS guide](https://docs.gnani.ai/api/TTS/tts-inference). Automated tests mock provider requests; a real account call remains to be done.
 
-## Gnani AI integration
-
-The app can record a short question, send it to Gnani STT REST (`/stt/v3`, Prisma v2.5 default), show the transcript for review, and pass an edited transcript into the existing research pipeline. It can then speak only the concise result paragraph using Gnani TTS REST (`/api/v1/tts/inference`, Timbre v2.5); the full written answer and SEC evidence remain visible. The STT endpoint supports clips up to 30 seconds. See the [official STT REST guide](https://docs.gnani.ai/api/STT/speech-to-text) and [official TTS REST guide](https://docs.gnani.ai/api/TTS/tts-inference).
-
-Gnani uses one API key ID for both its STT and TTS requests. From the repository root, add it to the ignored local file `.streamlit/secrets.toml`:
-
-```toml
-GNANI_API_KEY_ID = "paste your Gnani key ID here"
-```
-
-Alternatively, set `GNANI_API_KEY_ID` in the server process environment. The app reads it server-side and sends it only in Gnani's `X-API-Key-ID` request header. Do not paste the key into chat, put it in source code, screenshots, or logs, or commit `secrets.toml`; the local secrets file is ignored by Git. For hosted deployments, use the host's secrets manager. Voice requests are not sent when the key is absent. Automated tests mock the HTTP layer; **real STT/TTS account calls have not been tested yet**.
-
-There is no second private API key in the current app: SEC needs the descriptive `SEC_USER_AGENT` setting, and the Ollama planner connects to your local server without authentication by default. If you later switch to a hosted model provider or add a market-data provider, store its credential as a separate server-side secret.
-
-Keep API keys out of source code, chat, screenshots, logs, and commits. The repository ignores `.env` files and `.streamlit/secrets.toml`. For local Streamlit development, store secrets in a local ignored secrets file or use environment settings; for a hosted demo, use the host's secret store. Never place a key in a browser-visible component. Rotate it if it is exposed.
-
-## Limitations and next work
-
-- The annual operations use reusable SEC retrieval and calculation paths where reference evidence supports them. Q17 currently accepts common geographic labels and annual revenue schedules; unfamiliar classifications and asset-only schedules are unsupported rather than guessed. Issuer-specific custom tags and IFRS filers are not generally mapped. Foreign-currency amounts are retained without FX conversion, and calculations stop if inputs use different currencies.
-- The planner and SEC live integration have not been jointly benchmarked against reference answers.
-- Q1 year-over-year revenue growth is supported for standalone 10-Q quarters. Q2/Q3 YTD derivation, Q4 and quarter-to-quarter comparisons, quarterly support for the other operations, broader sector/fiscal-calendar coverage, and live planner/SEC evaluation remain future work. Q20 has an offline cross-section reference gate, but its bounded topic vocabulary and qualitative materiality selection still need broader company coverage and live evaluation.
-- Q19 preserves exact filing excerpts for proceedings, exposure, and uncertainty; amounts such as fines, accruals, and possible additional losses are kept in separate categories.
-- Q18 reports a disclosed hypothetical interest-rate fair-value sensitivity divided by cash and investment balances as a contextual ratio; it is not a probability, forecast, or realized-loss estimate.
-- Q09 narrative extraction uses heuristic Item 7/Item 1A parsing and keyword ranking; broader narrative topics need their own source-backed benchmark coverage.
-- The benchmark has no fixed gold answers for its general templates. Evaluation needs declared company/filing snapshots and references for each question.
-- Real Gnani STT/TTS account calls, a public demo recording, and deployment remain future work.
-
-FinSpect is a learning-focused prototype, not financial advice. Verify results against the cited filing before relying on them.
+There is no hosted LLM API key in the current text workflow: Ollama runs locally. SEC access uses the descriptive `SEC_USER_AGENT`, not a secret. Keep Gnani credentials server-side, and rotate them if they are exposed.
