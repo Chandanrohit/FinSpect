@@ -56,10 +56,10 @@ Make sure Ollama is running. If it is not already running as a service, open ano
 Text questions need no Gnani credentials. For voice, paste your single shared key into the local, Git-ignored file `D:\Finspect\v0.1\.streamlit\secrets.toml` (create the `.streamlit` folder if needed):
 
 ```toml
-GNANI_API_KEY_ID = "your Gnani API key ID"
+GNANI_API_KEY_ID = "[Paste API Key]"
 ```
 
-This file is ignored by Git. The app reads the key server-side and sends it in Gnani's `X-API-Key-ID` header for both services; it never displays or accepts keys on the dashboard. Restart Streamlit after adding the key. Do not put credentials in source code, screenshots, chat, or commits. Real STT/TTS account calls have not yet been verified.
+Replace `[Paste API Key]` with your Gnani API key ID locally. This file is ignored by Git. The app reads the key server-side and sends it in Gnani's `X-API-Key-ID` header for both services; it never displays or accepts keys on the dashboard. Restart Streamlit after adding the key. Do not put credentials in source code, screenshots, chat, or commits. Real STT/TTS account calls have not yet been verified.
 
 ### 4. Start Streamlit
 
