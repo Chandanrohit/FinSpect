@@ -70,13 +70,17 @@ def test_material_disclosure_matrix_covers_cross_section_evidence_for_three_issu
 
 
 def test_quarterly_revenue_reference_matrix_covers_three_fiscal_calendars():
-    path = Path(__file__).resolve().parents[1] / "data/fixtures/quarterly_revenue_q1_reference_matrix.json"
-    result = evaluate_quarterly_revenue_matrix(path)
-    assert result["case_count"] == result["pass_count"] == 3
-    assert result["fail_count"] == 0
-    assert result["issuers"] == ["AAPL", "MSFT", "NVDA"]
-    assert result["quarter_end_months"] == [4, 9, 12]
-    assert result["minimum_gate_coverage_met"] is True
+    fixtures = Path(__file__).resolve().parents[1] / "data/fixtures"
+    expected_end_months = {1: [4, 9, 12], 2: [3, 7, 12], 3: [3, 6, 10]}
+    for quarter in (1, 2, 3):
+        result = evaluate_quarterly_revenue_matrix(
+            fixtures / f"quarterly_revenue_q{quarter}_reference_matrix.json"
+        )
+        assert result["case_count"] == result["pass_count"] == 3
+        assert result["fail_count"] == 0
+        assert result["issuers"] == ["AAPL", "MSFT", "NVDA"]
+        assert result["quarter_end_months"] == expected_end_months[quarter]
+        assert result["minimum_gate_coverage_met"] is True
 
 
 def test_benchmark_report_records_fixture_and_unsupported_questions():

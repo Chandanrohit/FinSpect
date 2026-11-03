@@ -102,10 +102,16 @@ DEFAULT_MATERIAL_DISCLOSURE_MATRIX = (
 DEFAULT_QUARTERLY_REVENUE_MATRIX = (
     ROOT / "data" / "fixtures" / "quarterly_revenue_q1_reference_matrix.json"
 )
+DEFAULT_QUARTERLY_REVENUE_Q2_MATRIX = (
+    ROOT / "data" / "fixtures" / "quarterly_revenue_q2_reference_matrix.json"
+)
+DEFAULT_QUARTERLY_REVENUE_Q3_MATRIX = (
+    ROOT / "data" / "fixtures" / "quarterly_revenue_q3_reference_matrix.json"
+)
 
 
 def evaluate_quarterly_revenue_matrix(path: Path) -> dict[str, Any]:
-    """Validate Q1 standalone periods, original filing evidence, and growth."""
+    """Validate standalone quarterly periods, original filing evidence, and growth."""
     matrix = json.loads(path.read_text(encoding="utf-8"))
     cases = []
     for reference in matrix["cases"]:
@@ -116,7 +122,7 @@ def evaluate_quarterly_revenue_matrix(path: Path) -> dict[str, Any]:
             "same_fiscal_quarter_and_year_pair": (
                 len(periods) == 2
                 and periods[0]["fiscal_year"] + 1 == periods[1]["fiscal_year"]
-                and matrix["quarter"] == 1
+                and matrix["quarter"] in (1, 2, 3)
             ),
             "standalone_quarter_periods": all(
                 period["form"] == "10-Q"
@@ -146,7 +152,7 @@ def evaluate_quarterly_revenue_matrix(path: Path) -> dict[str, Any]:
         for case in cases for period in case["periods"]
     }
     return {
-        "matrix_id": matrix["matrix_id"], "question_id": "Q01-quarterly",
+        "matrix_id": matrix["matrix_id"], "question_id": f"Q01-Q{matrix['quarter']}-quarterly",
         "case_count": len(cases), "pass_count": sum(c["status"] == "PASS" for c in cases),
         "fail_count": sum(c["status"] == "FAIL" for c in cases),
         "issuers": issuers, "quarter_end_months": sorted(end_months),
@@ -2584,6 +2590,12 @@ def evaluate_benchmark(
     quarterly_revenue_matrix = evaluate_quarterly_revenue_matrix(
         DEFAULT_QUARTERLY_REVENUE_MATRIX
     )
+    quarterly_revenue_q2_matrix = evaluate_quarterly_revenue_matrix(
+        DEFAULT_QUARTERLY_REVENUE_Q2_MATRIX
+    )
+    quarterly_revenue_q3_matrix = evaluate_quarterly_revenue_matrix(
+        DEFAULT_QUARTERLY_REVENUE_Q3_MATRIX
+    )
     commitment_matrix = evaluate_commitment_matrix(DEFAULT_COMMITMENT_MATRIX)
     segment_revenue_matrix = evaluate_segment_revenue_matrix(DEFAULT_SEGMENT_REVENUE_MATRIX)
     operating_expense_matrix = evaluate_operating_expense_matrix(DEFAULT_OPERATING_EXPENSE_MATRIX)
@@ -3531,7 +3543,11 @@ def evaluate_benchmark(
             legal_proceedings_matrix,
             material_disclosure_matrix,
         ],
-        "supplemental_reference_matrices": [quarterly_revenue_matrix],
+        "supplemental_reference_matrices": [
+            quarterly_revenue_matrix,
+            quarterly_revenue_q2_matrix,
+            quarterly_revenue_q3_matrix,
+        ],
         "questions": report_questions,
     }
 

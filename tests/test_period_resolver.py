@@ -113,6 +113,36 @@ def test_selects_original_standalone_quarter_and_ignores_ytd_and_later_comparati
     assert fact["val"] == 26044
 
 
+@pytest.mark.parametrize(
+    ("quarter", "start", "end", "value"),
+    [
+        (2, "2024-04-29", "2024-07-28", 30040),
+        (3, "2024-07-29", "2024-10-27", 35082),
+    ],
+)
+def test_resolves_standalone_q2_and_q3_without_substituting_ytd(
+    quarter, start, end, value
+):
+    facts = {"facts": {"us-gaap": {"Revenues": {"units": {"USD": [
+        {"start": start, "end": end, "form": "10-Q", "fy": 2025,
+         "fp": f"Q{quarter}", "filed": "2024-11-20", "accn": "original",
+         "val": value},
+        {"start": "2024-01-29", "end": end, "form": "10-Q", "fy": 2025,
+         "fp": f"Q{quarter}", "filed": "2024-11-20", "accn": "original",
+         "val": value + 100},
+        {"start": start, "end": end, "form": "10-Q", "fy": 2026,
+         "fp": f"Q{quarter}", "filed": "2025-11-19", "accn": "comparative",
+         "val": value},
+    ]}}}}}
+
+    fact = find_quarterly_revenue_fact(facts, 2025, quarter)
+
+    assert fact["start"] == start
+    assert fact["end"] == end
+    assert fact["accn"] == "original"
+    assert fact["val"] == value
+
+
 def test_quarter_resolver_fails_closed_for_ytd_only_or_q4_facts():
     facts = {"facts": {"us-gaap": {"Revenues": {"units": {"USD": [
         {"start": "2024-01-29", "end": "2024-07-28", "form": "10-Q", "fy": 2025, "fp": "Q2", "filed": "2024-08-28", "accn": "ytd", "val": 46743},

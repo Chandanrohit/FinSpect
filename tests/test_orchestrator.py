@@ -3089,3 +3089,84 @@ def test_q1_year_over_year_revenue_pipeline_supports_different_fiscal_calendars(
         assert {item.accession_number for item in result.answer.evidence} == {
             rows[2024][4], rows[2025][4],
         }
+
+
+def test_q2_q3_year_over_year_revenue_pipeline_uses_standalone_reference_periods():
+    fixture_dir = Path(__file__).resolve().parents[1] / "data" / "fixtures"
+    for quarter in (2, 3):
+        matrix = json.loads(
+            (fixture_dir / f"quarterly_revenue_q{quarter}_reference_matrix.json")
+            .read_text(encoding="utf-8")
+        )
+        for reference in matrix["cases"]:
+            company = reference["company"]
+            rows = {item["fiscal_year"]: item for item in reference["periods"]}
+            periods = {
+                year: AnnualPeriod(
+                    fiscal_year=year, start_date=row["start_date"],
+                    end_date=row["end_date"], form=row["form"],
+                    filing_date=row["filing_date"],
+                    accession_number=row["accession_number"],
+                )
+                for year, row in rows.items()
+            }
+            question = (
+                f"Calculate {company['name']} revenue growth for Q{quarter} "
+                "FY2024 to FY2025."
+            )
+            plan = make_plan().model_copy(update={
+                "original_question": question,
+                "company": CompanyRequest(**company),
+                "period": PeriodRequest(
+                    period_kind="quarterly", fiscal_year=2025,
+                    fiscal_quarter=quarter, comparison_required=True,
+                    comparison_period="FY2024",
+                ),
+            })
+
+            class Planner:
+                def plan(self, _question):
+                    return plan
+
+            class CompanyResolver:
+                def resolve(self, **_kwargs):
+                    return company
+
+            class QuarterlyFactRetriever:
+                def get_fact(self, *, cik, taxonomy, concept, start_date, end_date,
+                             form, unit, filed_on_or_before, accession_number):
+                    row = next(
+                        item for item in rows.values()
+                        if item["accession_number"] == accession_number
+                    )
+                    assert taxonomy == "us-gaap"
+                    assert (start_date, end_date, form, unit, filed_on_or_before) == (
+                        row["start_date"], row["end_date"], "10-Q", "USD",
+                        row["filing_date"],
+                    )
+                    return {
+                        "cik": cik, "company": company["name"],
+                        "taxonomy": taxonomy, "concept": concept,
+                        "value": row["revenue_usd"], "unit": "USD",
+                        "start_date": row["start_date"], "end_date": row["end_date"],
+                        "fiscal_year": row["fiscal_year"], "form": "10-Q",
+                        "filing_date": row["filing_date"],
+                        "accession_number": row["accession_number"],
+                        "label": "Revenue",
+                    }
+
+            result = FinSpectOrchestrator(
+                planner=Planner(), normalizer=normalize_query_plan,
+                period_resolver=lambda _cik, year: PERIODS[year],
+                quarter_period_resolver=lambda _cik, year, _quarter: periods[year],
+                fact_retriever=QuarterlyFactRetriever(),
+                company_resolver=CompanyResolver(),
+            ).run(question)
+
+            expected = Decimal(reference["expected_growth_percent"])
+            assert abs(Decimal(result.answer.result_value) - expected) < Decimal("1e-24")
+            assert len(result.answer.evidence) == 2
+            assert all(f"Q{quarter} FY" in item.period for item in result.answer.evidence)
+            assert {item.accession_number for item in result.answer.evidence} == {
+                row["accession_number"] for row in rows.values()
+            }

@@ -1,0 +1,32 @@
+{
+  "matrix_id": "quarterly-q3-year-over-year-revenue-v1",
+  "scope": "Standalone Q3 revenue growth from exact annual comparison periods and SEC 10-Q evidence.",
+  "quarter": 3,
+  "unit": "USD",
+  "cases": [
+    {
+      "company": {"name": "NVIDIA Corporation", "ticker": "NVDA", "cik": "0001045810"},
+      "periods": [
+        {"fiscal_year": 2024, "start_date": "2023-07-31", "end_date": "2023-10-29", "form": "10-Q", "filing_date": "2023-11-21", "accession_number": "0001045810-23-000227", "revenue_usd": "18120000000", "source_url": "https://www.sec.gov/Archives/edgar/data/1045810/000104581023000227/nvda-20231029.htm"},
+        {"fiscal_year": 2025, "start_date": "2024-07-29", "end_date": "2024-10-27", "form": "10-Q", "filing_date": "2024-11-20", "accession_number": "0001045810-24-000316", "revenue_usd": "35082000000", "source_url": "https://www.sec.gov/Archives/edgar/data/1045810/000104581024000316/nvda-20241027.htm"}
+      ],
+      "expected_growth_percent": "93.60927152317880794701986755"
+    },
+    {
+      "company": {"name": "Microsoft Corporation", "ticker": "MSFT", "cik": "0000789019"},
+      "periods": [
+        {"fiscal_year": 2024, "start_date": "2024-01-01", "end_date": "2024-03-31", "form": "10-Q", "filing_date": "2024-04-25", "accession_number": "0000950170-24-048288", "revenue_usd": "61858000000", "source_url": "https://www.sec.gov/Archives/edgar/data/789019/000095017024048288/msft-20240331.htm"},
+        {"fiscal_year": 2025, "start_date": "2025-01-01", "end_date": "2025-03-31", "form": "10-Q", "filing_date": "2025-04-30", "accession_number": "0000950170-25-061046", "revenue_usd": "70066000000", "source_url": "https://www.sec.gov/Archives/edgar/data/789019/000095017025061046/msft-20250331.htm"}
+      ],
+      "expected_growth_percent": "13.26910019722590449093084160"
+    },
+    {
+      "company": {"name": "Apple Inc.", "ticker": "AAPL", "cik": "0000320193"},
+      "periods": [
+        {"fiscal_year": 2024, "start_date": "2024-03-31", "end_date": "2024-06-29", "form": "10-Q", "filing_date": "2024-08-02", "accession_number": "0000320193-24-000081", "revenue_usd": "85777000000", "source_url": "https://www.sec.gov/Archives/edgar/data/320193/000032019324000081/aapl-20240629.htm"},
+        {"fiscal_year": 2025, "start_date": "2025-03-30", "end_date": "2025-06-28", "form": "10-Q", "filing_date": "2025-08-01", "accession_number": "0000320193-25-000073", "revenue_usd": "94036000000", "source_url": "https://www.sec.gov/Archives/edgar/data/320193/000032019325000073/aapl-20250628.htm"}
+      ],
+      "expected_growth_percent": "9.628455180293085559065950080"
+    }
+  ]
+}
