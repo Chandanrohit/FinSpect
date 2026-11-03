@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import re
 from datetime import date
 from decimal import Decimal
 from pathlib import Path
@@ -88,6 +89,9 @@ DEFAULT_OPERATING_EXPENSE_MATRIX = (
 )
 DEFAULT_GEOGRAPHIC_REVENUE_MATRIX = (
     ROOT / "data" / "fixtures" / "annual_geographic_revenue_reference_matrix.json"
+)
+DEFAULT_MARKET_RISK_SENSITIVITY_MATRIX = (
+    ROOT / "data" / "fixtures" / "annual_market_risk_sensitivity_reference_matrix.json"
 )
 
 
@@ -427,6 +431,79 @@ def evaluate_geographic_revenue_matrix(path: Path) -> dict[str, Any]:
         "issuers": tickers,
         "cases_per_issuer": counts,
         "minimum_gate_coverage_met": minimum_coverage,
+        "cases": cases,
+    }
+
+
+def evaluate_market_risk_sensitivity_matrix(path: Path) -> dict[str, Any]:
+    """Validate Q18 Item 7A sensitivity amounts against exact-period portfolio balances."""
+    matrix = json.loads(path.read_text(encoding="utf-8"))
+    cases = []
+    for reference in matrix["cases"]:
+        company = reference["company"]
+        start = date.fromisoformat(reference["start_date"])
+        end = date.fromisoformat(reference["end_date"])
+        filed = date.fromisoformat(reference["filing_date"])
+        sensitivity = Decimal(reference["sensitivity_amount_usd"])
+        components = reference["denominator_components"]
+        portfolio = sum(Decimal(item["value_usd"]) for item in components)
+        share = (sensitivity / portfolio * Decimal(100)).quantize(Decimal("0.01"))
+        limitation_note = reference["limitation_note"].casefold()
+        required_terms = reference["limitation_terms"]
+        excerpt = reference["disclosure_excerpt"]
+        sensitivity_millions = sensitivity / Decimal(1_000_000)
+        formatted_sensitivity = f"{sensitivity_millions:,.0f}"
+        checks = {
+            "annual_period_and_filing": start < end and 300 <= (end - start).days <= 400 and filed >= end,
+            "source_provenance": (
+                reference["accession_number"].replace("-", "") in reference["source_url"]
+                and reference["source_url"].startswith("https://www.sec.gov/Archives/edgar/data/")
+                and f"/{int(company['cik'])}/" in reference["source_url"]
+                and reference["source_url"].endswith(".htm")
+            ),
+            "sensitivity_disclosure_supported": (
+                bool(re.search(r"basis points?|yield.curve|interest.rate", reference["scenario"], re.I))
+                and "fair value" in reference["impact"].casefold()
+                and formatted_sensitivity in excerpt
+            ),
+            "portfolio_components_reconcile": (
+                bool(components)
+                and len({item["concept"] for item in components}) == len(components)
+                and portfolio == Decimal(reference["portfolio_balance_usd"])
+            ),
+            "share_matches_reference": share == Decimal(reference["share_percent"]),
+            "scenario_limitations_supported": bool(required_terms) and all(
+                term.casefold() in limitation_note for term in required_terms
+            ),
+        }
+        cases.append({
+            "company": company,
+            "fiscal_year": reference["fiscal_year"],
+            "scenario": reference["scenario"],
+            "impact": reference["impact"],
+            "sensitivity_amount_usd": str(sensitivity),
+            "portfolio_balance_usd": str(portfolio),
+            "share_percent": str(share),
+            "unit": "USD",
+            "disclosure_excerpt": excerpt,
+            "limitation_note": reference["limitation_note"],
+            "accession_number": reference["accession_number"],
+            "source_url": reference["source_url"],
+            "checks": checks,
+            "status": "PASS" if all(checks.values()) else "FAIL",
+        })
+    tickers = sorted({case["company"]["ticker"] for case in cases})
+    counts = {ticker: sum(case["company"]["ticker"] == ticker for case in cases) for ticker in tickers}
+    return {
+        "matrix_id": matrix["matrix_id"],
+        "question_id": matrix["question_id"],
+        "evaluation_scope": matrix["evaluation_scope"],
+        "case_count": len(cases),
+        "pass_count": sum(case["status"] == "PASS" for case in cases),
+        "fail_count": sum(case["status"] == "FAIL" for case in cases),
+        "issuers": tickers,
+        "cases_per_issuer": counts,
+        "minimum_gate_coverage_met": len(tickers) >= 3 and all(count >= 1 for count in counts.values()),
         "cases": cases,
     }
 
@@ -2266,6 +2343,9 @@ def evaluate_benchmark(
     geographic_revenue_matrix = evaluate_geographic_revenue_matrix(
         DEFAULT_GEOGRAPHIC_REVENUE_MATRIX
     )
+    market_risk_sensitivity_matrix = evaluate_market_risk_sensitivity_matrix(
+        DEFAULT_MARKET_RISK_SENSITIVITY_MATRIX
+    )
     commitment_matrix = evaluate_commitment_matrix(DEFAULT_COMMITMENT_MATRIX)
     segment_revenue_matrix = evaluate_segment_revenue_matrix(DEFAULT_SEGMENT_REVENUE_MATRIX)
     operating_expense_matrix = evaluate_operating_expense_matrix(DEFAULT_OPERATING_EXPENSE_MATRIX)
@@ -2578,6 +2658,74 @@ def evaluate_benchmark(
                     "Live planner interpretation remains unevaluated."
                     if matrix_pass
                     else "One or more geographic revenue references failed validation."
+                ),
+            })
+            continue
+        if question_id == "Q18":
+            matrix_pass = (
+                market_risk_sensitivity_matrix["minimum_gate_coverage_met"]
+                and market_risk_sensitivity_matrix["pass_count"]
+                == market_risk_sensitivity_matrix["case_count"]
+            )
+            report_questions.append({
+                "question_id": question_id,
+                "question": question.question_template,
+                "company": None,
+                "filings": [
+                    {
+                        "company": case["company"],
+                        "fiscal_year": case["fiscal_year"],
+                        "accession_number": case["accession_number"],
+                        "source_url": case["source_url"],
+                    }
+                    for case in market_risk_sensitivity_matrix["cases"]
+                ],
+                "reporting_periods": [
+                    {"company": case["company"], "fiscal_year": case["fiscal_year"]}
+                    for case in market_risk_sensitivity_matrix["cases"]
+                ],
+                "expected_concepts": question.required_concepts,
+                "retrieval_mode": "offline_SEC_reference_matrix_and_exact-period_calculation",
+                "selected_evidence": [
+                    {
+                        "scenario": case["scenario"],
+                        "impact": case["impact"],
+                        "sensitivity_amount_usd": case["sensitivity_amount_usd"],
+                        "portfolio_balance_usd": case["portfolio_balance_usd"],
+                        "excerpt": case["disclosure_excerpt"],
+                        "accession_number": case["accession_number"],
+                        "source_url": case["source_url"],
+                    }
+                    for case in market_risk_sensitivity_matrix["cases"]
+                ],
+                "calculation_formula": "disclosed interest-rate fair-value sensitivity / period-end cash and investment balance * 100",
+                "expected_answer": [
+                    {
+                        "ticker": case["company"]["ticker"],
+                        "fiscal_year": case["fiscal_year"],
+                        "sensitivity_share_percent": case["share_percent"],
+                    }
+                    for case in market_risk_sensitivity_matrix["cases"]
+                ],
+                "actual_answer": [
+                    {
+                        "ticker": case["company"]["ticker"],
+                        "fiscal_year": case["fiscal_year"],
+                        "sensitivity_share_percent": case["share_percent"],
+                    }
+                    for case in market_risk_sensitivity_matrix["cases"]
+                ],
+                "checks": {
+                    "reference_matrix_cases_pass": matrix_pass,
+                    "live_extraction": "not_evaluated_by_offline_benchmark",
+                    "live_sec_retrieval": "not_evaluated_by_offline_benchmark",
+                    "query_interpretation": "not_evaluated",
+                },
+                "overall_status": "PARTIAL" if matrix_pass else "FAIL",
+                "failure_reason": (
+                    "Live planner interpretation remains unevaluated."
+                    if matrix_pass
+                    else "One or more Item 7A sensitivity references failed validation."
                 ),
             })
             continue
@@ -3002,9 +3150,9 @@ def evaluate_benchmark(
         "question_count": len(report_questions),
         "aggregate_counts": counts,
         "accuracy_percentage": None,
-        "accuracy_note": (
+            "accuracy_note": (
             "No overall accuracy percentage is reported: Q01, Q02, Q03, Q04, Q05, Q07, Q08, Q09, "
-            "Q06, Q10, Q11, Q12, Q13, Q14, Q15, Q16, and Q17 have fixture-backed checks; issuer matrix case counts and "
+            "Q06, Q10, Q11, Q12, Q13, Q14, Q15, Q16, Q17, and Q18 have fixture-backed checks; issuer matrix case counts and "
             "individual checks are reported per operation, but neither "
             "live SEC retrieval nor the planner was evaluated."
         ),
@@ -3026,6 +3174,7 @@ def evaluate_benchmark(
             segment_revenue_matrix,
             operating_expense_matrix,
             geographic_revenue_matrix,
+            market_risk_sensitivity_matrix,
         ],
         "questions": report_questions,
     }

@@ -32,6 +32,7 @@ from finspect.calculator import (
     inventory_revenue_growth_comparison,
     largest_component_contribution,
     share_repurchase_comparison,
+    sensitivity_ratio,
 )
 from finspect.edgar.client import EdgarClient
 from finspect.edgar.facts import FactRetrievalError, FinancialFactRetriever
@@ -50,6 +51,7 @@ from finspect.edgar.geographic_revenue import (
     GeographicRevenueError,
     GeographicRevenueExtractor,
 )
+from finspect.edgar.market_risk import MarketRiskError, MarketRiskSensitivityExtractor
 from finspect.narrative_retriever import NarrativeRetriever
 from finspect.query_planner import QueryPlan
 from finspect.edgar.xbrl import XBRLService
@@ -392,6 +394,17 @@ class FinSpectOrchestrator:
             and plan.period.fiscal_year is not None
             and not plan.period.comparison_required
         )
+        is_supported_market_risk_sensitivity = (
+            plan.operation == "sensitivity_analysis"
+            and bool(metric_names & {"market risk sensitivity", "interest rate sensitivity"})
+            and metric_names <= {
+                "market risk sensitivity", "interest rate sensitivity",
+                "investment portfolio", "investment portfolio balance",
+            }
+            and plan.period.period_kind == "annual"
+            and plan.period.fiscal_year is not None
+            and not plan.period.comparison_required
+        )
         is_supported_commitments = (
             plan.operation == "commitment_liquidity"
             and has_future_commitments and has_near_term_commitments
@@ -443,6 +456,7 @@ class FinSpectOrchestrator:
             or is_supported_equity_rollforward
             or is_supported_regulatory_risk
             or is_supported_geographic_exposure
+            or is_supported_market_risk_sensitivity
             or is_supported_commitments
             or is_supported_segment_growth
             or is_supported_expense_growth
@@ -476,6 +490,7 @@ class FinSpectOrchestrator:
             or is_supported_equity_rollforward
             or is_supported_regulatory_risk
             or is_supported_geographic_exposure
+            or is_supported_market_risk_sensitivity
             or is_supported_commitments
         ):
             fiscal_years = (plan.period.fiscal_year,)
@@ -492,6 +507,8 @@ class FinSpectOrchestrator:
         if is_supported_regulatory_risk:
             fiscal_years = (plan.period.fiscal_year,)
         if is_supported_geographic_exposure:
+            fiscal_years = (plan.period.fiscal_year,)
+        if is_supported_market_risk_sensitivity:
             fiscal_years = (plan.period.fiscal_year,)
         if is_supported_commitments:
             fiscal_years = (plan.period.fiscal_year,)
@@ -1501,6 +1518,206 @@ class FinSpectOrchestrator:
                     "share_percent": str(share),
                     "classification_basis": schedule.basis,
                     "limitations": list(schedule.limitations),
+                    "accession_number": current_period.accession_number,
+                    "source_url": filing_url,
+                },),
+            )
+
+        if is_supported_market_risk_sensitivity:
+            current_period = periods[0]
+            if not self.filing_retriever or not self.fact_retriever:
+                return PipelineResult(plan=plan, answer=build_unsupported_answer(
+                    question,
+                    "Exact annual filing and period-matched investment-balance retrieval are required for market-risk sensitivity analysis.",
+                ))
+            if not current_period.accession_number or not current_period.filing_date:
+                return PipelineResult(plan=plan, answer=build_unsupported_answer(
+                    question,
+                    "The requested fiscal year could not be tied to an exact 10-K accession and filing date.",
+                ))
+            try:
+                filing = self.filing_retriever.get_filing(
+                    cik=cik,
+                    accession_number=current_period.accession_number,
+                    form="10-K",
+                )
+                if (
+                    filing.get("form") != "10-K"
+                    or str(filing.get("cik", "")).zfill(10) != cik
+                    or filing.get("accession_number") != current_period.accession_number
+                    or filing.get("filing_date") != current_period.filing_date
+                    or filing.get("report_date") != current_period.end_date
+                    or not filing.get("html")
+                    or not filing.get("primary_document")
+                ):
+                    raise MarketRiskError(
+                        "Retrieved filing metadata or content does not match the requested issuer and exact 10-K period."
+                    )
+                sensitivity = MarketRiskSensitivityExtractor().extract(
+                    filing["html"], fiscal_year=current_period.fiscal_year
+                )
+            except (FilingRetrievalError, MarketRiskError, KeyError, ValueError) as exc:
+                return PipelineResult(plan=plan, answer=build_unsupported_answer(
+                    question, f"Could not identify one supported Item 7A sensitivity in the exact 10-K: {exc}"
+                ))
+
+            def retrieve_instant_fact(concepts: tuple[str, ...], *, required: bool):
+                for concept in concepts:
+                    try:
+                        raw = self.fact_retriever.get_fact(
+                            cik=cik,
+                            taxonomy="us-gaap",
+                            concept=concept,
+                            start_date=None,
+                            end_date=current_period.end_date,
+                            form="10-K",
+                            unit=current_period.currency,
+                            filed_on_or_before=current_period.filing_date,
+                            accession_number=current_period.accession_number,
+                        )
+                        if (
+                            str(raw.get("cik", "")).zfill(10) != cik
+                            or raw.get("accession_number") != current_period.accession_number
+                            or raw.get("end_date") != current_period.end_date
+                            or raw.get("start_date") is not None
+                        ):
+                            raise FactRetrievalError(
+                                "Investment portfolio balance does not match the exact filing period."
+                            )
+                        return sec_fact_to_financial_fact(
+                            raw,
+                            period_role=PeriodRole.CURRENT,
+                            reporting_scope=ReportingScope.CONSOLIDATED,
+                        )
+                    except FactRetrievalError:
+                        continue
+                if required:
+                    raise FactRetrievalError(
+                        f"Could not retrieve any exact-period fact for {concepts[0]}."
+                    )
+                return None
+
+            try:
+                cash_fact = retrieve_instant_fact((
+                    "CashAndCashEquivalentsAtCarryingValue",
+                    "CashCashEquivalentsRestrictedCashAndRestrictedCashEquivalents",
+                ), required=True)
+                current_investment_fact = retrieve_instant_fact((
+                    "MarketableSecuritiesCurrent",
+                    "ShortTermInvestments",
+                    "AvailableForSaleSecuritiesCurrent",
+                ), required=True)
+                noncurrent_investment_fact = retrieve_instant_fact((
+                    "MarketableSecuritiesNoncurrent",
+                    "AvailableForSaleSecuritiesNoncurrent",
+                ), required=False)
+                portfolio_facts = [cash_fact, current_investment_fact]
+                if noncurrent_investment_fact is not None:
+                    portfolio_facts.append(noncurrent_investment_fact)
+                for left_fact, right_fact in zip(portfolio_facts, portfolio_facts[1:]):
+                    require_compatible_facts(
+                        left_fact, right_fact, require_same_period=True
+                    )
+                validate_currency_inputs(*portfolio_facts)
+                if current_period.currency != "USD":
+                    raise ValueError("Market-risk sensitivity ratio currently requires USD filings.")
+                portfolio_value = sum(
+                    fact.normalized_value for fact in portfolio_facts
+                )
+                sensitivity_value = sensitivity.sensitivity_amount * Decimal(1_000_000)
+                calculation = sensitivity_ratio(sensitivity_value, portfolio_value)
+            except (FactRetrievalError, ValueError, ArithmeticError) as exc:
+                return PipelineResult(plan=plan, answer=build_unsupported_answer(
+                    question, f"The sensitivity and investment portfolio could not be compared safely: {exc}"
+                ))
+
+            filing_url = self.filing_retriever.submissions.get_filing_url(
+                cik=cik,
+                accession_number=current_period.accession_number,
+                primary_document=filing["primary_document"],
+            )
+            period_label = f"As of {current_period.end_date} (FY{current_period.fiscal_year})"
+            evidence = [
+                AnswerEvidence(
+                    f"Item 7A hypothetical interest-rate sensitivity: {sensitivity.scenario}",
+                    sensitivity_value,
+                    "USD",
+                    period_label,
+                    current_period.filing_date,
+                    current_period.accession_number,
+                    filing_url,
+                ),
+                AnswerEvidence(
+                    "Cash and cash equivalents",
+                    cash_fact.normalized_value,
+                    "USD",
+                    period_label,
+                    current_period.filing_date,
+                    current_period.accession_number,
+                    filing_url,
+                ),
+                AnswerEvidence(
+                    "Current marketable securities or short-term investments",
+                    current_investment_fact.normalized_value,
+                    "USD",
+                    period_label,
+                    current_period.filing_date,
+                    current_period.accession_number,
+                    filing_url,
+                ),
+            ]
+            if noncurrent_investment_fact is not None:
+                evidence.append(AnswerEvidence(
+                    "Noncurrent marketable securities",
+                    noncurrent_investment_fact.normalized_value,
+                    "USD",
+                    period_label,
+                    current_period.filing_date,
+                    current_period.accession_number,
+                    filing_url,
+                ))
+            evidence.append(AnswerEvidence(
+                "Cash and investment portfolio balance",
+                portfolio_value,
+                "USD",
+                period_label,
+                current_period.filing_date,
+                current_period.accession_number,
+                filing_url,
+            ))
+            ratio_display = f"{calculation.value.quantize(Decimal('0.01')):,.2f}%"
+            limitations = (
+                "This is a hypothetical, point-in-time interest-rate scenario, not a forecast or a realized loss.",
+                "The ratio compares the disclosed fair-value sensitivity with reported cash and investment balances; those balances are a contextual denominator and may include amounts outside the sensitivity model.",
+                "Only the identified interest-rate investment-portfolio sensitivity is summarized; other market-risk categories may also be disclosed in Item 7A.",
+            )
+            answer = Answer(
+                text=(
+                    f"{resolved['name']} disclosed that {sensitivity.scenario} could cause a "
+                    f"{sensitivity.impact} change of ${sensitivity_value:,.0f}. That equals "
+                    f"{ratio_display} of its reported cash and investment portfolio balance of "
+                    f"${portfolio_value:,.0f} for FY{current_period.fiscal_year}.\n\n"
+                    f"Source: [SEC Form 10-K, Item 7A]({filing_url})\n\n"
+                    + "\n".join(f"- {item}" for item in limitations)
+                ),
+                formula_id=calculation.formula_id,
+                result_value=str(calculation.value),
+                result_unit=calculation.unit,
+                evidence=tuple(evidence),
+                limitations=limitations,
+            )
+            return PipelineResult(
+                plan=plan,
+                answer=answer,
+                facts=({
+                    "company": resolved["name"],
+                    "ticker": resolved.get("ticker"),
+                    "fiscal_year": current_period.fiscal_year,
+                    "scenario": sensitivity.scenario,
+                    "impact": sensitivity.impact,
+                    "sensitivity_amount_usd": str(sensitivity_value),
+                    "portfolio_balance_usd": str(portfolio_value),
+                    "ratio_percent": str(calculation.value),
                     "accession_number": current_period.accession_number,
                     "source_url": filing_url,
                 },),

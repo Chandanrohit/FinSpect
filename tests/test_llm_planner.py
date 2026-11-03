@@ -94,3 +94,9 @@ def test_system_prompt_routes_q17_to_geographic_revenue_with_basis_and_caveats()
     assert '"geographic_exposure"' in SYSTEM_PROMPT
     assert "classification\n    basis" in SYSTEM_PROMPT
     assert "do not substitute assets" in SYSTEM_PROMPT
+
+
+def test_system_prompt_routes_q18_to_period_matched_item_7a_sensitivity():
+    assert '"sensitivity_analysis"' in SYSTEM_PROMPT
+    assert "interest-rate investment-portfolio fair-value scenario" in SYSTEM_PROMPT
+    assert "a forecast or realized loss" in SYSTEM_PROMPT

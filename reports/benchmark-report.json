@@ -7,12 +7,12 @@
   "question_count": 20,
   "aggregate_counts": {
     "PASS": 0,
-    "PARTIAL": 17,
-    "UNSUPPORTED": 3,
+    "PARTIAL": 18,
+    "UNSUPPORTED": 2,
     "FAIL": 0
   },
   "accuracy_percentage": null,
-  "accuracy_note": "No overall accuracy percentage is reported: Q01, Q02, Q03, Q04, Q05, Q07, Q08, Q09, Q06, Q10, Q11, Q12, Q13, Q14, Q15, Q16, and Q17 have fixture-backed checks; issuer matrix case counts and individual checks are reported per operation, but neither live SEC retrieval nor the planner was evaluated.",
+  "accuracy_note": "No overall accuracy percentage is reported: Q01, Q02, Q03, Q04, Q05, Q07, Q08, Q09, Q06, Q10, Q11, Q12, Q13, Q14, Q15, Q16, Q17, and Q18 have fixture-backed checks; issuer matrix case counts and individual checks are reported per operation, but neither live SEC retrieval nor the planner was evaluated.",
   "operation_reference_matrices": [
     {
       "matrix_id": "annual-revenue-growth-multi-issuer-v2-healthcare",
@@ -4424,6 +4424,108 @@
           "status": "PASS"
         }
       ]
+    },
+    {
+      "matrix_id": "annual-market-risk-sensitivity-multi-issuer-v1",
+      "question_id": "Q18",
+      "evaluation_scope": "Offline reference checks validate the hypothetical interest-rate portfolio sensitivity against exact-period cash and investment balances. Live SEC extraction and live query interpretation are evaluated separately. The ratio is contextual, not a probability, forecast, or estimate of realized losses.",
+      "case_count": 3,
+      "pass_count": 3,
+      "fail_count": 0,
+      "issuers": [
+        "AAPL",
+        "MSFT",
+        "NVDA"
+      ],
+      "cases_per_issuer": {
+        "AAPL": 1,
+        "MSFT": 1,
+        "NVDA": 1
+      },
+      "minimum_gate_coverage_met": true,
+      "cases": [
+        {
+          "company": {
+            "name": "NVIDIA Corporation",
+            "ticker": "NVDA",
+            "cik": "0001045810"
+          },
+          "fiscal_year": 2025,
+          "scenario": "Parallel yield-curve shift plus or minus 0.5%",
+          "impact": "fair value of investment portfolio",
+          "sensitivity_amount_usd": "238000000",
+          "portfolio_balance_usd": "43210000000",
+          "share_percent": "0.55",
+          "unit": "USD",
+          "disclosure_excerpt": "parallel shifts in the yield curve of plus or minus 0.5% would result in a change in fair value for these investments of $238 million",
+          "limitation_note": "Under Item 7A Investment and Interest Rate Risk, as of fiscal year 2025 NVIDIA performed a sensitivity analysis on its investment portfolio.",
+          "accession_number": "0001045810-25-000023",
+          "source_url": "https://www.sec.gov/Archives/edgar/data/1045810/000104581025000023/nvda-20250126.htm",
+          "checks": {
+            "annual_period_and_filing": true,
+            "source_provenance": true,
+            "sensitivity_disclosure_supported": true,
+            "portfolio_components_reconcile": true,
+            "share_matches_reference": true,
+            "scenario_limitations_supported": true
+          },
+          "status": "PASS"
+        },
+        {
+          "company": {
+            "name": "Microsoft Corporation",
+            "ticker": "MSFT",
+            "cik": "0000789019"
+          },
+          "fiscal_year": 2025,
+          "scenario": "100 basis point increase in U.S. treasury interest rates",
+          "impact": "fair value of fixed-income portfolio",
+          "sensitivity_amount_usd": "1415000000",
+          "portfolio_balance_usd": "94565000000",
+          "share_percent": "1.50",
+          "unit": "USD",
+          "disclosure_excerpt": "Interest rate | 100 basis point increase in U.S. treasury interest rates | (1,415) | Fair Value",
+          "limitation_note": "The sensitivity table sets forth the potential loss in future earnings or fair values resulting from hypothetical changes in relevant market rates or prices.",
+          "accession_number": "0000950170-25-100235",
+          "source_url": "https://www.sec.gov/Archives/edgar/data/789019/000095017025100235/msft-20250630.htm",
+          "checks": {
+            "annual_period_and_filing": true,
+            "source_provenance": true,
+            "sensitivity_disclosure_supported": true,
+            "portfolio_components_reconcile": true,
+            "share_matches_reference": true,
+            "scenario_limitations_supported": true
+          },
+          "status": "PASS"
+        },
+        {
+          "company": {
+            "name": "Apple Inc.",
+            "ticker": "AAPL",
+            "cik": "0000320193"
+          },
+          "fiscal_year": 2025,
+          "scenario": "100 basis points, all tenors",
+          "impact": "fair value of investment portfolio",
+          "sensitivity_amount_usd": "2416000000",
+          "portfolio_balance_usd": "132420000000",
+          "share_percent": "1.82",
+          "unit": "USD",
+          "disclosure_excerpt": "Investment portfolio | 100 basis points, all tenors | Decline in fair value | $2,416",
+          "limitation_note": "The table shows potential impacts on the investment portfolio from a hypothetical increase in relevant interest rates as of September 27, 2025.",
+          "accession_number": "0000320193-25-000079",
+          "source_url": "https://www.sec.gov/Archives/edgar/data/320193/000032019325000079/aapl-20250927.htm",
+          "checks": {
+            "annual_period_and_filing": true,
+            "source_provenance": true,
+            "sensitivity_disclosure_supported": true,
+            "portfolio_components_reconcile": true,
+            "share_matches_reference": true,
+            "scenario_limitations_supported": true
+          },
+          "status": "PASS"
+        }
+      ]
     }
   ],
   "questions": [
@@ -7628,25 +7730,138 @@
       "question_id": "Q18",
       "question": "What quantitative market-risk sensitivity does the company disclose, and what would the disclosed sensitivity represent relative to the relevant financial measure for the reporting period?",
       "company": null,
-      "filings": [],
-      "reporting_periods": [],
+      "filings": [
+        {
+          "company": {
+            "name": "NVIDIA Corporation",
+            "ticker": "NVDA",
+            "cik": "0001045810"
+          },
+          "fiscal_year": 2025,
+          "accession_number": "0001045810-25-000023",
+          "source_url": "https://www.sec.gov/Archives/edgar/data/1045810/000104581025000023/nvda-20250126.htm"
+        },
+        {
+          "company": {
+            "name": "Microsoft Corporation",
+            "ticker": "MSFT",
+            "cik": "0000789019"
+          },
+          "fiscal_year": 2025,
+          "accession_number": "0000950170-25-100235",
+          "source_url": "https://www.sec.gov/Archives/edgar/data/789019/000095017025100235/msft-20250630.htm"
+        },
+        {
+          "company": {
+            "name": "Apple Inc.",
+            "ticker": "AAPL",
+            "cik": "0000320193"
+          },
+          "fiscal_year": 2025,
+          "accession_number": "0000320193-25-000079",
+          "source_url": "https://www.sec.gov/Archives/edgar/data/320193/000032019325000079/aapl-20250927.htm"
+        }
+      ],
+      "reporting_periods": [
+        {
+          "company": {
+            "name": "NVIDIA Corporation",
+            "ticker": "NVDA",
+            "cik": "0001045810"
+          },
+          "fiscal_year": 2025
+        },
+        {
+          "company": {
+            "name": "Microsoft Corporation",
+            "ticker": "MSFT",
+            "cik": "0000789019"
+          },
+          "fiscal_year": 2025
+        },
+        {
+          "company": {
+            "name": "Apple Inc.",
+            "ticker": "AAPL",
+            "cik": "0000320193"
+          },
+          "fiscal_year": 2025
+        }
+      ],
       "expected_concepts": [],
-      "retrieval_mode": "not_run",
-      "retrieved_inputs": [],
-      "selected_evidence": [],
-      "calculation_formula": null,
-      "expected_answer": null,
-      "actual_answer": "I cannot answer this request reliably yet: No complete retrieval-to-answer path is implemented for Q18; calculator registration alone is not support.\n\nYour question: What quantitative market-risk sensitivity does the company disclose, and what would the disclosed sensitivity represent relative to the relevant financial measure for the reporting period?",
+      "retrieval_mode": "offline_SEC_reference_matrix_and_exact-period_calculation",
+      "selected_evidence": [
+        {
+          "scenario": "Parallel yield-curve shift plus or minus 0.5%",
+          "impact": "fair value of investment portfolio",
+          "sensitivity_amount_usd": "238000000",
+          "portfolio_balance_usd": "43210000000",
+          "excerpt": "parallel shifts in the yield curve of plus or minus 0.5% would result in a change in fair value for these investments of $238 million",
+          "accession_number": "0001045810-25-000023",
+          "source_url": "https://www.sec.gov/Archives/edgar/data/1045810/000104581025000023/nvda-20250126.htm"
+        },
+        {
+          "scenario": "100 basis point increase in U.S. treasury interest rates",
+          "impact": "fair value of fixed-income portfolio",
+          "sensitivity_amount_usd": "1415000000",
+          "portfolio_balance_usd": "94565000000",
+          "excerpt": "Interest rate | 100 basis point increase in U.S. treasury interest rates | (1,415) | Fair Value",
+          "accession_number": "0000950170-25-100235",
+          "source_url": "https://www.sec.gov/Archives/edgar/data/789019/000095017025100235/msft-20250630.htm"
+        },
+        {
+          "scenario": "100 basis points, all tenors",
+          "impact": "fair value of investment portfolio",
+          "sensitivity_amount_usd": "2416000000",
+          "portfolio_balance_usd": "132420000000",
+          "excerpt": "Investment portfolio | 100 basis points, all tenors | Decline in fair value | $2,416",
+          "accession_number": "0000320193-25-000079",
+          "source_url": "https://www.sec.gov/Archives/edgar/data/320193/000032019325000079/aapl-20250927.htm"
+        }
+      ],
+      "calculation_formula": "disclosed interest-rate fair-value sensitivity / period-end cash and investment balance * 100",
+      "expected_answer": [
+        {
+          "ticker": "NVDA",
+          "fiscal_year": 2025,
+          "sensitivity_share_percent": "0.55"
+        },
+        {
+          "ticker": "MSFT",
+          "fiscal_year": 2025,
+          "sensitivity_share_percent": "1.50"
+        },
+        {
+          "ticker": "AAPL",
+          "fiscal_year": 2025,
+          "sensitivity_share_percent": "1.82"
+        }
+      ],
+      "actual_answer": [
+        {
+          "ticker": "NVDA",
+          "fiscal_year": 2025,
+          "sensitivity_share_percent": "0.55"
+        },
+        {
+          "ticker": "MSFT",
+          "fiscal_year": 2025,
+          "sensitivity_share_percent": "1.50"
+        },
+        {
+          "ticker": "AAPL",
+          "fiscal_year": 2025,
+          "sensitivity_share_percent": "1.82"
+        }
+      ],
       "checks": {
-        "input_retrieval_correctness": null,
-        "period_correctness": null,
-        "unit_correctness": null,
-        "calculation_correctness": null,
-        "evidence_correctness": null,
-        "query_interpretation_correctness": null
+        "reference_matrix_cases_pass": true,
+        "live_extraction": "not_evaluated_by_offline_benchmark",
+        "live_sec_retrieval": "not_evaluated_by_offline_benchmark",
+        "query_interpretation": "not_evaluated"
       },
-      "overall_status": "UNSUPPORTED",
-      "failure_reason": "No complete retrieval-to-answer path is implemented for Q18; calculator registration alone is not support."
+      "overall_status": "PARTIAL",
+      "failure_reason": "Live planner interpretation remains unevaluated."
     },
     {
       "question_id": "Q19",

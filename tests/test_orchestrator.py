@@ -2042,6 +2042,124 @@ def test_q17_pipeline_matches_all_six_issuer_period_references():
         assert result.facts[0]["accession_number"] == reference["accession_number"]
 
 
+def test_q18_pipeline_matches_all_reference_issuers_with_exact_filing_facts():
+    root = Path(__file__).parents[1]
+    references = json.loads(
+        (root / "data/fixtures/annual_market_risk_sensitivity_reference_matrix.json")
+        .read_text(encoding="utf-8")
+    )["cases"]
+
+    for reference in references:
+        company = reference["company"]
+        period = AnnualPeriod(
+            fiscal_year=reference["fiscal_year"],
+            start_date=reference["start_date"],
+            end_date=reference["end_date"],
+            filing_date=reference["filing_date"],
+            accession_number=reference["accession_number"],
+        )
+        question = (
+            f"What quantitative market-risk sensitivity did {company['name']} disclose "
+            f"for FY{reference['fiscal_year']}?"
+        )
+        plan = make_plan().model_copy(update={
+            "original_question": question,
+            "company": CompanyRequest(**company),
+            "period": PeriodRequest(
+                period_label=f"FY{reference['fiscal_year']}",
+                period_kind="annual", fiscal_year=reference["fiscal_year"],
+                comparison_required=False,
+            ),
+            "benchmark_id": "Q18",
+            "task_type": "calculation",
+            "operation": "sensitivity_analysis",
+            "metrics": [
+                MetricRequest(name="market_risk_sensitivity", role="primary", sources=["market_risk"]),
+                MetricRequest(name="investment_portfolio_balance", role="supporting", sources=["xbrl"]),
+            ],
+            "retrieval": RetrievalRequirements(sources=["market_risk", "xbrl"]),
+            "answer": AnswerRequirements(expected_output="percentage"),
+        })
+        ticker = company["ticker"]
+        if ticker == "NVDA":
+            sensitivity_html = (
+                "<p>Interest rate risk. As of fiscal year 2025, parallel shifts in the yield curve of plus or minus 0.5% "
+                "would result in a change in fair value for these investments of $238 million.</p>"
+            )
+        elif ticker == "MSFT":
+            sensitivity_html = """
+                <p>Interest rate risk sensitivity, dollars in millions</p>
+                <table><tr><th>Risk Categories</th><th>Hypothetical Change</th><th>June 30, 2025</th><th>Impact</th></tr>
+                <tr><td>Interest rate</td><td>100 basis point increase in U.S. treasury interest rates</td><td>(1,415)</td><td>Fair Value</td></tr></table>
+            """
+        else:
+            sensitivity_html = """
+                <p>Interest rate risk: potential impacts of hypothetical interest-rate changes (dollars in millions).</p>
+                <table><tr><th>Instrument</th><th>Hypothetical Interest Rate Increase</th><th>Potential Impact</th><th>2025</th><th>2024</th></tr>
+                <tr><td>Investment portfolio</td><td>100 basis points, all tenors</td><td>Decline in fair value</td><td>2,416</td><td>2,755</td></tr></table>
+            """
+        html = (
+            "<p>ITEM 7A. QUANTITATIVE AND QUALITATIVE DISCLOSURES ABOUT MARKET RISK</p>"
+            + sensitivity_html
+            + "<p>ITEM 8. FINANCIAL STATEMENTS</p>"
+        )
+        url = reference["source_url"]
+
+        class Planner:
+            def plan(self, _question):
+                return plan
+
+        class CompanyResolver:
+            def resolve(self, **_kwargs):
+                return company
+
+        class FilingRetriever:
+            submissions = type("Submissions", (), {
+                "get_filing_url": staticmethod(lambda **_kwargs: url)
+            })()
+
+            def get_filing(self, **_kwargs):
+                return {
+                    "cik": company["cik"], "form": "10-K",
+                    "filing_date": reference["filing_date"],
+                    "report_date": reference["end_date"],
+                    "accession_number": reference["accession_number"],
+                    "primary_document": url.rsplit("/", 1)[-1], "html": html,
+                }
+
+        class FactRetriever:
+            def get_fact(self, *, concept, **_kwargs):
+                component = next(
+                    (item for item in reference["denominator_components"] if item["concept"] == concept),
+                    None,
+                )
+                if component is None:
+                    raise FactRetrievalError(f"No fixture for {concept}")
+                return {
+                    "cik": company["cik"], "company": company["name"],
+                    "taxonomy": "us-gaap", "concept": concept,
+                    "label": component["label"], "value": int(component["value_usd"]),
+                    "unit": "USD", "start_date": None, "end_date": reference["end_date"],
+                    "fiscal_year": reference["fiscal_year"], "form": "10-K",
+                    "filing_date": reference["filing_date"],
+                    "accession_number": reference["accession_number"],
+                }
+
+        result = FinSpectOrchestrator(
+            planner=Planner(), normalizer=normalize_query_plan,
+            period_resolver=lambda _cik, _year: period,
+            fact_retriever=FactRetriever(), company_resolver=CompanyResolver(),
+            filing_retriever=FilingRetriever(),
+        ).run(question)
+
+        assert result.answer.formula_id == "Q18"
+        assert Decimal(result.answer.result_value).quantize(Decimal("0.01")) == Decimal(reference["share_percent"])
+        assert result.answer.result_unit == "percent"
+        assert "hypothetical" in " ".join(result.answer.limitations).casefold()
+        assert result.facts[0]["accession_number"] == reference["accession_number"]
+        assert all(item.source_url == url for item in result.answer.evidence)
+
+
 def test_q16_exact_filing_pipeline_matches_six_issuer_period_references():
     root = Path(__file__).parents[1]
     references = json.loads(
@@ -2519,7 +2637,7 @@ def make_unsupported_benchmark_plan(question):
     [
         f"Q{number:02d}"
         for number in range(2, 21)
-        if number not in {2, 3, 4, 5, 7, 8, 9, 10, 11, 13}
+        if number not in {2, 3, 4, 5, 7, 8, 9, 10, 11, 13, 14, 15, 16, 17, 18}
     ],
 )
 def test_other_benchmark_operations_are_explicitly_unsupported(question_id):

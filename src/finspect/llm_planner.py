@@ -85,6 +85,13 @@ Rules:
     the exact 10-K. Preserve the issuer's geographic labels and classification
     basis and include any stated limitation; do not substitute assets or
     reportable business segments for geographic revenue.
+24. For Q18 market-risk sensitivity questions, require one explicit annual
+    fiscal year and use operation "sensitivity_analysis" with a market-risk
+    sensitivity and investment-portfolio balance from the exact 10-K. Use a
+    clearly disclosed interest-rate investment-portfolio fair-value scenario
+    only when its period-end balance and units can be matched; otherwise the
+    pipeline must report unsupported. Do not treat a hypothetical scenario as
+    a forecast or realized loss.
 """
 
 

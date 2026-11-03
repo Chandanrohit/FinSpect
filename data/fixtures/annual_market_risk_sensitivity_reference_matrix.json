@@ -1,0 +1,72 @@
+{
+  "matrix_id": "annual-market-risk-sensitivity-multi-issuer-v1",
+  "question_id": "Q18",
+  "evaluation_scope": "Offline reference checks validate the hypothetical interest-rate portfolio sensitivity against exact-period cash and investment balances. Live SEC extraction and live query interpretation are evaluated separately. The ratio is contextual, not a probability, forecast, or estimate of realized losses.",
+  "form": "10-K",
+  "cases": [
+    {
+      "company": {"name": "NVIDIA Corporation", "ticker": "NVDA", "cik": "0001045810"},
+      "fiscal_year": 2025,
+      "start_date": "2024-01-29",
+      "end_date": "2025-01-26",
+      "filing_date": "2025-02-26",
+      "accession_number": "0001045810-25-000023",
+      "source_url": "https://www.sec.gov/Archives/edgar/data/1045810/000104581025000023/nvda-20250126.htm",
+      "scenario": "Parallel yield-curve shift plus or minus 0.5%",
+      "impact": "fair value of investment portfolio",
+      "sensitivity_amount_usd": "238000000",
+      "denominator_components": [
+        {"label": "Cash and cash equivalents", "concept": "CashAndCashEquivalentsAtCarryingValue", "value_usd": "8589000000"},
+        {"label": "Marketable securities", "concept": "MarketableSecuritiesCurrent", "value_usd": "34621000000"}
+      ],
+      "portfolio_balance_usd": "43210000000",
+      "share_percent": "0.55",
+      "disclosure_excerpt": "parallel shifts in the yield curve of plus or minus 0.5% would result in a change in fair value for these investments of $238 million",
+      "limitation_note": "Under Item 7A Investment and Interest Rate Risk, as of fiscal year 2025 NVIDIA performed a sensitivity analysis on its investment portfolio.",
+      "limitation_terms": ["sensitivity analysis", "interest rate", "investment portfolio"]
+    },
+    {
+      "company": {"name": "Microsoft Corporation", "ticker": "MSFT", "cik": "0000789019"},
+      "fiscal_year": 2025,
+      "start_date": "2024-07-01",
+      "end_date": "2025-06-30",
+      "filing_date": "2025-07-30",
+      "accession_number": "0000950170-25-100235",
+      "source_url": "https://www.sec.gov/Archives/edgar/data/789019/000095017025100235/msft-20250630.htm",
+      "scenario": "100 basis point increase in U.S. treasury interest rates",
+      "impact": "fair value of fixed-income portfolio",
+      "sensitivity_amount_usd": "1415000000",
+      "denominator_components": [
+        {"label": "Cash and cash equivalents", "concept": "CashAndCashEquivalentsAtCarryingValue", "value_usd": "30242000000"},
+        {"label": "Short-term investments", "concept": "ShortTermInvestments", "value_usd": "64323000000"}
+      ],
+      "portfolio_balance_usd": "94565000000",
+      "share_percent": "1.50",
+      "disclosure_excerpt": "Interest rate | 100 basis point increase in U.S. treasury interest rates | (1,415) | Fair Value",
+      "limitation_note": "The sensitivity table sets forth the potential loss in future earnings or fair values resulting from hypothetical changes in relevant market rates or prices.",
+      "limitation_terms": ["hypothetical changes", "potential loss", "fair values"]
+    },
+    {
+      "company": {"name": "Apple Inc.", "ticker": "AAPL", "cik": "0000320193"},
+      "fiscal_year": 2025,
+      "start_date": "2024-09-29",
+      "end_date": "2025-09-27",
+      "filing_date": "2025-10-31",
+      "accession_number": "0000320193-25-000079",
+      "source_url": "https://www.sec.gov/Archives/edgar/data/320193/000032019325000079/aapl-20250927.htm",
+      "scenario": "100 basis points, all tenors",
+      "impact": "fair value of investment portfolio",
+      "sensitivity_amount_usd": "2416000000",
+      "denominator_components": [
+        {"label": "Cash and cash equivalents", "concept": "CashAndCashEquivalentsAtCarryingValue", "value_usd": "35934000000"},
+        {"label": "Current marketable securities", "concept": "MarketableSecuritiesCurrent", "value_usd": "18763000000"},
+        {"label": "Noncurrent marketable securities", "concept": "MarketableSecuritiesNoncurrent", "value_usd": "77723000000"}
+      ],
+      "portfolio_balance_usd": "132420000000",
+      "share_percent": "1.82",
+      "disclosure_excerpt": "Investment portfolio | 100 basis points, all tenors | Decline in fair value | $2,416",
+      "limitation_note": "The table shows potential impacts on the investment portfolio from a hypothetical increase in relevant interest rates as of September 27, 2025.",
+      "limitation_terms": ["hypothetical increase", "investment portfolio", "interest rates"]
+    }
+  ]
+}
