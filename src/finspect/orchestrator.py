@@ -52,6 +52,7 @@ from finspect.edgar.geographic_revenue import (
     GeographicRevenueExtractor,
 )
 from finspect.edgar.market_risk import MarketRiskError, MarketRiskSensitivityExtractor
+from finspect.edgar.legal import LegalDisclosureError, LegalProceedingsExtractor
 from finspect.narrative_retriever import NarrativeRetriever
 from finspect.query_planner import QueryPlan
 from finspect.edgar.xbrl import XBRLService
@@ -405,6 +406,22 @@ class FinSpectOrchestrator:
             and plan.period.fiscal_year is not None
             and not plan.period.comparison_required
         )
+        is_supported_litigation_analysis = (
+            plan.operation == "litigation_analysis"
+            and bool(metric_names & {
+                "litigation and contingencies", "legal proceedings", "legal proceeding",
+                "litigation", "contingencies", "legal contingencies", "legal claims",
+                "loss contingencies",
+            })
+            and metric_names <= {
+                "litigation and contingencies", "legal proceedings", "legal proceeding",
+                "litigation", "contingencies", "legal contingencies", "legal claims",
+                "loss contingencies", "financial exposure", "loss uncertainty",
+            }
+            and plan.period.period_kind == "annual"
+            and plan.period.fiscal_year is not None
+            and not plan.period.comparison_required
+        )
         is_supported_commitments = (
             plan.operation == "commitment_liquidity"
             and has_future_commitments and has_near_term_commitments
@@ -457,6 +474,7 @@ class FinSpectOrchestrator:
             or is_supported_regulatory_risk
             or is_supported_geographic_exposure
             or is_supported_market_risk_sensitivity
+            or is_supported_litigation_analysis
             or is_supported_commitments
             or is_supported_segment_growth
             or is_supported_expense_growth
@@ -476,7 +494,10 @@ class FinSpectOrchestrator:
                     "plus annual shareholder-return and capital-expenditure "
                     "allocation when all cash-flow inputs are available. "
                     "Segment revenue contribution is supported when the exact "
-                    "annual 10-K contains one reconciled reportable-segment revenue schedule."
+                    "annual 10-K contains one reconciled reportable-segment revenue schedule. "
+                    "Selected annual Item 1A risk, geographic revenue, Item 7A interest-rate sensitivity, "
+                    "legal proceeding, and contingency disclosures are supported when the exact filing "
+                    "contains clear evidence."
                 ),
             )
             return PipelineResult(plan=plan, answer=answer)
@@ -491,6 +512,7 @@ class FinSpectOrchestrator:
             or is_supported_regulatory_risk
             or is_supported_geographic_exposure
             or is_supported_market_risk_sensitivity
+            or is_supported_litigation_analysis
             or is_supported_commitments
         ):
             fiscal_years = (plan.period.fiscal_year,)
@@ -509,6 +531,8 @@ class FinSpectOrchestrator:
         if is_supported_geographic_exposure:
             fiscal_years = (plan.period.fiscal_year,)
         if is_supported_market_risk_sensitivity:
+            fiscal_years = (plan.period.fiscal_year,)
+        if is_supported_litigation_analysis:
             fiscal_years = (plan.period.fiscal_year,)
         if is_supported_commitments:
             fiscal_years = (plan.period.fiscal_year,)
@@ -1718,6 +1742,115 @@ class FinSpectOrchestrator:
                     "sensitivity_amount_usd": str(sensitivity_value),
                     "portfolio_balance_usd": str(portfolio_value),
                     "ratio_percent": str(calculation.value),
+                    "accession_number": current_period.accession_number,
+                    "source_url": filing_url,
+                },),
+            )
+
+        if is_supported_litigation_analysis:
+            current_period = periods[0]
+            if not self.filing_retriever:
+                return PipelineResult(plan=plan, answer=build_unsupported_answer(
+                    question, "Exact annual 10-K retrieval is required for legal proceeding analysis."
+                ))
+            if not current_period.accession_number or not current_period.filing_date:
+                return PipelineResult(plan=plan, answer=build_unsupported_answer(
+                    question,
+                    "The requested fiscal year could not be tied to an exact 10-K accession and filing date.",
+                ))
+            try:
+                filing = self.filing_retriever.get_filing(
+                    cik=cik,
+                    accession_number=current_period.accession_number,
+                    form="10-K",
+                )
+                if (
+                    filing.get("form") != "10-K"
+                    or str(filing.get("cik", "")).zfill(10) != cik
+                    or filing.get("accession_number") != current_period.accession_number
+                    or filing.get("filing_date") != current_period.filing_date
+                    or filing.get("report_date") != current_period.end_date
+                    or not filing.get("html")
+                    or not filing.get("primary_document")
+                ):
+                    raise LegalDisclosureError(
+                        "Retrieved filing metadata or content does not match the requested issuer and exact 10-K period."
+                    )
+                disclosure = LegalProceedingsExtractor().extract(
+                    filing["html"], fiscal_year=current_period.fiscal_year
+                )
+            except (FilingRetrievalError, LegalDisclosureError, KeyError, ValueError) as exc:
+                return PipelineResult(plan=plan, answer=build_unsupported_answer(
+                    question,
+                    f"Could not identify supported legal proceeding and loss-uncertainty disclosures in the exact 10-K: {exc}",
+                ))
+
+            filing_url = self.filing_retriever.submissions.get_filing_url(
+                cik=cik,
+                accession_number=current_period.accession_number,
+                primary_document=filing["primary_document"],
+            )
+            period_label = f"FY{current_period.fiscal_year}"
+            evidence = []
+            for label, excerpts in (
+                ("Legal proceeding", disclosure.proceeding_excerpts[:4]),
+                ("Disclosed financial exposure", disclosure.exposure_excerpts[:4]),
+                ("Company-stated loss uncertainty", disclosure.uncertainty_excerpts[:3]),
+            ):
+                for excerpt in excerpts:
+                    item = AnswerEvidence(
+                        label,
+                        excerpt,
+                        "filing excerpt",
+                        period_label,
+                        current_period.filing_date,
+                        current_period.accession_number,
+                        filing_url,
+                    )
+                    if item not in evidence:
+                        evidence.append(item)
+
+            def format_excerpt_group(title: str, excerpts: tuple[str, ...], limit: int) -> str:
+                if not excerpts:
+                    return f"**{title}:** No clear disclosure was extracted from the selected sections."
+                return "**" + title + ":**\n" + "\n".join(
+                    f"- “{excerpt}”" for excerpt in excerpts[:limit]
+                )
+
+            limitations = (
+                "These excerpts describe the company's disclosures as of the filing date and do not predict how a matter will be resolved.",
+                "An assessed fine, an accrued liability, a possible additional loss, and an unquantified claim are different exposure categories and should not be added together.",
+                "This focused extraction is not a complete legal docket or legal assessment; consult the cited filing for all proceedings and context.",
+            )
+            answer = Answer(
+                text=(
+                    f"{resolved['name']} disclosed the following selected legal proceedings and contingencies in its FY{current_period.fiscal_year} Form 10-K. The excerpts preserve the filing's descriptions of the matters, any stated amounts, and management's uncertainty language.\n\n"
+                    + format_excerpt_group("Proceedings and claims", disclosure.proceeding_excerpts, 4)
+                    + "\n\n"
+                    + format_excerpt_group("Financial exposure disclosed", disclosure.exposure_excerpts, 4)
+                    + "\n\n"
+                    + format_excerpt_group("Company-stated uncertainty", disclosure.uncertainty_excerpts, 3)
+                    + f"\n\nSource: [SEC Form 10-K]({filing_url})"
+                    + "\n\n"
+                    + "\n".join(f"- {item}" for item in limitations)
+                ),
+                formula_id=None,
+                result_value=None,
+                result_unit=None,
+                evidence=tuple(evidence),
+                limitations=limitations,
+            )
+            return PipelineResult(
+                plan=plan,
+                answer=answer,
+                facts=({
+                    "company": resolved["name"],
+                    "ticker": resolved.get("ticker"),
+                    "fiscal_year": current_period.fiscal_year,
+                    "source_sections": list(disclosure.source_sections),
+                    "proceeding_excerpts": list(disclosure.proceeding_excerpts[:4]),
+                    "financial_exposure_excerpts": list(disclosure.exposure_excerpts[:4]),
+                    "uncertainty_excerpts": list(disclosure.uncertainty_excerpts[:3]),
                     "accession_number": current_period.accession_number,
                     "source_url": filing_url,
                 },),

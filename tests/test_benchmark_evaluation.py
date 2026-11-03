@@ -2,6 +2,7 @@ from finspect.benchmark_eval import (
     evaluate_benchmark,
     evaluate_commitment_matrix,
     evaluate_geographic_revenue_matrix,
+    evaluate_legal_proceedings_matrix,
     evaluate_market_risk_sensitivity_matrix,
     evaluate_operating_expense_matrix,
     evaluate_segment_revenue_matrix,
@@ -48,14 +49,23 @@ def test_market_risk_sensitivity_reference_matrix_covers_three_issuers():
     assert result["minimum_gate_coverage_met"] is True
 
 
+def test_legal_proceedings_reference_matrix_keeps_exposures_and_uncertainty_distinct():
+    path = Path(__file__).resolve().parents[1] / "data/fixtures/annual_legal_proceedings_reference_matrix.json"
+    result = evaluate_legal_proceedings_matrix(path)
+    assert result["case_count"] == result["pass_count"] == 3
+    assert result["fail_count"] == 0
+    assert result["issuers"] == ["AAPL", "MSFT", "NVDA"]
+    assert result["minimum_gate_coverage_met"] is True
+
+
 def test_benchmark_report_records_fixture_and_unsupported_questions():
     report = evaluate_benchmark()
 
     assert report["question_count"] == 20
     assert report["aggregate_counts"] == {
         "PASS": 0,
-        "PARTIAL": 18,
-        "UNSUPPORTED": 2,
+        "PARTIAL": 19,
+        "UNSUPPORTED": 1,
         "FAIL": 0,
     }
     assert report["accuracy_percentage"] is None
@@ -207,6 +217,13 @@ def test_benchmark_report_records_fixture_and_unsupported_questions():
     assert market_risk_matrix["issuers"] == ["AAPL", "MSFT", "NVDA"]
     assert market_risk_matrix["minimum_gate_coverage_met"] is True
 
+    legal_matrix = report["operation_reference_matrices"][18]
+    assert legal_matrix["question_id"] == "Q19"
+    assert legal_matrix["case_count"] == legal_matrix["pass_count"] == 3
+    assert legal_matrix["fail_count"] == 0
+    assert legal_matrix["issuers"] == ["AAPL", "MSFT", "NVDA"]
+    assert legal_matrix["minimum_gate_coverage_met"] is True
+
     questions = {item["question_id"]: item for item in report["questions"]}
     q01 = questions["Q01"]
     assert q01["overall_status"] == "PARTIAL"
@@ -335,6 +352,13 @@ def test_benchmark_report_records_fixture_and_unsupported_questions():
     assert q18["checks"]["query_interpretation"] == "not_evaluated"
     assert len(q18["actual_answer"]) == 3
 
+    q19 = questions["Q19"]
+    assert q19["overall_status"] == "PARTIAL"
+    assert q19["checks"]["reference_matrix_cases_pass"] is True
+    assert q19["checks"]["live_extraction"] == "not_evaluated_by_offline_benchmark"
+    assert q19["checks"]["query_interpretation"] == "not_evaluated"
+    assert len(q19["actual_answer"]) == 3
+
     q09 = questions["Q09"]
     assert q09["overall_status"] == "PARTIAL"
     assert q09["actual_answer"]["result_unit"] == "percentage_points"
@@ -344,7 +368,7 @@ def test_benchmark_report_records_fixture_and_unsupported_questions():
     for question_id in [
         f"Q{number:02d}"
         for number in range(2, 21)
-        if number not in {2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18}
+        if number not in {2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19}
     ]:
         question = questions[question_id]
         assert question["overall_status"] == "UNSUPPORTED"

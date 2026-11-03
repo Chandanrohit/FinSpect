@@ -100,3 +100,9 @@ def test_system_prompt_routes_q18_to_period_matched_item_7a_sensitivity():
     assert '"sensitivity_analysis"' in SYSTEM_PROMPT
     assert "interest-rate investment-portfolio fair-value scenario" in SYSTEM_PROMPT
     assert "a forecast or realized loss" in SYSTEM_PROMPT
+
+
+def test_system_prompt_routes_q19_to_uncertainty_preserving_legal_disclosures():
+    assert '"litigation_analysis"' in SYSTEM_PROMPT
+    assert "assessed fines" in SYSTEM_PROMPT and "possible additional losses" in SYSTEM_PROMPT
+    assert "do not infer a settlement value or legal outcome" in SYSTEM_PROMPT

@@ -1,0 +1,108 @@
+{
+  "matrix_id": "annual-legal-proceedings-multi-issuer-v1",
+  "question_id": "Q19",
+  "evaluation_scope": "Offline reference cases validate Item 3 legal proceeding and numbered contingency-note excerpts, explicitly classified exposures, and company-stated loss uncertainty. Currency amounts, assessed fines, accrued liabilities, and possible additional losses are distinct disclosures and are not combined.",
+  "form": "10-K",
+  "cases": [
+    {
+      "company": {"name": "NVIDIA Corporation", "ticker": "NVDA", "cik": "0001045810"},
+      "fiscal_year": 2025,
+      "start_date": "2024-01-29",
+      "end_date": "2025-01-26",
+      "filing_date": "2025-02-26",
+      "accession_number": "0001045810-25-000023",
+      "source_url": "https://www.sec.gov/Archives/edgar/data/1045810/000104581025000023/nvda-20250126.htm",
+      "source_sections": ["Item 3. Legal Proceedings", "Note 12 - Commitments and Contingencies"],
+      "proceeding_excerpts": [
+        "Plaintiffs sought class certification, an award of unspecified compensatory damages, an award of reasonable costs and expenses, including attorneys’ fees and expert fees, and further relief as the Court may deem just and proper.",
+        "On February 20, 2025, the Ninth Circuit’s judgment, entered August 25, 2023 and corrected August 28, 2023, took effect, and the case was remanded to the district court for further proceedings."
+      ],
+      "financial_exposures": [
+        {
+          "type": "unquantified_claim",
+          "amount": null,
+          "unit": null,
+          "excerpt": "Plaintiffs sought class certification, an award of unspecified compensatory damages, an award of reasonable costs and expenses, including attorneys’ fees and expert fees, and further relief as the Court may deem just and proper."
+        },
+        {
+          "type": "no_accrual_and_unestimable_loss",
+          "amount": null,
+          "unit": null,
+          "excerpt": "As of January 26, 2025, there are no accrued contingent liabilities associated with the legal proceedings described above based on our belief that liabilities, while reasonably possible, are not probable. Further, any possible loss or range of loss in these matters cannot be reasonably estimated at this time."
+        }
+      ],
+      "uncertainty_excerpts": [
+        "As of January 26, 2025, there are no accrued contingent liabilities associated with the legal proceedings described above based on our belief that liabilities, while reasonably possible, are not probable. Further, any possible loss or range of loss in these matters cannot be reasonably estimated at this time."
+      ]
+    },
+    {
+      "company": {"name": "Microsoft Corporation", "ticker": "MSFT", "cik": "0000789019"},
+      "fiscal_year": 2025,
+      "start_date": "2024-07-01",
+      "end_date": "2025-06-30",
+      "filing_date": "2025-07-30",
+      "accession_number": "0000950170-25-100235",
+      "source_url": "https://www.sec.gov/Archives/edgar/data/789019/000095017025100235/msft-20250630.htm",
+      "source_sections": ["Item 3. Legal Proceedings", "Note 14 - Contingencies"],
+      "proceeding_excerpts": [
+        "In 2018, the Irish Data Protection Commission (“IDPC”) began investigating a complaint against LinkedIn as to whether LinkedIn’s targeted advertising practices violated the recently implemented European Union General Data Protection Regulation (“GDPR”). Microsoft cooperated throughout the period of inquiry. In October 2024, the IDPC provided LinkedIn with a final decision alleging GDPR violations and assessing a fine.",
+        "In November 2024, LinkedIn appealed the final decision to the Irish courts, and the next hearing is scheduled for December 2025."
+      ],
+      "financial_exposures": [
+        {
+          "type": "accrued_aggregate_legal_liability",
+          "amount": "541000000",
+          "unit": "USD",
+          "excerpt": "As of June 30, 2025, we accrued aggregate legal liabilities of $541 million."
+        },
+        {
+          "type": "reasonably_possible_additional_loss",
+          "amount": "600000000",
+          "unit": "USD",
+          "excerpt": "While we intend to defend these matters vigorously, adverse outcomes that we estimate could reach approximately $600 million in aggregate beyond recorded amounts are reasonably possible."
+        }
+      ],
+      "uncertainty_excerpts": [
+        "Although management currently believes that resolving claims against us, individually or in aggregate, will not have a material adverse impact in our consolidated financial statements, these matters are subject to inherent uncertainties and management’s view of these matters may change in the future.",
+        "Were unfavorable final outcomes to occur, there exists the possibility of a material adverse impact in our consolidated financial statements for the period in which the effects become reasonably estimable."
+      ]
+    },
+    {
+      "company": {"name": "Apple Inc.", "ticker": "AAPL", "cik": "0000320193"},
+      "fiscal_year": 2025,
+      "start_date": "2024-09-29",
+      "end_date": "2025-09-27",
+      "filing_date": "2025-10-31",
+      "accession_number": "0000320193-25-000079",
+      "source_url": "https://www.sec.gov/Archives/edgar/data/320193/000032019325000079/aapl-20250927.htm",
+      "source_sections": ["Item 3. Legal Proceedings", "Note 12 - Commitments, Contingencies and Supply Concentrations"],
+      "proceeding_excerpts": [
+        "On April 23, 2025, the Commission fined the Company €500 million in the Article 5(4) Investigation and issued a cease and desist order requiring the Company to remove technical and commercial restrictions that prevent developers from steering users to alternative distribution channels outside the App Store. The Company has appealed the Commission’s Article 5(4) decision.",
+        "If the Commission makes a final determination in the Article 6(4) Investigation that there has been a violation, it can issue a cease and desist order and may impose fines up to 10% of the Company’s annual worldwide net sales."
+      ],
+      "financial_exposures": [
+        {
+          "type": "assessed_fine_under_appeal",
+          "amount": "500000000",
+          "unit": "EUR",
+          "excerpt": "On April 23, 2025, the Commission fined the Company €500 million in the Article 5(4) Investigation and issued a cease and desist order requiring the Company to remove technical and commercial restrictions that prevent developers from steering users to alternative distribution channels outside the App Store. The Company has appealed the Commission’s Article 5(4) decision."
+        },
+        {
+          "type": "potential_fine_cap",
+          "amount": "10",
+          "unit": "percent of annual worldwide net sales",
+          "excerpt": "If the Commission makes a final determination in the Article 6(4) Investigation that there has been a violation, it can issue a cease and desist order and may impose fines up to 10% of the Company’s annual worldwide net sales."
+        },
+        {
+          "type": "other_loss_contingencies",
+          "amount": null,
+          "unit": null,
+          "excerpt": "In the opinion of management, there was not at least a reasonable possibility the Company may have incurred a material loss, or a material loss greater than a recorded accrual, concerning loss contingencies for asserted legal and other claims."
+        }
+      ],
+      "uncertainty_excerpts": [
+        "The Company is subject to various legal proceedings and claims that have arisen in the ordinary course of business and that have not been fully resolved. The outcome of litigation is inherently uncertain. In the opinion of management, there was not at least a reasonable possibility the Company may have incurred a material loss, or a material loss greater than a recorded accrual, concerning loss contingencies for asserted legal and other claims."
+      ]
+    }
+  ]
+}

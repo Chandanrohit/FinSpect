@@ -2160,6 +2160,132 @@ def test_q18_pipeline_matches_all_reference_issuers_with_exact_filing_facts():
         assert all(item.source_url == url for item in result.answer.evidence)
 
 
+def test_q19_pipeline_preserves_proceedings_exposures_and_uncertainty_for_all_references():
+    root = Path(__file__).parents[1]
+    references = json.loads(
+        (root / "data/fixtures/annual_legal_proceedings_reference_matrix.json")
+        .read_text(encoding="utf-8")
+    )["cases"]
+
+    for reference in references:
+        company = reference["company"]
+        period = AnnualPeriod(
+            fiscal_year=reference["fiscal_year"],
+            start_date=reference["start_date"],
+            end_date=reference["end_date"],
+            filing_date=reference["filing_date"],
+            accession_number=reference["accession_number"],
+        )
+        question = (
+            f"What material legal proceedings and loss exposure did {company['name']} disclose "
+            f"for FY{reference['fiscal_year']}?"
+        )
+        plan = make_plan().model_copy(update={
+            "original_question": question,
+            "company": CompanyRequest(**company),
+            "period": PeriodRequest(
+                period_label=f"FY{reference['fiscal_year']}",
+                period_kind="annual", fiscal_year=reference["fiscal_year"],
+                comparison_required=False,
+            ),
+            "benchmark_id": "Q19",
+            "task_type": "disclosure_analysis",
+            "operation": "litigation_analysis",
+            "metrics": [
+                MetricRequest(name="legal proceedings", role="primary", sources=["narrative"]),
+                MetricRequest(name="contingencies", role="supporting", sources=["narrative"]),
+                MetricRequest(name="loss uncertainty", role="supporting", sources=["narrative"]),
+            ],
+            "retrieval": RetrievalRequirements(sources=["narrative"]),
+            "answer": AnswerRequirements(expected_output="text"),
+        })
+        if company["ticker"] == "NVDA":
+            note = """
+                <p>NOTE 12 - COMMITMENTS AND CONTINGENCIES</p><p>Litigation</p>
+                <p>Plaintiffs sought class certification and unspecified compensatory damages in the securities class action lawsuit.</p>
+                <p>Accounting for Loss Contingencies</p>
+                <p>As of January 26, 2025, there are no accrued contingent liabilities associated with the legal proceedings because liabilities are reasonably possible, not probable. Any possible loss or range of loss cannot be reasonably estimated at this time.</p>
+                <p>NOTE 13 - INCOME TAXES</p>
+            """
+            item3 = "<p>ITEM 3. LEGAL PROCEEDINGS</p><p>Please see Note 12 for a discussion of our legal proceedings.</p>"
+            item8 = "<p>ITEM 15. EXHIBITS AND FINANCIAL STATEMENT SCHEDULES</p>"
+        elif company["ticker"] == "MSFT":
+            note = """
+                <p>NOTE 14 - CONTINGENCIES</p><p>Irish Data Protection Commission Matter</p>
+                <p>LinkedIn appealed the Irish Data Protection Commission's final decision assessing a fine; the next hearing is scheduled for December 2025.</p>
+                <p>Other Contingencies</p>
+                <p>Although management believes resolution will not have a material adverse impact, these matters are subject to inherent uncertainties.</p>
+                <p>As of June 30, 2025, we accrued aggregate legal liabilities of $541 million. Adverse outcomes could reach approximately $600 million beyond recorded amounts and are reasonably possible.</p>
+                <p>NOTE 15 - STOCKHOLDERS' EQUITY</p>
+            """
+            item3 = "<p>ITEM 3. LEGAL PROCEEDINGS</p><p>Refer to Note 14 - Contingencies for legal proceedings.</p>"
+            item8 = "<p>ITEM 8. FINANCIAL STATEMENTS</p>"
+        else:
+            note = """
+                <p>NOTE 12 - COMMITMENTS, CONTINGENCIES AND SUPPLY CONCENTRATIONS</p>
+                <p>Contingencies</p>
+                <p>The Company is subject to legal proceedings whose outcome is inherently uncertain.</p>
+                <p>In the opinion of management, there was not at least a reasonable possibility of a material loss or a material loss greater than a recorded accrual.</p>
+                <p>NOTE 13 - SEGMENT INFORMATION</p>
+            """
+            item3 = """
+                <p>ITEM 3. LEGAL PROCEEDINGS</p><p>Digital Markets Act Investigations</p>
+                <p>The Commission fined the Company €500 million in the Article 5(4) Investigation. The Company appealed the decision.</p>
+                <p>If the Commission makes a final determination in a separate investigation, it may impose fines up to 10% of the Company's annual worldwide net sales.</p>
+                <p>The DOJ filed a civil antitrust lawsuit seeking equitable relief.</p>
+            """
+            item8 = "<p>ITEM 8. FINANCIAL STATEMENTS</p>"
+        html = item3 + item8 + note
+        url = reference["source_url"]
+
+        class Planner:
+            def plan(self, _question):
+                return plan
+
+        class CompanyResolver:
+            def resolve(self, **_kwargs):
+                return company
+
+        class FilingRetriever:
+            submissions = type("Submissions", (), {
+                "get_filing_url": staticmethod(lambda **_kwargs: url)
+            })()
+
+            def get_filing(self, **_kwargs):
+                return {
+                    "cik": company["cik"], "form": "10-K",
+                    "filing_date": reference["filing_date"],
+                    "report_date": reference["end_date"],
+                    "accession_number": reference["accession_number"],
+                    "primary_document": url.rsplit("/", 1)[-1], "html": html,
+                }
+
+        result = FinSpectOrchestrator(
+            planner=Planner(), normalizer=normalize_query_plan,
+            period_resolver=lambda _cik, _year: period,
+            fact_retriever=FixtureFactRetriever(), company_resolver=CompanyResolver(),
+            filing_retriever=FilingRetriever(),
+        ).run(question)
+
+        assert result.answer.formula_id is None
+        assert result.answer.result_value is None
+        assert result.answer.evidence
+        assert any(item.label == "Legal proceeding" for item in result.answer.evidence)
+        assert any(item.label == "Company-stated loss uncertainty" for item in result.answer.evidence)
+        assert all(item.accession_number == reference["accession_number"] for item in result.answer.evidence)
+        assert all(item.source_url == url for item in result.answer.evidence)
+        assert result.facts[0]["fiscal_year"] == reference["fiscal_year"]
+        if company["ticker"] == "NVDA":
+            assert "cannot be reasonably estimated" in result.answer.text
+            assert "unspecified compensatory damages" in result.answer.text
+        elif company["ticker"] == "MSFT":
+            assert "$541 million" in result.answer.text
+            assert "$600 million" in result.answer.text
+        else:
+            assert "€500 million" in result.answer.text
+            assert "10%" in result.answer.text
+
+
 def test_q16_exact_filing_pipeline_matches_six_issuer_period_references():
     root = Path(__file__).parents[1]
     references = json.loads(
@@ -2618,8 +2744,10 @@ def make_unsupported_benchmark_plan(question):
         period=PeriodRequest(
             period_kind="annual",
             fiscal_year=2025,
-            comparison_required=True,
-            comparison_period="FY2024",
+            comparison_required=question.id not in {"Q16", "Q17", "Q19"},
+            comparison_period=(
+                "FY2024" if question.id not in {"Q16", "Q17", "Q19"} else None
+            ),
         ),
         benchmark_id=question.id,
         task_type=task_type,
@@ -2637,7 +2765,7 @@ def make_unsupported_benchmark_plan(question):
     [
         f"Q{number:02d}"
         for number in range(2, 21)
-        if number not in {2, 3, 4, 5, 7, 8, 9, 10, 11, 13, 14, 15, 16, 17, 18}
+        if number not in {2, 3, 4, 5, 7, 8, 9, 10, 11, 13, 14, 15, 16, 17, 18, 19}
     ],
 )
 def test_other_benchmark_operations_are_explicitly_unsupported(question_id):

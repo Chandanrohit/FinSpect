@@ -92,6 +92,12 @@ Rules:
     only when its period-end balance and units can be matched; otherwise the
     pipeline must report unsupported. Do not treat a hypothetical scenario as
     a forecast or realized loss.
+25. For Q19 legal-proceeding and contingency questions, require one explicit
+    annual fiscal year and use operation "litigation_analysis" with legal
+    proceedings and contingencies from the exact 10-K. Preserve cited filing
+    excerpts and the company's own uncertainty language. Keep assessed fines,
+    accrued liabilities, possible additional losses, and unquantified claims
+    separate; do not infer a settlement value or legal outcome.
 """
 
 
