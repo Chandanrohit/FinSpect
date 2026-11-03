@@ -46,6 +46,10 @@ from finspect.edgar.operating_expenses import (
     OperatingExpenseError,
     OperatingExpenseExtractor,
 )
+from finspect.edgar.geographic_revenue import (
+    GeographicRevenueError,
+    GeographicRevenueExtractor,
+)
 from finspect.narrative_retriever import NarrativeRetriever
 from finspect.query_planner import QueryPlan
 from finspect.edgar.xbrl import XBRLService
@@ -380,6 +384,14 @@ class FinSpectOrchestrator:
             and plan.period.fiscal_year is not None
             and not plan.period.comparison_required
         )
+        is_supported_geographic_exposure = (
+            plan.operation == "geographic_exposure"
+            and bool(metric_names & {"geographic revenue", "geographic exposure", "revenue by geography"})
+            and metric_names <= {"geographic revenue", "geographic exposure", "revenue by geography"}
+            and plan.period.period_kind == "annual"
+            and plan.period.fiscal_year is not None
+            and not plan.period.comparison_required
+        )
         is_supported_commitments = (
             plan.operation == "commitment_liquidity"
             and has_future_commitments and has_near_term_commitments
@@ -430,6 +442,7 @@ class FinSpectOrchestrator:
             or is_supported_cash_allocation
             or is_supported_equity_rollforward
             or is_supported_regulatory_risk
+            or is_supported_geographic_exposure
             or is_supported_commitments
             or is_supported_segment_growth
             or is_supported_expense_growth
@@ -462,6 +475,7 @@ class FinSpectOrchestrator:
             or is_supported_cash_allocation
             or is_supported_equity_rollforward
             or is_supported_regulatory_risk
+            or is_supported_geographic_exposure
             or is_supported_commitments
         ):
             fiscal_years = (plan.period.fiscal_year,)
@@ -476,6 +490,8 @@ class FinSpectOrchestrator:
                 )
             fiscal_years = (plan.period.fiscal_year - 1, plan.period.fiscal_year)
         if is_supported_regulatory_risk:
+            fiscal_years = (plan.period.fiscal_year,)
+        if is_supported_geographic_exposure:
             fiscal_years = (plan.period.fiscal_year,)
         if is_supported_commitments:
             fiscal_years = (plan.period.fiscal_year,)
@@ -1380,6 +1396,114 @@ class FinSpectOrchestrator:
                     "accession_number": item.accession_number,
                     "source_url": item.source_url,
                 } for item in evidence),
+            )
+
+        if is_supported_geographic_exposure:
+            current_period = periods[0]
+            if not self.filing_retriever:
+                return PipelineResult(plan=plan, answer=build_unsupported_answer(
+                    question, "Exact annual filing retrieval is required for geographic revenue analysis."
+                ))
+            if not current_period.accession_number or not current_period.filing_date:
+                return PipelineResult(plan=plan, answer=build_unsupported_answer(
+                    question, "The requested fiscal year could not be tied to an exact 10-K accession and filing date."
+                ))
+            try:
+                filing = self.filing_retriever.get_filing(
+                    cik=cik,
+                    accession_number=current_period.accession_number,
+                    form="10-K",
+                )
+                if (
+                    filing.get("form") != "10-K"
+                    or str(filing.get("cik", "")).zfill(10) != cik
+                    or filing.get("accession_number") != current_period.accession_number
+                    or filing.get("filing_date") != current_period.filing_date
+                    or filing.get("report_date") != current_period.end_date
+                    or not filing.get("html")
+                    or not filing.get("primary_document")
+                ):
+                    raise GeographicRevenueError(
+                        "Retrieved filing metadata or content does not match the requested issuer and exact 10-K period."
+                    )
+                schedule = GeographicRevenueExtractor().extract(
+                    filing["html"], fiscal_year=current_period.fiscal_year
+                )
+            except (FilingRetrievalError, GeographicRevenueError, KeyError, ValueError) as exc:
+                return PipelineResult(plan=plan, answer=build_unsupported_answer(
+                    question, f"Could not identify one reconciled geographic-revenue schedule in the exact 10-K: {exc}"
+                ))
+
+            largest_region, largest_amount = max(
+                schedule.geographic_revenue.items(), key=lambda item: item[1]
+            )
+            share = (largest_amount / schedule.total_revenue * Decimal(100)).quantize(
+                Decimal("0.01")
+            )
+            filing_url = self.filing_retriever.submissions.get_filing_url(
+                cik=cik,
+                accession_number=current_period.accession_number,
+                primary_document=filing["primary_document"],
+            )
+            evidence = (
+                AnswerEvidence(
+                    f"Largest disclosed geographic revenue category: {largest_region}",
+                    largest_amount,
+                    schedule.unit,
+                    f"FY{current_period.fiscal_year}",
+                    current_period.filing_date,
+                    current_period.accession_number,
+                    filing_url,
+                ),
+                AnswerEvidence(
+                    "Total revenue across disclosed geographic categories",
+                    schedule.total_revenue,
+                    schedule.unit,
+                    f"FY{current_period.fiscal_year}",
+                    current_period.filing_date,
+                    current_period.accession_number,
+                    filing_url,
+                ),
+            )
+            basis_text = {
+                "billing_location": "customer billing location",
+                "customer_location": "customer location",
+                "management_defined": "the company’s reportable segment definitions",
+            }.get(schedule.basis, "the filing’s stated geographic classification")
+            basis_note = f"The filing classifies geography by {basis_text}."
+            limitations = (basis_note, *schedule.limitations)
+            answer = Answer(
+                text=(
+                    f"{resolved['name']} reported {largest_region} as its largest disclosed geographic "
+                    f"revenue category for FY{current_period.fiscal_year}: {largest_amount:,.0f} "
+                    f"{schedule.unit} of {schedule.total_revenue:,.0f} {schedule.unit}, or {share}% "
+                    f"of reported revenue. The company’s classification basis and caveats are listed below.\n\n"
+                    + "\n".join(f"- {item}" for item in limitations)
+                    + "\n\n"
+                    f"Source: [SEC Form 10-K]({filing_url})"
+                ),
+                formula_id=None,
+                result_value=str(share),
+                result_unit="percent",
+                evidence=evidence,
+                limitations=limitations,
+            )
+            return PipelineResult(
+                plan=plan,
+                answer=answer,
+                facts=({
+                    "company": resolved["name"],
+                    "ticker": resolved.get("ticker"),
+                    "fiscal_year": current_period.fiscal_year,
+                    "largest_geography": largest_region,
+                    "largest_revenue": str(largest_amount),
+                    "total_revenue": str(schedule.total_revenue),
+                    "share_percent": str(share),
+                    "classification_basis": schedule.basis,
+                    "limitations": list(schedule.limitations),
+                    "accession_number": current_period.accession_number,
+                    "source_url": filing_url,
+                },),
             )
 
         # 5. Resolve supported metrics to controlled SEC concepts, then

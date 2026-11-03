@@ -80,6 +80,11 @@ Rules:
     "expense_growth_contribution". Request operating-expense categories and
     their reconciled total from the same 10-K; preserve issuer category labels
     and do not treat unlike categories as comparable across companies.
+23. For Q17 geographic exposure questions, require one explicit annual fiscal
+    year and use operation "geographic_exposure" with geographic revenue from
+    the exact 10-K. Preserve the issuer's geographic labels and classification
+    basis and include any stated limitation; do not substitute assets or
+    reportable business segments for geographic revenue.
 """
 
 

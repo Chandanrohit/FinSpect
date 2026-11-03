@@ -88,3 +88,9 @@ def test_system_prompt_routes_q16_to_annual_risk_factor_disclosures():
     assert '"regulatory_risks"' in SYSTEM_PROMPT
     assert '"risk_factors"' in SYSTEM_PROMPT
     assert "explicit annual fiscal year" in SYSTEM_PROMPT
+
+
+def test_system_prompt_routes_q17_to_geographic_revenue_with_basis_and_caveats():
+    assert '"geographic_exposure"' in SYSTEM_PROMPT
+    assert "classification\n    basis" in SYSTEM_PROMPT
+    assert "do not substitute assets" in SYSTEM_PROMPT

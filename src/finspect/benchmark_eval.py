@@ -86,6 +86,9 @@ DEFAULT_SEGMENT_REVENUE_MATRIX = (
 DEFAULT_OPERATING_EXPENSE_MATRIX = (
     ROOT / "data" / "fixtures" / "annual_operating_expense_reference_matrix.json"
 )
+DEFAULT_GEOGRAPHIC_REVENUE_MATRIX = (
+    ROOT / "data" / "fixtures" / "annual_geographic_revenue_reference_matrix.json"
+)
 
 
 def evaluate_segment_revenue_matrix(path: Path) -> dict[str, Any]:
@@ -350,6 +353,80 @@ def evaluate_regulatory_risk_matrix(path: Path) -> dict[str, Any]:
         "minimum_gate_coverage_met": len(tickers) >= 3 and all(
             count >= 2 for count in counts.values()
         ),
+        "cases": cases,
+    }
+
+
+def evaluate_geographic_revenue_matrix(path: Path) -> dict[str, Any]:
+    """Validate Q17 source, annual period, reconciled geographies, and share."""
+    matrix = json.loads(path.read_text(encoding="utf-8"))
+    cases = []
+    years_by_ticker: dict[str, set[int]] = {}
+    for reference in matrix["cases"]:
+        company = reference["company"]
+        ticker = company["ticker"]
+        year = reference["fiscal_year"]
+        years_by_ticker.setdefault(ticker, set()).add(year)
+        start = date.fromisoformat(reference["start_date"])
+        end = date.fromisoformat(reference["end_date"])
+        filed = date.fromisoformat(reference["filing_date"])
+        areas = {name: Decimal(value) for name, value in reference["geographic_revenue"].items()}
+        total = Decimal(reference["total_revenue"])
+        largest_name, largest_value = max(areas.items(), key=lambda item: item[1])
+        share = (largest_value / total * Decimal(100)).quantize(Decimal("0.01"))
+        limitation_terms = reference["required_limitation_terms"]
+        classification_note = reference["classification_note"].casefold()
+        checks = {
+            "annual_period_and_filing": start < end and 300 <= (end - start).days <= 400 and filed >= end,
+            "source_provenance": (
+                reference["accession_number"].replace("-", "") in reference["source_url"]
+                and reference["source_url"].startswith("https://www.sec.gov/Archives/edgar/data/")
+                and f"/{int(company['cik'])}/" in reference["source_url"]
+                and reference["source_url"].endswith(".htm")
+            ),
+            "geographic_values_reconcile": bool(areas) and sum(areas.values()) == total,
+            "classification_basis_supported": reference["classification_basis"] in {
+                "billing_location", "customer_location", "management_defined"
+            },
+            "largest_area_and_share_match": (
+                largest_name == reference["largest_geography"]
+                and largest_value == Decimal(reference["largest_revenue"])
+                and share == Decimal(reference["share_percent"])
+            ),
+            "classification_caveats_referenced": bool(limitation_terms) and all(
+                isinstance(term, str) and term.casefold() in classification_note
+                for term in limitation_terms
+            ),
+        }
+        cases.append({
+            "company": company,
+            "fiscal_year": year,
+            "classification_basis": reference["classification_basis"],
+            "largest_geography": largest_name,
+            "largest_revenue": str(largest_value),
+            "total_revenue": str(total),
+            "share_percent": str(share),
+            "unit": reference["unit"],
+            "required_limitation_terms": limitation_terms,
+            "classification_note": reference["classification_note"],
+            "accession_number": reference["accession_number"],
+            "source_url": reference["source_url"],
+            "checks": checks,
+            "status": "PASS" if all(checks.values()) else "FAIL",
+        })
+    tickers = sorted(years_by_ticker)
+    counts = {ticker: sum(case["company"]["ticker"] == ticker for case in cases) for ticker in tickers}
+    minimum_coverage = len(tickers) >= 3 and all(count >= 2 for count in counts.values())
+    return {
+        "matrix_id": matrix["matrix_id"],
+        "question_id": matrix["question_id"],
+        "evaluation_scope": matrix["evaluation_scope"],
+        "case_count": len(cases),
+        "pass_count": sum(case["status"] == "PASS" for case in cases),
+        "fail_count": sum(case["status"] == "FAIL" for case in cases),
+        "issuers": tickers,
+        "cases_per_issuer": counts,
+        "minimum_gate_coverage_met": minimum_coverage,
         "cases": cases,
     }
 
@@ -2186,6 +2263,9 @@ def evaluate_benchmark(
     regulatory_risk_matrix = evaluate_regulatory_risk_matrix(
         DEFAULT_REGULATORY_RISK_MATRIX
     )
+    geographic_revenue_matrix = evaluate_geographic_revenue_matrix(
+        DEFAULT_GEOGRAPHIC_REVENUE_MATRIX
+    )
     commitment_matrix = evaluate_commitment_matrix(DEFAULT_COMMITMENT_MATRIX)
     segment_revenue_matrix = evaluate_segment_revenue_matrix(DEFAULT_SEGMENT_REVENUE_MATRIX)
     operating_expense_matrix = evaluate_operating_expense_matrix(DEFAULT_OPERATING_EXPENSE_MATRIX)
@@ -2428,6 +2508,76 @@ def evaluate_benchmark(
                 "overall_status": "PARTIAL" if matrix_pass else "FAIL",
                 "failure_reason": (
                     "Offline source-excerpt retrieval only; live SEC retrieval and planner interpretation remain untested."
+                ),
+            })
+            continue
+        if question_id == "Q17":
+            matrix_pass = (
+                geographic_revenue_matrix["minimum_gate_coverage_met"]
+                and geographic_revenue_matrix["pass_count"]
+                == geographic_revenue_matrix["case_count"]
+            )
+            report_questions.append({
+                "question_id": question_id,
+                "question": question.question_template,
+                "company": None,
+                "filings": [
+                    {
+                        "company": case["company"],
+                        "fiscal_year": case["fiscal_year"],
+                        "accession_number": case["accession_number"],
+                        "source_url": case["source_url"],
+                    }
+                    for case in geographic_revenue_matrix["cases"]
+                ],
+                "reporting_periods": [
+                    {"company": case["company"], "fiscal_year": case["fiscal_year"]}
+                    for case in geographic_revenue_matrix["cases"]
+                ],
+                "expected_concepts": question.required_concepts,
+                "retrieval_mode": "live_SEC_geographic_revenue_extraction_plus_offline_reference_calculation",
+                "selected_evidence": [
+                    {
+                        "largest_geography": case["largest_geography"],
+                        "largest_revenue": case["largest_revenue"],
+                        "total_revenue": case["total_revenue"],
+                        "unit": case["unit"],
+                        "classification_basis": case["classification_basis"],
+                        "required_limitation_terms": case["required_limitation_terms"],
+                        "accession_number": case["accession_number"],
+                        "source_url": case["source_url"],
+                    }
+                    for case in geographic_revenue_matrix["cases"]
+                ],
+                "calculation_formula": "largest disclosed geographic revenue / total revenue * 100",
+                "expected_answer": [
+                    {
+                        "ticker": case["company"]["ticker"],
+                        "fiscal_year": case["fiscal_year"],
+                        "geography": case["largest_geography"],
+                        "share_percent": case["share_percent"],
+                    }
+                    for case in geographic_revenue_matrix["cases"]
+                ],
+                "actual_answer": [
+                    {
+                        "ticker": case["company"]["ticker"],
+                        "fiscal_year": case["fiscal_year"],
+                        "geography": case["largest_geography"],
+                        "share_percent": case["share_percent"],
+                    }
+                    for case in geographic_revenue_matrix["cases"]
+                ],
+                "checks": {
+                    "reference_matrix_cases_pass": matrix_pass,
+                    "live_extraction": "passed" if matrix_pass else "failed",
+                    "query_interpretation": "not_evaluated",
+                },
+                "overall_status": "PARTIAL" if matrix_pass else "FAIL",
+                "failure_reason": (
+                    "Live planner interpretation remains unevaluated."
+                    if matrix_pass
+                    else "One or more geographic revenue references failed validation."
                 ),
             })
             continue
@@ -2854,7 +3004,7 @@ def evaluate_benchmark(
         "accuracy_percentage": None,
         "accuracy_note": (
             "No overall accuracy percentage is reported: Q01, Q02, Q03, Q04, Q05, Q07, Q08, Q09, "
-            "Q06, Q10, Q11, Q12, Q13, Q14, Q15, and Q16 have fixture-backed checks; issuer matrix case counts and "
+            "Q06, Q10, Q11, Q12, Q13, Q14, Q15, Q16, and Q17 have fixture-backed checks; issuer matrix case counts and "
             "individual checks are reported per operation, but neither "
             "live SEC retrieval nor the planner was evaluated."
         ),
@@ -2875,6 +3025,7 @@ def evaluate_benchmark(
             commitment_matrix,
             segment_revenue_matrix,
             operating_expense_matrix,
+            geographic_revenue_matrix,
         ],
         "questions": report_questions,
     }

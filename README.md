@@ -2,7 +2,7 @@
 
 FinSpect is an experimental financial research system. It uses a language model to interpret a question, SEC filing data to supply financial inputs, validation rules to reject incompatible facts, and deterministic Python calculations to produce an answer with its periods and sources.
 
-> **Prototype status:** the current end-to-end paths cover annual revenue growth, absolute annual revenue change, annual operating margin change, the net-income/operating-income change relationship, share repurchase analysis, weighted-average share dilution, receivables/revenue growth comparison, cash conversion comparison, and an inventory/revenue growth comparison with annual filing narrative excerpts. The 20-question benchmark is not broadly supported. The current reproducible evaluation is **9 PARTIAL, 11 UNSUPPORTED**; see [`reports/benchmark-report.json`](reports/benchmark-report.json).
+> **Prototype status:** 17 of 20 benchmark archetypes have reference-backed annual implementations. The latest deterministic report is **17 PARTIAL, 3 UNSUPPORTED, 0 FAIL**; PARTIAL means offline references pass and does not represent overall live accuracy. Planner/live integration and broader issuer coverage remain outstanding. See [`reports/benchmark-report.json`](reports/benchmark-report.json).
 
 ## Problem
 
@@ -40,7 +40,7 @@ The Streamlit application calls the same orchestrator. It displays the structure
 - Optional Gnani Prisma v2.5 voice question input and Timbre v2.5 spoken result summary; the full written answer and SEC evidence remain visible.
 - Decimal-based calculator functions for benchmark formulas; registration does **not** mean an operation is wired end to end.
 - Evidence-bearing answers with reporting periods, filing dates, accession numbers, and SEC URLs.
-- An initial filing parser and keyword-ranked narrative passage retriever. Disclosure answers are not enabled end to end.
+- Annual statement, segment, cash-allocation, equity, commitment, risk-factor, and geographic-revenue retrieval-to-answer paths for Q01–Q17; unsupported or ambiguous evidence fails closed. Q17 geographic revenue passed exact SEC extraction for six NVIDIA, Microsoft, and Apple annual filings while preserving each issuer's classification basis and caveats.
 
 ## Setup
 
@@ -87,7 +87,7 @@ The checked-in NVIDIA FY2024/FY2025 snapshots provide repeatable Q01, Q03, Q05, 
 
 The benchmark has 20 question archetypes across five layers. The intended design uses shared retrieval and calculation paths for supported operations, so each wording does not need its own implementation; company-specific mappings are added only when filing evidence shows a real tag or disclosure difference. Queries outside supported archetypes or without sufficient evidence must fail closed.
 
-The Q01, Q03, Q05, Q07, Q08, Q09, Q10, Q11, and Q13 reports are **PARTIAL** because they use checked-in filing references and validated fixture plans; they do not run live SEC retrieval or the Ollama planner. Q01, Q03, Q05, and Q13 each check eight annual pairs across NVIDIA, Microsoft, Apple, and CVS Health. Q07, Q08, and Q09 each check six cases across NVIDIA, Microsoft, and Apple. Q10 checks six annual pairs across NVIDIA, Microsoft, and Apple, normalizing the standard `PaymentsForRepurchaseOfCommonStock` cash-outflow amount to its spend magnitude before comparing it with operating cash flow. Q11 checks nine annual periods across NVIDIA, Microsoft, and Apple, using reported basic and diluted weighted-average shares in the SEC `shares` unit. Q09 retrieves the exact annual accession, compares instant inventory balances with annual revenue, and requires relevant Item 7 or Item 1A text with a linked filing. These are source-backed offline checks, not live SEC evaluation. Most current matrices remain concentrated in large technology companies, so broader sector coverage is still needed. Q02, Q04, Q06, Q12, and Q14–Q20 remain **UNSUPPORTED** by the current retrieval-to-answer pipeline. No overall benchmark accuracy percentage is claimed.
+The benchmark records 17 **PARTIAL** question types and 3 **UNSUPPORTED** (Q18–Q20). Reference matrices validate named issuers, exact accessions, periods, units, calculations, and disclosures. Q17 also passed live SEC HTML extraction for NVIDIA, Microsoft, and Apple FY2024/FY2025; its query-planner interpretation is not live-evaluated. Most matrices remain concentrated in large technology companies, so broader sector coverage is still needed. No overall benchmark accuracy percentage is claimed.
 
 Q07 measures the change in cash plus current short-term investments divided by the change in total assets. It can be negative or exceed 100% when the denominator is negative or smaller than the liquid-asset change. The result is a contribution ratio, not a liquidity ratio or measure of unrestricted cash; reported current investments may include restricted amounts.
 
@@ -97,7 +97,7 @@ Q07 measures the change in cash plus current short-term investments divided by t
 2. Start the application with Streamlit.
 3. Try `Calculate Microsoft's revenue growth from FY2024 to FY2025.` or one of the NVIDIA examples: operating margin change, net-income/operating-income change relationship, receivables versus revenue growth, or cash conversion.
 4. Inspect the plan, result, periods, formula, and SEC evidence shown with the answer.
-5. For deterministic offline checks of the five supported benchmark questions, regenerate the benchmark report.
+5. For deterministic reference checks of implemented benchmark operations, regenerate the benchmark report.
 6. To try voice input and spoken playback, set `GNANI_API_KEY_ID`; review the transcript before running the financial research query.
 
 The live demo depends on Ollama and SEC availability. The benchmark snapshot is the reproducible demonstration when those services are unavailable.
@@ -120,9 +120,9 @@ Keep API keys out of source code, chat, screenshots, logs, and commits. The repo
 
 ## Limitations and next work
 
-- The tested company-agnostic paths cover annual SEC revenue growth, absolute revenue change, operating margin change, net-income/operating-income change relationship, share repurchase analysis, weighted-average share dilution, receivables/revenue growth comparison, cash conversion comparison, and inventory/revenue growth comparison with cited filing excerpts. They use standard US-GAAP tags; issuer-specific custom tags and IFRS filers are not mapped. Foreign-currency amounts are retained without FX conversion, and a calculation stops if its inputs use different currencies.
+- The annual operations use reusable SEC retrieval and calculation paths where reference evidence supports them. Q17 currently accepts common geographic labels and annual revenue schedules; unfamiliar classifications and asset-only schedules are unsupported rather than guessed. Issuer-specific custom tags and IFRS filers are not generally mapped. Foreign-currency amounts are retained without FX conversion, and calculations stop if inputs use different currencies.
 - The planner and SEC live integration have not been jointly benchmarked against reference answers.
-- Quarterly periods, segment facts, other balance-sheet calculations, and other disclosure answers need complete retrieval-to-answer paths and tests.
+- Q18–Q20, quarterly periods, broader sector and fiscal-calendar coverage, and live planner/SEC evaluation remain future work.
 - Q09 narrative extraction uses heuristic Item 7/Item 1A parsing and keyword ranking; broader narrative topics need their own source-backed benchmark coverage.
 - The benchmark has no fixed gold answers for its general templates. Evaluation needs declared company/filing snapshots and references for each question.
 - Real Gnani STT/TTS account calls, a public demo recording, and deployment remain future work.

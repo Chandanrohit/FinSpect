@@ -1883,6 +1883,165 @@ def test_q16_regulatory_risk_uses_item_1a_excerpt_from_exact_10k():
     assert "nvda-20250126.htm" in result.answer.text
 
 
+def test_q17_geographic_revenue_uses_exact_10k_and_reports_classification_caveat():
+    question = "What share of NVIDIA's FY2025 revenue came from its largest geographic exposure?"
+    plan = make_plan().model_copy(update={
+        "original_question": question,
+        "period": PeriodRequest(
+            period_label="FY2025", period_kind="annual", fiscal_year=2025,
+            comparison_required=False,
+        ),
+        "benchmark_id": "Q17",
+        "task_type": "disclosure_analysis",
+        "operation": "geographic_exposure",
+        "metrics": [MetricRequest(
+            name="geographic_revenue", role="primary", sources=["financial_table"]
+        )],
+        "retrieval": RetrievalRequirements(sources=["financial_table"]),
+        "answer": AnswerRequirements(expected_output="text"),
+    })
+    html = """
+    <p>Revenue by geographic area is based upon customer billing location.</p>
+    <table>
+      <tr><th>Area</th><th>2025</th></tr>
+      <tr><td>United States</td><td>60</td></tr>
+      <tr><td>Singapore</td><td>25</td></tr>
+      <tr><td>Taiwan</td><td>15</td></tr>
+      <tr><td>Total revenue</td><td>100</td></tr>
+    </table>
+    <p>Shipping location may be different from customer billing location.</p>
+    """
+
+    class Planner:
+        def plan(self, _question):
+            return plan
+
+    class FilingRetriever:
+        submissions = type("Submissions", (), {
+            "get_filing_url": staticmethod(lambda **_kwargs: "https://www.sec.gov/Archives/edgar/data/1045810/000104581025000023/nvda-20250126.htm")
+        })()
+
+        def get_filing(self, *, cik, accession_number, form):
+            assert cik == CIK
+            assert accession_number == PERIODS[2025].accession_number
+            assert form == "10-K"
+            return {
+                "cik": CIK, "form": "10-K",
+                "filing_date": PERIODS[2025].filing_date,
+                "report_date": PERIODS[2025].end_date,
+                "accession_number": PERIODS[2025].accession_number,
+                "primary_document": "nvda-20250126.htm", "html": html,
+            }
+
+    result = FinSpectOrchestrator(
+        planner=Planner(), normalizer=normalize_query_plan,
+        period_resolver=lambda _cik, year: PERIODS[year],
+        fact_retriever=FixtureFactRetriever(),
+        company_resolver=FixtureCompanyResolver(),
+        filing_retriever=FilingRetriever(),
+    ).run(question)
+
+    assert result.answer.result_value == "60.00"
+    assert result.answer.result_unit == "percent"
+    assert "United States" in result.answer.text
+    assert any("billing location" in item for item in result.answer.limitations)
+    assert any("Shipping location may be different" in item for item in result.answer.limitations)
+    assert result.facts[0]["accession_number"] == PERIODS[2025].accession_number
+    assert "nvda-20250126.htm" in result.facts[0]["source_url"]
+
+
+def test_q17_pipeline_matches_all_six_issuer_period_references():
+    root = Path(__file__).parents[1]
+    references = json.loads(
+        (root / "data/fixtures/annual_geographic_revenue_reference_matrix.json")
+        .read_text(encoding="utf-8")
+    )["cases"]
+
+    for reference in references:
+        company = reference["company"]
+        year = reference["fiscal_year"]
+        question = f"What share of {company['name']}'s FY{year} revenue came from its largest geographic region?"
+        plan = make_plan().model_copy(update={
+            "original_question": question,
+            "company": CompanyRequest(**company),
+            "period": PeriodRequest(
+                period_label=f"FY{year}", period_kind="annual", fiscal_year=year,
+                comparison_required=False,
+            ),
+            "benchmark_id": "Q17",
+            "task_type": "disclosure_analysis",
+            "operation": "geographic_exposure",
+            "metrics": [MetricRequest(
+                name="geographic_revenue", role="primary", sources=["financial_table"]
+            )],
+            "retrieval": RetrievalRequirements(sources=["financial_table"]),
+            "answer": AnswerRequirements(expected_output="text"),
+        })
+        geographic_rows = "".join(
+            f"<tr><td>{label}</td><td>{value}</td></tr>"
+            for label, value in reference["geographic_revenue"].items()
+        )
+        basis_text = {
+            "billing_location": "Revenue by geographic area is based upon customer billing location.",
+            "customer_location": "Revenue classified by the major geographic areas in which customers were located.",
+            "management_defined": "Reportable segments consist of the following geographic areas.",
+        }[reference["classification_basis"]]
+        caveat_text = {
+            "billing_location": "End customer location may be different from the customer billing location.",
+            "customer_location": "Includes billings to OEMs and multinational organizations when it is impracticable to determine geographic source.",
+            "management_defined": "Net sales for geographic segments are generally based on customers' location.",
+        }[reference["classification_basis"]]
+        html = (
+            f"<p>{basis_text}</p><table><tr><th>Area</th><th>Year Ended {year}</th></tr>"
+            f"{geographic_rows}<tr><td>Total revenue</td><td>{reference['total_revenue']}</td></tr></table>"
+            f"<p>{caveat_text}</p>"
+        )
+        period = AnnualPeriod(
+            fiscal_year=year,
+            start_date=reference["start_date"],
+            end_date=reference["end_date"],
+            filing_date=reference["filing_date"],
+            accession_number=reference["accession_number"],
+        )
+
+        class Planner:
+            def plan(self, _question):
+                return plan
+
+        class CompanyResolver:
+            def resolve(self, **_kwargs):
+                return company
+
+        class FilingRetriever:
+            submissions = type("Submissions", (), {
+                "get_filing_url": staticmethod(lambda **_kwargs: reference["source_url"])
+            })()
+
+            def get_filing(self, **_kwargs):
+                return {
+                    "cik": company["cik"], "form": "10-K",
+                    "filing_date": reference["filing_date"],
+                    "report_date": reference["end_date"],
+                    "accession_number": reference["accession_number"],
+                    "primary_document": reference["source_url"].rsplit("/", 1)[-1],
+                    "html": html,
+                }
+
+        result = FinSpectOrchestrator(
+            planner=Planner(), normalizer=normalize_query_plan,
+            period_resolver=lambda _cik, _year: period,
+            fact_retriever=FixtureFactRetriever(),
+            company_resolver=CompanyResolver(), filing_retriever=FilingRetriever(),
+        ).run(question)
+
+        assert result.answer.result_value == reference["share_percent"]
+        assert result.answer.result_unit == "percent"
+        assert result.facts[0]["classification_basis"] == reference["classification_basis"]
+        assert result.answer.limitations
+        assert result.facts[0]["largest_geography"] == reference["largest_geography"]
+        assert result.facts[0]["accession_number"] == reference["accession_number"]
+
+
 def test_q16_exact_filing_pipeline_matches_six_issuer_period_references():
     root = Path(__file__).parents[1]
     references = json.loads(

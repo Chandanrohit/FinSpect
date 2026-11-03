@@ -1,6 +1,7 @@
 from finspect.benchmark_eval import (
     evaluate_benchmark,
     evaluate_commitment_matrix,
+    evaluate_geographic_revenue_matrix,
     evaluate_operating_expense_matrix,
     evaluate_segment_revenue_matrix,
 )
@@ -28,14 +29,23 @@ def test_operating_expense_reference_matrix_covers_three_issuers_and_two_years()
     assert result["minimum_gate_coverage_met"] is True
 
 
+def test_geographic_revenue_reference_matrix_covers_three_issuers_and_two_years():
+    path = Path(__file__).resolve().parents[1] / "data" / "fixtures" / "annual_geographic_revenue_reference_matrix.json"
+    result = evaluate_geographic_revenue_matrix(path)
+    assert result["case_count"] == result["pass_count"] == 6
+    assert result["fail_count"] == 0
+    assert result["issuers"] == ["AAPL", "MSFT", "NVDA"]
+    assert result["minimum_gate_coverage_met"] is True
+
+
 def test_benchmark_report_records_fixture_and_unsupported_questions():
     report = evaluate_benchmark()
 
     assert report["question_count"] == 20
     assert report["aggregate_counts"] == {
         "PASS": 0,
-        "PARTIAL": 16,
-        "UNSUPPORTED": 4,
+        "PARTIAL": 17,
+        "UNSUPPORTED": 3,
         "FAIL": 0,
     }
     assert report["accuracy_percentage"] is None
@@ -172,6 +182,14 @@ def test_benchmark_report_records_fixture_and_unsupported_questions():
     assert commitment_matrix["case_count"] == commitment_matrix["pass_count"] == 6
     assert commitment_matrix["minimum_gate_coverage_met"] is True
 
+    geographic_revenue_matrix = report["operation_reference_matrices"][16]
+    assert geographic_revenue_matrix["question_id"] == "Q17"
+    assert geographic_revenue_matrix["case_count"] == geographic_revenue_matrix["pass_count"] == 6
+    assert geographic_revenue_matrix["fail_count"] == 0
+    assert geographic_revenue_matrix["issuers"] == ["AAPL", "MSFT", "NVDA"]
+    assert geographic_revenue_matrix["minimum_gate_coverage_met"] is True
+    assert set(geographic_revenue_matrix["cases_per_issuer"].values()) == {2}
+
     questions = {item["question_id"]: item for item in report["questions"]}
     q01 = questions["Q01"]
     assert q01["overall_status"] == "PARTIAL"
@@ -286,6 +304,13 @@ def test_benchmark_report_records_fixture_and_unsupported_questions():
     assert len(q16["actual_answer"]) == 6
     assert all(item["excerpt"] for item in q16["actual_answer"])
 
+    q17 = questions["Q17"]
+    assert q17["overall_status"] == "PARTIAL"
+    assert q17["checks"]["reference_matrix_cases_pass"] is True
+    assert q17["checks"]["live_extraction"] == "passed"
+    assert len(q17["actual_answer"]) == 6
+    assert q17["actual_answer"][-1]["share_percent"] == "42.86"
+
     q09 = questions["Q09"]
     assert q09["overall_status"] == "PARTIAL"
     assert q09["actual_answer"]["result_unit"] == "percentage_points"
@@ -295,7 +320,7 @@ def test_benchmark_report_records_fixture_and_unsupported_questions():
     for question_id in [
         f"Q{number:02d}"
         for number in range(2, 21)
-        if number not in {2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16}
+        if number not in {2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17}
     ]:
         question = questions[question_id]
         assert question["overall_status"] == "UNSUPPORTED"

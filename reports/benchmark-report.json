@@ -7,12 +7,12 @@
   "question_count": 20,
   "aggregate_counts": {
     "PASS": 0,
-    "PARTIAL": 16,
-    "UNSUPPORTED": 4,
+    "PARTIAL": 17,
+    "UNSUPPORTED": 3,
     "FAIL": 0
   },
   "accuracy_percentage": null,
-  "accuracy_note": "No overall accuracy percentage is reported: Q01, Q02, Q03, Q04, Q05, Q07, Q08, Q09, Q06, Q10, Q11, Q12, Q13, Q14, Q15, and Q16 have fixture-backed checks; issuer matrix case counts and individual checks are reported per operation, but neither live SEC retrieval nor the planner was evaluated.",
+  "accuracy_note": "No overall accuracy percentage is reported: Q01, Q02, Q03, Q04, Q05, Q07, Q08, Q09, Q06, Q10, Q11, Q12, Q13, Q14, Q15, Q16, and Q17 have fixture-backed checks; issuer matrix case counts and individual checks are reported per operation, but neither live SEC retrieval nor the planner was evaluated.",
   "operation_reference_matrices": [
     {
       "matrix_id": "annual-revenue-growth-multi-issuer-v2-healthcare",
@@ -4219,6 +4219,211 @@
       "case_count": 6,
       "pass_count": 6,
       "minimum_gate_coverage_met": true
+    },
+    {
+      "matrix_id": "annual-geographic-revenue-multi-issuer-v1",
+      "question_id": "Q17",
+      "evaluation_scope": "Live SEC 10-K table extraction plus deterministic offline reference checks for largest disclosed geographic revenue category, revenue denominator, classification basis, caveat presence, period, and source accession. Does not measure query planner quality or all possible issuer-specific geographic taxonomies.",
+      "case_count": 6,
+      "pass_count": 6,
+      "fail_count": 0,
+      "issuers": [
+        "AAPL",
+        "MSFT",
+        "NVDA"
+      ],
+      "cases_per_issuer": {
+        "AAPL": 2,
+        "MSFT": 2,
+        "NVDA": 2
+      },
+      "minimum_gate_coverage_met": true,
+      "cases": [
+        {
+          "company": {
+            "name": "NVIDIA Corporation",
+            "ticker": "NVDA",
+            "cik": "0001045810"
+          },
+          "fiscal_year": 2024,
+          "classification_basis": "billing_location",
+          "largest_geography": "United States",
+          "largest_revenue": "26966",
+          "total_revenue": "60922",
+          "share_percent": "44.26",
+          "unit": "USD millions",
+          "required_limitation_terms": [
+            "billing location",
+            "end customer location"
+          ],
+          "classification_note": "Revenue by geographic areas is designated based upon the billing location of the customer. End customer location may be different than our customer\u2019s billing location.",
+          "accession_number": "0001045810-24-000029",
+          "source_url": "https://www.sec.gov/Archives/edgar/data/1045810/000104581024000029/nvda-20240128.htm",
+          "checks": {
+            "annual_period_and_filing": true,
+            "source_provenance": true,
+            "geographic_values_reconcile": true,
+            "classification_basis_supported": true,
+            "largest_area_and_share_match": true,
+            "classification_caveats_referenced": true
+          },
+          "status": "PASS"
+        },
+        {
+          "company": {
+            "name": "NVIDIA Corporation",
+            "ticker": "NVDA",
+            "cik": "0001045810"
+          },
+          "fiscal_year": 2025,
+          "classification_basis": "billing_location",
+          "largest_geography": "United States",
+          "largest_revenue": "61257",
+          "total_revenue": "130497",
+          "share_percent": "46.94",
+          "unit": "USD millions",
+          "required_limitation_terms": [
+            "billing location",
+            "end customer location"
+          ],
+          "classification_note": "Revenue by geographic areas is designated based upon the billing location of the customer. End customer location may be different than our customer\u2019s billing location.",
+          "accession_number": "0001045810-25-000023",
+          "source_url": "https://www.sec.gov/Archives/edgar/data/1045810/000104581025000023/nvda-20250126.htm",
+          "checks": {
+            "annual_period_and_filing": true,
+            "source_provenance": true,
+            "geographic_values_reconcile": true,
+            "classification_basis_supported": true,
+            "largest_area_and_share_match": true,
+            "classification_caveats_referenced": true
+          },
+          "status": "PASS"
+        },
+        {
+          "company": {
+            "name": "Microsoft Corporation",
+            "ticker": "MSFT",
+            "cik": "0000789019"
+          },
+          "fiscal_year": 2024,
+          "classification_basis": "customer_location",
+          "largest_geography": "United States",
+          "largest_revenue": "124704",
+          "total_revenue": "245122",
+          "share_percent": "50.87",
+          "unit": "USD millions",
+          "required_limitation_terms": [
+            "geographic source",
+            "OEM",
+            "impracticability"
+          ],
+          "classification_note": "Includes billings to OEMs and certain multinational organizations because of the nature of these businesses and the impracticability of determining the geographic source of the revenue.",
+          "accession_number": "0000950170-24-087843",
+          "source_url": "https://www.sec.gov/Archives/edgar/data/789019/000095017024087843/msft-20240630.htm",
+          "checks": {
+            "annual_period_and_filing": true,
+            "source_provenance": true,
+            "geographic_values_reconcile": true,
+            "classification_basis_supported": true,
+            "largest_area_and_share_match": true,
+            "classification_caveats_referenced": true
+          },
+          "status": "PASS"
+        },
+        {
+          "company": {
+            "name": "Microsoft Corporation",
+            "ticker": "MSFT",
+            "cik": "0000789019"
+          },
+          "fiscal_year": 2025,
+          "classification_basis": "customer_location",
+          "largest_geography": "United States",
+          "largest_revenue": "144546",
+          "total_revenue": "281724",
+          "share_percent": "51.31",
+          "unit": "USD millions",
+          "required_limitation_terms": [
+            "geographic source",
+            "OEM",
+            "impracticability"
+          ],
+          "classification_note": "Includes billings to OEMs and certain multinational organizations because of the nature of these businesses and the impracticability of determining the geographic source of the revenue.",
+          "accession_number": "0000950170-25-100235",
+          "source_url": "https://www.sec.gov/Archives/edgar/data/789019/000095017025100235/msft-20250630.htm",
+          "checks": {
+            "annual_period_and_filing": true,
+            "source_provenance": true,
+            "geographic_values_reconcile": true,
+            "classification_basis_supported": true,
+            "largest_area_and_share_match": true,
+            "classification_caveats_referenced": true
+          },
+          "status": "PASS"
+        },
+        {
+          "company": {
+            "name": "Apple Inc.",
+            "ticker": "AAPL",
+            "cik": "0000320193"
+          },
+          "fiscal_year": 2024,
+          "classification_basis": "management_defined",
+          "largest_geography": "Americas",
+          "largest_revenue": "167045",
+          "total_revenue": "391035",
+          "share_percent": "42.72",
+          "unit": "USD millions",
+          "required_limitation_terms": [
+            "reportable segments consist",
+            "geographic segments",
+            "location of customers"
+          ],
+          "classification_note": "The Company\u2019s reportable segments consist of the Americas, Europe, Greater China, Japan and Rest of Asia Pacific. Net sales for geographic segments are generally based on the location of customers and sales through the Company\u2019s retail stores located in those geographic locations.",
+          "accession_number": "0000320193-24-000123",
+          "source_url": "https://www.sec.gov/Archives/edgar/data/320193/000032019324000123/aapl-20240928.htm",
+          "checks": {
+            "annual_period_and_filing": true,
+            "source_provenance": true,
+            "geographic_values_reconcile": true,
+            "classification_basis_supported": true,
+            "largest_area_and_share_match": true,
+            "classification_caveats_referenced": true
+          },
+          "status": "PASS"
+        },
+        {
+          "company": {
+            "name": "Apple Inc.",
+            "ticker": "AAPL",
+            "cik": "0000320193"
+          },
+          "fiscal_year": 2025,
+          "classification_basis": "management_defined",
+          "largest_geography": "Americas",
+          "largest_revenue": "178353",
+          "total_revenue": "416161",
+          "share_percent": "42.86",
+          "unit": "USD millions",
+          "required_limitation_terms": [
+            "reportable segments consist",
+            "geographic segments",
+            "location of customers"
+          ],
+          "classification_note": "The Company\u2019s reportable segments consist of the Americas, Europe, Greater China, Japan and Rest of Asia Pacific. Net sales for geographic segments are generally based on the location of customers and sales through the Company\u2019s retail stores located in those geographic locations.",
+          "accession_number": "0000320193-25-000079",
+          "source_url": "https://www.sec.gov/Archives/edgar/data/320193/000032019325000079/aapl-20250927.htm",
+          "checks": {
+            "annual_period_and_filing": true,
+            "source_provenance": true,
+            "geographic_values_reconcile": true,
+            "classification_basis_supported": true,
+            "largest_area_and_share_match": true,
+            "classification_caveats_referenced": true
+          },
+          "status": "PASS"
+        }
+      ]
     }
   ],
   "questions": [
@@ -7134,27 +7339,290 @@
       "question_id": "Q17",
       "question": "What proportion of revenue or assets was associated with the largest disclosed geographic exposure, and what limitations or distinctions does the company provide regarding the geographic classification?",
       "company": null,
-      "filings": [],
-      "reporting_periods": [],
+      "filings": [
+        {
+          "company": {
+            "name": "NVIDIA Corporation",
+            "ticker": "NVDA",
+            "cik": "0001045810"
+          },
+          "fiscal_year": 2024,
+          "accession_number": "0001045810-24-000029",
+          "source_url": "https://www.sec.gov/Archives/edgar/data/1045810/000104581024000029/nvda-20240128.htm"
+        },
+        {
+          "company": {
+            "name": "NVIDIA Corporation",
+            "ticker": "NVDA",
+            "cik": "0001045810"
+          },
+          "fiscal_year": 2025,
+          "accession_number": "0001045810-25-000023",
+          "source_url": "https://www.sec.gov/Archives/edgar/data/1045810/000104581025000023/nvda-20250126.htm"
+        },
+        {
+          "company": {
+            "name": "Microsoft Corporation",
+            "ticker": "MSFT",
+            "cik": "0000789019"
+          },
+          "fiscal_year": 2024,
+          "accession_number": "0000950170-24-087843",
+          "source_url": "https://www.sec.gov/Archives/edgar/data/789019/000095017024087843/msft-20240630.htm"
+        },
+        {
+          "company": {
+            "name": "Microsoft Corporation",
+            "ticker": "MSFT",
+            "cik": "0000789019"
+          },
+          "fiscal_year": 2025,
+          "accession_number": "0000950170-25-100235",
+          "source_url": "https://www.sec.gov/Archives/edgar/data/789019/000095017025100235/msft-20250630.htm"
+        },
+        {
+          "company": {
+            "name": "Apple Inc.",
+            "ticker": "AAPL",
+            "cik": "0000320193"
+          },
+          "fiscal_year": 2024,
+          "accession_number": "0000320193-24-000123",
+          "source_url": "https://www.sec.gov/Archives/edgar/data/320193/000032019324000123/aapl-20240928.htm"
+        },
+        {
+          "company": {
+            "name": "Apple Inc.",
+            "ticker": "AAPL",
+            "cik": "0000320193"
+          },
+          "fiscal_year": 2025,
+          "accession_number": "0000320193-25-000079",
+          "source_url": "https://www.sec.gov/Archives/edgar/data/320193/000032019325000079/aapl-20250927.htm"
+        }
+      ],
+      "reporting_periods": [
+        {
+          "company": {
+            "name": "NVIDIA Corporation",
+            "ticker": "NVDA",
+            "cik": "0001045810"
+          },
+          "fiscal_year": 2024
+        },
+        {
+          "company": {
+            "name": "NVIDIA Corporation",
+            "ticker": "NVDA",
+            "cik": "0001045810"
+          },
+          "fiscal_year": 2025
+        },
+        {
+          "company": {
+            "name": "Microsoft Corporation",
+            "ticker": "MSFT",
+            "cik": "0000789019"
+          },
+          "fiscal_year": 2024
+        },
+        {
+          "company": {
+            "name": "Microsoft Corporation",
+            "ticker": "MSFT",
+            "cik": "0000789019"
+          },
+          "fiscal_year": 2025
+        },
+        {
+          "company": {
+            "name": "Apple Inc.",
+            "ticker": "AAPL",
+            "cik": "0000320193"
+          },
+          "fiscal_year": 2024
+        },
+        {
+          "company": {
+            "name": "Apple Inc.",
+            "ticker": "AAPL",
+            "cik": "0000320193"
+          },
+          "fiscal_year": 2025
+        }
+      ],
       "expected_concepts": [
         "geographic_revenue_or_assets"
       ],
-      "retrieval_mode": "not_run",
-      "retrieved_inputs": [],
-      "selected_evidence": [],
-      "calculation_formula": null,
-      "expected_answer": null,
-      "actual_answer": "I cannot answer this request reliably yet: No complete retrieval-to-answer path is implemented for Q17; calculator registration alone is not support.\n\nYour question: What proportion of revenue or assets was associated with the largest disclosed geographic exposure, and what limitations or distinctions does the company provide regarding the geographic classification?",
+      "retrieval_mode": "live_SEC_geographic_revenue_extraction_plus_offline_reference_calculation",
+      "selected_evidence": [
+        {
+          "largest_geography": "United States",
+          "largest_revenue": "26966",
+          "total_revenue": "60922",
+          "unit": "USD millions",
+          "classification_basis": "billing_location",
+          "required_limitation_terms": [
+            "billing location",
+            "end customer location"
+          ],
+          "accession_number": "0001045810-24-000029",
+          "source_url": "https://www.sec.gov/Archives/edgar/data/1045810/000104581024000029/nvda-20240128.htm"
+        },
+        {
+          "largest_geography": "United States",
+          "largest_revenue": "61257",
+          "total_revenue": "130497",
+          "unit": "USD millions",
+          "classification_basis": "billing_location",
+          "required_limitation_terms": [
+            "billing location",
+            "end customer location"
+          ],
+          "accession_number": "0001045810-25-000023",
+          "source_url": "https://www.sec.gov/Archives/edgar/data/1045810/000104581025000023/nvda-20250126.htm"
+        },
+        {
+          "largest_geography": "United States",
+          "largest_revenue": "124704",
+          "total_revenue": "245122",
+          "unit": "USD millions",
+          "classification_basis": "customer_location",
+          "required_limitation_terms": [
+            "geographic source",
+            "OEM",
+            "impracticability"
+          ],
+          "accession_number": "0000950170-24-087843",
+          "source_url": "https://www.sec.gov/Archives/edgar/data/789019/000095017024087843/msft-20240630.htm"
+        },
+        {
+          "largest_geography": "United States",
+          "largest_revenue": "144546",
+          "total_revenue": "281724",
+          "unit": "USD millions",
+          "classification_basis": "customer_location",
+          "required_limitation_terms": [
+            "geographic source",
+            "OEM",
+            "impracticability"
+          ],
+          "accession_number": "0000950170-25-100235",
+          "source_url": "https://www.sec.gov/Archives/edgar/data/789019/000095017025100235/msft-20250630.htm"
+        },
+        {
+          "largest_geography": "Americas",
+          "largest_revenue": "167045",
+          "total_revenue": "391035",
+          "unit": "USD millions",
+          "classification_basis": "management_defined",
+          "required_limitation_terms": [
+            "reportable segments consist",
+            "geographic segments",
+            "location of customers"
+          ],
+          "accession_number": "0000320193-24-000123",
+          "source_url": "https://www.sec.gov/Archives/edgar/data/320193/000032019324000123/aapl-20240928.htm"
+        },
+        {
+          "largest_geography": "Americas",
+          "largest_revenue": "178353",
+          "total_revenue": "416161",
+          "unit": "USD millions",
+          "classification_basis": "management_defined",
+          "required_limitation_terms": [
+            "reportable segments consist",
+            "geographic segments",
+            "location of customers"
+          ],
+          "accession_number": "0000320193-25-000079",
+          "source_url": "https://www.sec.gov/Archives/edgar/data/320193/000032019325000079/aapl-20250927.htm"
+        }
+      ],
+      "calculation_formula": "largest disclosed geographic revenue / total revenue * 100",
+      "expected_answer": [
+        {
+          "ticker": "NVDA",
+          "fiscal_year": 2024,
+          "geography": "United States",
+          "share_percent": "44.26"
+        },
+        {
+          "ticker": "NVDA",
+          "fiscal_year": 2025,
+          "geography": "United States",
+          "share_percent": "46.94"
+        },
+        {
+          "ticker": "MSFT",
+          "fiscal_year": 2024,
+          "geography": "United States",
+          "share_percent": "50.87"
+        },
+        {
+          "ticker": "MSFT",
+          "fiscal_year": 2025,
+          "geography": "United States",
+          "share_percent": "51.31"
+        },
+        {
+          "ticker": "AAPL",
+          "fiscal_year": 2024,
+          "geography": "Americas",
+          "share_percent": "42.72"
+        },
+        {
+          "ticker": "AAPL",
+          "fiscal_year": 2025,
+          "geography": "Americas",
+          "share_percent": "42.86"
+        }
+      ],
+      "actual_answer": [
+        {
+          "ticker": "NVDA",
+          "fiscal_year": 2024,
+          "geography": "United States",
+          "share_percent": "44.26"
+        },
+        {
+          "ticker": "NVDA",
+          "fiscal_year": 2025,
+          "geography": "United States",
+          "share_percent": "46.94"
+        },
+        {
+          "ticker": "MSFT",
+          "fiscal_year": 2024,
+          "geography": "United States",
+          "share_percent": "50.87"
+        },
+        {
+          "ticker": "MSFT",
+          "fiscal_year": 2025,
+          "geography": "United States",
+          "share_percent": "51.31"
+        },
+        {
+          "ticker": "AAPL",
+          "fiscal_year": 2024,
+          "geography": "Americas",
+          "share_percent": "42.72"
+        },
+        {
+          "ticker": "AAPL",
+          "fiscal_year": 2025,
+          "geography": "Americas",
+          "share_percent": "42.86"
+        }
+      ],
       "checks": {
-        "input_retrieval_correctness": null,
-        "period_correctness": null,
-        "unit_correctness": null,
-        "calculation_correctness": null,
-        "evidence_correctness": null,
-        "query_interpretation_correctness": null
+        "reference_matrix_cases_pass": true,
+        "live_extraction": "passed",
+        "query_interpretation": "not_evaluated"
       },
-      "overall_status": "UNSUPPORTED",
-      "failure_reason": "No complete retrieval-to-answer path is implemented for Q17; calculator registration alone is not support."
+      "overall_status": "PARTIAL",
+      "failure_reason": "Live planner interpretation remains unevaluated."
     },
     {
       "question_id": "Q18",
