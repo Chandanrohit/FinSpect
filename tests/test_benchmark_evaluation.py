@@ -5,6 +5,7 @@ from finspect.benchmark_eval import (
     evaluate_legal_proceedings_matrix,
     evaluate_material_disclosure_matrix,
     evaluate_quarterly_revenue_matrix,
+    evaluate_quarterly_ytd_derivation_matrix,
     evaluate_market_risk_sensitivity_matrix,
     evaluate_operating_expense_matrix,
     evaluate_segment_revenue_matrix,
@@ -81,6 +82,16 @@ def test_quarterly_revenue_reference_matrix_covers_three_fiscal_calendars():
         assert result["issuers"] == ["AAPL", "MSFT", "NVDA"]
         assert result["quarter_end_months"] == expected_end_months[quarter]
         assert result["minimum_gate_coverage_met"] is True
+
+
+def test_quarterly_ytd_derivation_matrix_covers_q2_q3_across_three_issuers():
+    path = Path(__file__).resolve().parents[1] / "data/fixtures/quarterly_ytd_revenue_derivation_matrix.json"
+    result = evaluate_quarterly_ytd_derivation_matrix(path)
+    assert result["case_count"] == result["pass_count"] == 6
+    assert result["fail_count"] == 0
+    assert result["issuers"] == ["AAPL", "MSFT", "NVDA"]
+    assert result["quarter_coverage"] == {2: 3, 3: 3}
+    assert result["minimum_gate_coverage_met"] is True
 
 
 def test_benchmark_report_records_fixture_and_unsupported_questions():

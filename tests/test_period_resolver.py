@@ -178,6 +178,14 @@ def test_derives_q2_q3_from_original_ytd_facts_and_ignores_same_filing_comparati
             "fy": 2025, "fp": "Q3", "filed": "2024-11-20", "accn": "q3",
             "val": 38_819,
         })
+    current_fact = next(item for item in entries if item["end"] == current_end)
+    entries.append({
+        **current_fact,
+        "form": "10-Q/A",
+        "filed": "2025-02-01",
+        "accn": "amended-later",
+        "val": current_ytd + 999_999,
+    })
 
     facts = {"facts": {"us-gaap": {"Revenues": {"units": {"USD": entries}}}}}
     fact = find_quarterly_revenue_fact(facts, 2025, quarter)
@@ -197,6 +205,8 @@ def test_quarter_resolver_fails_closed_for_ytd_only_or_q4_facts():
     ]}}}}}
     with pytest.raises(ValueError, match="No standalone or safely derivable Q1"):
         find_quarterly_revenue_fact(facts, 2025, 1)
+    with pytest.raises(ValueError, match="No standalone or safely derivable Q2"):
+        find_quarterly_revenue_fact(facts, 2025, 2)
     with pytest.raises(ValueError, match="supports fiscal quarters 1 through 3"):
         find_quarterly_revenue_fact(facts, 2025, 4)
 

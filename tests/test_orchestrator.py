@@ -8,6 +8,7 @@ from finspect.orchestrator import AnnualPeriod, FinSpectOrchestrator, get_orches
 from finspect.edgar.facts import FactRetrievalError
 from finspect.edgar.parser import FilingParser
 from finspect.plan_normalizer import normalize_query_plan
+from finspect.period_resolver import resolve_quarterly_period
 from finspect.narrative_retriever import NarrativeRetriever
 from finspect.query_planner import (
     CompanyRequest,
@@ -3241,3 +3242,94 @@ def test_ytd_derived_quarterly_revenue_pipeline_shows_all_source_facts():
     assert any("current-quarter YTD revenue less prior-quarter YTD revenue" in item
                for item in result.answer.limitations)
     assert result.canonical_facts[0].evidence[0].evidence_type == "derived"
+
+
+def test_ytd_derivation_reference_matrix_runs_through_resolver_and_answer_pipeline():
+    fixture_path = (
+        Path(__file__).resolve().parents[1]
+        / "data" / "fixtures" / "quarterly_ytd_revenue_derivation_matrix.json"
+    )
+    matrix = json.loads(fixture_path.read_text(encoding="utf-8"))
+
+    class NoFactLookup:
+        def get_fact(self, **_kwargs):
+            raise AssertionError("Quarterly revenue should use the period resolver's SEC facts.")
+
+    for reference in matrix["cases"]:
+        company = reference["company"]
+        quarter = reference["quarter"]
+        periods_by_year = {item["fiscal_year"]: item for item in reference["periods"]}
+        entries = []
+        for period in reference["periods"]:
+            fiscal_year = period["fiscal_year"]
+            for filing_quarter, source in (
+                (quarter - 1, period["prior_ytd"]),
+                (quarter, period["current_ytd"]),
+            ):
+                entries.append({
+                    "start": source["start_date"],
+                    "end": source["end_date"],
+                    "form": source["form"],
+                    "fy": fiscal_year,
+                    "fp": f"Q{filing_quarter}",
+                    "filed": source["filing_date"],
+                    "accn": source["accession_number"],
+                    "val": int(source["value_usd"]),
+                })
+        company_facts = {
+            "facts": {"us-gaap": {"Revenues": {"units": {"USD": entries}}}}
+        }
+
+        class FakeXBRLService:
+            def get_company_facts(self, cik):
+                assert str(cik).lstrip("0") == str(company["cik"]).lstrip("0")
+                return company_facts
+
+        question = (
+            f"Calculate {company['name']} revenue growth for Q{quarter} "
+            "FY2024 to FY2025."
+        )
+        plan = make_plan().model_copy(update={
+            "original_question": question,
+            "company": CompanyRequest(**company),
+            "period": PeriodRequest(
+                period_kind="quarterly", fiscal_year=2025,
+                fiscal_quarter=quarter, comparison_required=True,
+                comparison_period="FY2024",
+            ),
+        })
+
+        class Planner:
+            def plan(self, _question):
+                return plan
+
+        class CompanyResolver:
+            def resolve(self, **_kwargs):
+                return company
+
+        result = FinSpectOrchestrator(
+            planner=Planner(), normalizer=normalize_query_plan,
+            period_resolver=lambda _cik, _year: PERIODS[2024],
+            quarter_period_resolver=lambda cik, year, fiscal_quarter: resolve_quarterly_period(
+                cik, year, fiscal_quarter, xbrl_service=FakeXBRLService()
+            ),
+            fact_retriever=NoFactLookup(), company_resolver=CompanyResolver(),
+        ).run(question)
+
+        assert abs(
+            Decimal(result.answer.result_value)
+            - Decimal(reference["expected_growth_percent"])
+        ) < Decimal("1e-24")
+        assert len(result.answer.evidence) == 6
+        assert sum(item.label == "Revenue YTD input" for item in result.answer.evidence) == 4
+        assert sum("derived" in item.label for item in result.answer.evidence) == 2
+        expected_accessions = {
+            source["accession_number"]
+            for period in reference["periods"]
+            for source in (period["prior_ytd"], period["current_ytd"])
+        }
+        assert expected_accessions <= {
+            item.accession_number for item in result.answer.evidence
+        }
+        assert all(item.source_url for item in result.answer.evidence)
+        assert result.canonical_facts[0].evidence[0].evidence_type == "derived"

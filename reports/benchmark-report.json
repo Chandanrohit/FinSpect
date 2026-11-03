@@ -5199,6 +5199,512 @@
           "status": "PASS"
         }
       ]
+    },
+    {
+      "matrix_id": "quarterly-ytd-standalone-revenue-derivation-v1",
+      "question_id": "Q01-quarterly-ytd-derivation",
+      "case_count": 6,
+      "pass_count": 6,
+      "fail_count": 0,
+      "issuers": [
+        "AAPL",
+        "MSFT",
+        "NVDA"
+      ],
+      "quarter_coverage": {
+        "2": 3,
+        "3": 3
+      },
+      "quarter_end_months": [
+        3,
+        6,
+        7,
+        10,
+        12
+      ],
+      "minimum_gate_coverage_met": true,
+      "cases": [
+        {
+          "company": {
+            "name": "NVIDIA Corporation",
+            "ticker": "NVDA",
+            "cik": "0001045810"
+          },
+          "quarter": 2,
+          "periods": [
+            {
+              "fiscal_year": 2024,
+              "fiscal_year_start": "2023-01-30",
+              "quarter_start": "2023-05-01",
+              "quarter_end": "2023-07-30",
+              "prior_ytd": {
+                "value_usd": "7192000000",
+                "start_date": "2023-01-30",
+                "end_date": "2023-04-30",
+                "form": "10-Q",
+                "filing_date": "2023-05-30",
+                "accession_number": "0001045810-23-000093",
+                "source_url": "https://www.sec.gov/Archives/edgar/data/1045810/000104581023000093/nvda-20230430.htm"
+              },
+              "current_ytd": {
+                "value_usd": "20699000000",
+                "start_date": "2023-01-30",
+                "end_date": "2023-07-30",
+                "form": "10-Q",
+                "filing_date": "2023-08-23",
+                "accession_number": "0001045810-23-000175",
+                "source_url": "https://www.sec.gov/Archives/edgar/data/1045810/000104581023000175/nvda-20230730.htm"
+              },
+              "standalone_revenue_usd": "13507000000"
+            },
+            {
+              "fiscal_year": 2025,
+              "fiscal_year_start": "2024-01-29",
+              "quarter_start": "2024-04-29",
+              "quarter_end": "2024-07-28",
+              "prior_ytd": {
+                "value_usd": "26044000000",
+                "start_date": "2024-01-29",
+                "end_date": "2024-04-28",
+                "form": "10-Q",
+                "filing_date": "2024-05-29",
+                "accession_number": "0001045810-24-000124",
+                "source_url": "https://www.sec.gov/Archives/edgar/data/1045810/000104581024000124/nvda-20240428.htm"
+              },
+              "current_ytd": {
+                "value_usd": "56084000000",
+                "start_date": "2024-01-29",
+                "end_date": "2024-07-28",
+                "form": "10-Q",
+                "filing_date": "2024-08-28",
+                "accession_number": "0001045810-24-000264",
+                "source_url": "https://www.sec.gov/Archives/edgar/data/1045810/000104581024000264/nvda-20240728.htm"
+              },
+              "standalone_revenue_usd": "30040000000"
+            }
+          ],
+          "expected_growth_percent": "122.4031983416006515140297623",
+          "checks": {
+            "same_quarter_consecutive_fiscal_years": true,
+            "period_checks": [
+              {
+                "ytd_periods_aligned": true,
+                "source_provenance": true,
+                "original_filing_sources_match_period_references": true,
+                "derived_quarter_matches_filing_reference": true
+              },
+              {
+                "ytd_periods_aligned": true,
+                "source_provenance": true,
+                "original_filing_sources_match_period_references": true,
+                "derived_quarter_matches_filing_reference": true
+              }
+            ],
+            "growth_matches_reference": true
+          },
+          "status": "PASS"
+        },
+        {
+          "company": {
+            "name": "Microsoft Corporation",
+            "ticker": "MSFT",
+            "cik": "0000789019"
+          },
+          "quarter": 2,
+          "periods": [
+            {
+              "fiscal_year": 2024,
+              "fiscal_year_start": "2023-07-01",
+              "quarter_start": "2023-10-01",
+              "quarter_end": "2023-12-31",
+              "prior_ytd": {
+                "value_usd": "56517000000",
+                "start_date": "2023-07-01",
+                "end_date": "2023-09-30",
+                "form": "10-Q",
+                "filing_date": "2023-10-24",
+                "accession_number": "0000950170-23-054855",
+                "source_url": "https://www.sec.gov/Archives/edgar/data/789019/000095017023054855/msft-20230930.htm"
+              },
+              "current_ytd": {
+                "value_usd": "118537000000",
+                "start_date": "2023-07-01",
+                "end_date": "2023-12-31",
+                "form": "10-Q",
+                "filing_date": "2024-01-30",
+                "accession_number": "0000950170-24-008814",
+                "source_url": "https://www.sec.gov/Archives/edgar/data/789019/000095017024008814/msft-20231231.htm"
+              },
+              "standalone_revenue_usd": "62020000000"
+            },
+            {
+              "fiscal_year": 2025,
+              "fiscal_year_start": "2024-07-01",
+              "quarter_start": "2024-10-01",
+              "quarter_end": "2024-12-31",
+              "prior_ytd": {
+                "value_usd": "65585000000",
+                "start_date": "2024-07-01",
+                "end_date": "2024-09-30",
+                "form": "10-Q",
+                "filing_date": "2024-10-30",
+                "accession_number": "0000950170-24-118967",
+                "source_url": "https://www.sec.gov/Archives/edgar/data/789019/000095017024118967/msft-20240930.htm"
+              },
+              "current_ytd": {
+                "value_usd": "135217000000",
+                "start_date": "2024-07-01",
+                "end_date": "2024-12-31",
+                "form": "10-Q",
+                "filing_date": "2025-01-29",
+                "accession_number": "0000950170-25-010491",
+                "source_url": "https://www.sec.gov/Archives/edgar/data/789019/000095017025010491/msft-20241231.htm"
+              },
+              "standalone_revenue_usd": "69632000000"
+            }
+          ],
+          "expected_growth_percent": "12.27346017413737504030957756",
+          "checks": {
+            "same_quarter_consecutive_fiscal_years": true,
+            "period_checks": [
+              {
+                "ytd_periods_aligned": true,
+                "source_provenance": true,
+                "original_filing_sources_match_period_references": true,
+                "derived_quarter_matches_filing_reference": true
+              },
+              {
+                "ytd_periods_aligned": true,
+                "source_provenance": true,
+                "original_filing_sources_match_period_references": true,
+                "derived_quarter_matches_filing_reference": true
+              }
+            ],
+            "growth_matches_reference": true
+          },
+          "status": "PASS"
+        },
+        {
+          "company": {
+            "name": "Apple Inc.",
+            "ticker": "AAPL",
+            "cik": "0000320193"
+          },
+          "quarter": 2,
+          "periods": [
+            {
+              "fiscal_year": 2024,
+              "fiscal_year_start": "2023-10-01",
+              "quarter_start": "2023-12-31",
+              "quarter_end": "2024-03-30",
+              "prior_ytd": {
+                "value_usd": "119575000000",
+                "start_date": "2023-10-01",
+                "end_date": "2023-12-30",
+                "form": "10-Q",
+                "filing_date": "2024-02-02",
+                "accession_number": "0000320193-24-000006",
+                "source_url": "https://www.sec.gov/Archives/edgar/data/320193/000032019324000006/aapl-20231230.htm"
+              },
+              "current_ytd": {
+                "value_usd": "210328000000",
+                "start_date": "2023-10-01",
+                "end_date": "2024-03-30",
+                "form": "10-Q",
+                "filing_date": "2024-05-03",
+                "accession_number": "0000320193-24-000069",
+                "source_url": "https://www.sec.gov/Archives/edgar/data/320193/000032019324000069/aapl-20240330.htm"
+              },
+              "standalone_revenue_usd": "90753000000"
+            },
+            {
+              "fiscal_year": 2025,
+              "fiscal_year_start": "2024-09-29",
+              "quarter_start": "2024-12-29",
+              "quarter_end": "2025-03-29",
+              "prior_ytd": {
+                "value_usd": "124300000000",
+                "start_date": "2024-09-29",
+                "end_date": "2024-12-28",
+                "form": "10-Q",
+                "filing_date": "2025-01-30",
+                "accession_number": "0000320193-25-000008",
+                "source_url": "https://www.sec.gov/Archives/edgar/data/320193/000032019325000008/aapl-20241228.htm"
+              },
+              "current_ytd": {
+                "value_usd": "219659000000",
+                "start_date": "2024-09-29",
+                "end_date": "2025-03-29",
+                "form": "10-Q",
+                "filing_date": "2025-05-02",
+                "accession_number": "0000320193-25-000057",
+                "source_url": "https://www.sec.gov/Archives/edgar/data/320193/000032019325000057/aapl-20250329.htm"
+              },
+              "standalone_revenue_usd": "95359000000"
+            }
+          ],
+          "expected_growth_percent": "5.075314314678302645642568290",
+          "checks": {
+            "same_quarter_consecutive_fiscal_years": true,
+            "period_checks": [
+              {
+                "ytd_periods_aligned": true,
+                "source_provenance": true,
+                "original_filing_sources_match_period_references": true,
+                "derived_quarter_matches_filing_reference": true
+              },
+              {
+                "ytd_periods_aligned": true,
+                "source_provenance": true,
+                "original_filing_sources_match_period_references": true,
+                "derived_quarter_matches_filing_reference": true
+              }
+            ],
+            "growth_matches_reference": true
+          },
+          "status": "PASS"
+        },
+        {
+          "company": {
+            "name": "NVIDIA Corporation",
+            "ticker": "NVDA",
+            "cik": "0001045810"
+          },
+          "quarter": 3,
+          "periods": [
+            {
+              "fiscal_year": 2024,
+              "fiscal_year_start": "2023-01-30",
+              "quarter_start": "2023-07-31",
+              "quarter_end": "2023-10-29",
+              "prior_ytd": {
+                "value_usd": "20699000000",
+                "start_date": "2023-01-30",
+                "end_date": "2023-07-30",
+                "form": "10-Q",
+                "filing_date": "2023-08-23",
+                "accession_number": "0001045810-23-000175",
+                "source_url": "https://www.sec.gov/Archives/edgar/data/1045810/000104581023000175/nvda-20230730.htm"
+              },
+              "current_ytd": {
+                "value_usd": "38819000000",
+                "start_date": "2023-01-30",
+                "end_date": "2023-10-29",
+                "form": "10-Q",
+                "filing_date": "2023-11-21",
+                "accession_number": "0001045810-23-000227",
+                "source_url": "https://www.sec.gov/Archives/edgar/data/1045810/000104581023000227/nvda-20231029.htm"
+              },
+              "standalone_revenue_usd": "18120000000"
+            },
+            {
+              "fiscal_year": 2025,
+              "fiscal_year_start": "2024-01-29",
+              "quarter_start": "2024-07-29",
+              "quarter_end": "2024-10-27",
+              "prior_ytd": {
+                "value_usd": "56084000000",
+                "start_date": "2024-01-29",
+                "end_date": "2024-07-28",
+                "form": "10-Q",
+                "filing_date": "2024-08-28",
+                "accession_number": "0001045810-24-000264",
+                "source_url": "https://www.sec.gov/Archives/edgar/data/1045810/000104581024000264/nvda-20240728.htm"
+              },
+              "current_ytd": {
+                "value_usd": "91166000000",
+                "start_date": "2024-01-29",
+                "end_date": "2024-10-27",
+                "form": "10-Q",
+                "filing_date": "2024-11-20",
+                "accession_number": "0001045810-24-000316",
+                "source_url": "https://www.sec.gov/Archives/edgar/data/1045810/000104581024000316/nvda-20241027.htm"
+              },
+              "standalone_revenue_usd": "35082000000"
+            }
+          ],
+          "expected_growth_percent": "93.60927152317880794701986755",
+          "checks": {
+            "same_quarter_consecutive_fiscal_years": true,
+            "period_checks": [
+              {
+                "ytd_periods_aligned": true,
+                "source_provenance": true,
+                "original_filing_sources_match_period_references": true,
+                "derived_quarter_matches_filing_reference": true
+              },
+              {
+                "ytd_periods_aligned": true,
+                "source_provenance": true,
+                "original_filing_sources_match_period_references": true,
+                "derived_quarter_matches_filing_reference": true
+              }
+            ],
+            "growth_matches_reference": true
+          },
+          "status": "PASS"
+        },
+        {
+          "company": {
+            "name": "Microsoft Corporation",
+            "ticker": "MSFT",
+            "cik": "0000789019"
+          },
+          "quarter": 3,
+          "periods": [
+            {
+              "fiscal_year": 2024,
+              "fiscal_year_start": "2023-07-01",
+              "quarter_start": "2024-01-01",
+              "quarter_end": "2024-03-31",
+              "prior_ytd": {
+                "value_usd": "118537000000",
+                "start_date": "2023-07-01",
+                "end_date": "2023-12-31",
+                "form": "10-Q",
+                "filing_date": "2024-01-30",
+                "accession_number": "0000950170-24-008814",
+                "source_url": "https://www.sec.gov/Archives/edgar/data/789019/000095017024008814/msft-20231231.htm"
+              },
+              "current_ytd": {
+                "value_usd": "180395000000",
+                "start_date": "2023-07-01",
+                "end_date": "2024-03-31",
+                "form": "10-Q",
+                "filing_date": "2024-04-25",
+                "accession_number": "0000950170-24-048288",
+                "source_url": "https://www.sec.gov/Archives/edgar/data/789019/000095017024048288/msft-20240331.htm"
+              },
+              "standalone_revenue_usd": "61858000000"
+            },
+            {
+              "fiscal_year": 2025,
+              "fiscal_year_start": "2024-07-01",
+              "quarter_start": "2025-01-01",
+              "quarter_end": "2025-03-31",
+              "prior_ytd": {
+                "value_usd": "135217000000",
+                "start_date": "2024-07-01",
+                "end_date": "2024-12-31",
+                "form": "10-Q",
+                "filing_date": "2025-01-29",
+                "accession_number": "0000950170-25-010491",
+                "source_url": "https://www.sec.gov/Archives/edgar/data/789019/000095017025010491/msft-20241231.htm"
+              },
+              "current_ytd": {
+                "value_usd": "205283000000",
+                "start_date": "2024-07-01",
+                "end_date": "2025-03-31",
+                "form": "10-Q",
+                "filing_date": "2025-04-30",
+                "accession_number": "0000950170-25-061046",
+                "source_url": "https://www.sec.gov/Archives/edgar/data/789019/000095017025061046/msft-20250331.htm"
+              },
+              "standalone_revenue_usd": "70066000000"
+            }
+          ],
+          "expected_growth_percent": "13.26910019722590449093084160",
+          "checks": {
+            "same_quarter_consecutive_fiscal_years": true,
+            "period_checks": [
+              {
+                "ytd_periods_aligned": true,
+                "source_provenance": true,
+                "original_filing_sources_match_period_references": true,
+                "derived_quarter_matches_filing_reference": true
+              },
+              {
+                "ytd_periods_aligned": true,
+                "source_provenance": true,
+                "original_filing_sources_match_period_references": true,
+                "derived_quarter_matches_filing_reference": true
+              }
+            ],
+            "growth_matches_reference": true
+          },
+          "status": "PASS"
+        },
+        {
+          "company": {
+            "name": "Apple Inc.",
+            "ticker": "AAPL",
+            "cik": "0000320193"
+          },
+          "quarter": 3,
+          "periods": [
+            {
+              "fiscal_year": 2024,
+              "fiscal_year_start": "2023-10-01",
+              "quarter_start": "2024-03-31",
+              "quarter_end": "2024-06-29",
+              "prior_ytd": {
+                "value_usd": "210328000000",
+                "start_date": "2023-10-01",
+                "end_date": "2024-03-30",
+                "form": "10-Q",
+                "filing_date": "2024-05-03",
+                "accession_number": "0000320193-24-000069",
+                "source_url": "https://www.sec.gov/Archives/edgar/data/320193/000032019324000069/aapl-20240330.htm"
+              },
+              "current_ytd": {
+                "value_usd": "296105000000",
+                "start_date": "2023-10-01",
+                "end_date": "2024-06-29",
+                "form": "10-Q",
+                "filing_date": "2024-08-02",
+                "accession_number": "0000320193-24-000081",
+                "source_url": "https://www.sec.gov/Archives/edgar/data/320193/000032019324000081/aapl-20240629.htm"
+              },
+              "standalone_revenue_usd": "85777000000"
+            },
+            {
+              "fiscal_year": 2025,
+              "fiscal_year_start": "2024-09-29",
+              "quarter_start": "2025-03-30",
+              "quarter_end": "2025-06-28",
+              "prior_ytd": {
+                "value_usd": "219659000000",
+                "start_date": "2024-09-29",
+                "end_date": "2025-03-29",
+                "form": "10-Q",
+                "filing_date": "2025-05-02",
+                "accession_number": "0000320193-25-000057",
+                "source_url": "https://www.sec.gov/Archives/edgar/data/320193/000032019325000057/aapl-20250329.htm"
+              },
+              "current_ytd": {
+                "value_usd": "313695000000",
+                "start_date": "2024-09-29",
+                "end_date": "2025-06-28",
+                "form": "10-Q",
+                "filing_date": "2025-08-01",
+                "accession_number": "0000320193-25-000073",
+                "source_url": "https://www.sec.gov/Archives/edgar/data/320193/000032019325000073/aapl-20250628.htm"
+              },
+              "standalone_revenue_usd": "94036000000"
+            }
+          ],
+          "expected_growth_percent": "9.628455180293085559065950080",
+          "checks": {
+            "same_quarter_consecutive_fiscal_years": true,
+            "period_checks": [
+              {
+                "ytd_periods_aligned": true,
+                "source_provenance": true,
+                "original_filing_sources_match_period_references": true,
+                "derived_quarter_matches_filing_reference": true
+              },
+              {
+                "ytd_periods_aligned": true,
+                "source_provenance": true,
+                "original_filing_sources_match_period_references": true,
+                "derived_quarter_matches_filing_reference": true
+              }
+            ],
+            "growth_matches_reference": true
+          },
+          "status": "PASS"
+        }
+      ]
     }
   ],
   "questions": [

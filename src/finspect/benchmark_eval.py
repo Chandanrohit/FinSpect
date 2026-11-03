@@ -5,7 +5,7 @@ from __future__ import annotations
 import argparse
 import json
 import re
-from datetime import date
+from datetime import date, timedelta
 from decimal import Decimal
 from pathlib import Path
 from typing import Any
@@ -108,6 +108,9 @@ DEFAULT_QUARTERLY_REVENUE_Q2_MATRIX = (
 DEFAULT_QUARTERLY_REVENUE_Q3_MATRIX = (
     ROOT / "data" / "fixtures" / "quarterly_revenue_q3_reference_matrix.json"
 )
+DEFAULT_QUARTERLY_YTD_DERIVATION_MATRIX = (
+    ROOT / "data" / "fixtures" / "quarterly_ytd_revenue_derivation_matrix.json"
+)
 
 
 def evaluate_quarterly_revenue_matrix(path: Path) -> dict[str, Any]:
@@ -162,6 +165,130 @@ def evaluate_quarterly_revenue_matrix(path: Path) -> dict[str, Any]:
     }
 
 
+def evaluate_quarterly_ytd_derivation_matrix(path: Path) -> dict[str, Any]:
+    """Validate Q2/Q3 standalone revenue derived from consecutive SEC YTD facts."""
+    matrix = json.loads(path.read_text(encoding="utf-8"))
+    cases = []
+    quarter_refs = {
+        quarter: json.loads(
+            (ROOT / "data" / "fixtures" / f"quarterly_revenue_q{quarter}_reference_matrix.json")
+            .read_text(encoding="utf-8")
+        )
+        for quarter in (1, 2, 3)
+    }
+    for reference in matrix["cases"]:
+        company = reference["company"]
+        quarter = int(reference["quarter"])
+        periods = reference["periods"]
+        reference_periods = {
+            q: next(
+                case for case in quarter_refs[q]["cases"]
+                if case["company"]["ticker"] == company["ticker"]
+            )["periods"]
+            for q in (quarter - 1, quarter)
+        }
+        fiscal_period_checks = []
+        derived_values = []
+        for index, period in enumerate(periods):
+            prior_ytd = period["prior_ytd"]
+            current_ytd = period["current_ytd"]
+            fiscal_start = date.fromisoformat(period["fiscal_year_start"])
+            quarter_start = date.fromisoformat(period["quarter_start"])
+            quarter_end = date.fromisoformat(period["quarter_end"])
+            prior_ytd_end = date.fromisoformat(prior_ytd["end_date"])
+            prior_days = (prior_ytd_end - fiscal_start).days
+            current_days = (date.fromisoformat(current_ytd["end_date"]) - fiscal_start).days
+            quarter_days = (quarter_end - quarter_start).days
+            prior_quarter = reference_periods[quarter - 1][index]
+            current_quarter = reference_periods[quarter][index]
+            prior_range = (70, 110) if quarter == 2 else (150, 210)
+            current_range = (150, 210) if quarter == 2 else (220, 320)
+            derived = Decimal(current_ytd["value_usd"]) - Decimal(prior_ytd["value_usd"])
+            derived_values.append(derived)
+            ytd_sources = (prior_ytd, current_ytd)
+            source_provenance = all(
+                source["form"] == "10-Q"
+                and source["accession_number"].replace("-", "") in source["source_url"]
+                and source["source_url"].startswith("https://www.sec.gov/Archives/edgar/data/")
+                and f"/{int(company['cik'])}/" in source["source_url"]
+                and date.fromisoformat(source["filing_date"]) >= date.fromisoformat(source["end_date"])
+                for source in ytd_sources
+            )
+            aligned_original_filing_sources = (
+                prior_ytd["accession_number"] == prior_quarter["accession_number"]
+                and prior_ytd["source_url"] == prior_quarter["source_url"]
+                and current_ytd["accession_number"] == current_quarter["accession_number"]
+                and current_ytd["source_url"] == current_quarter["source_url"]
+            )
+            fiscal_period_checks.append({
+                "ytd_periods_aligned": (
+                    prior_ytd["start_date"] == period["fiscal_year_start"]
+                    and current_ytd["start_date"] == period["fiscal_year_start"]
+                    and prior_ytd_end + timedelta(days=1) == quarter_start
+                    and date.fromisoformat(current_ytd["end_date"]) == quarter_end
+                    and prior_range[0] <= prior_days <= prior_range[1]
+                    and current_range[0] <= current_days <= current_range[1]
+                    and 70 <= quarter_days <= 110
+                ),
+                "source_provenance": source_provenance,
+                "original_filing_sources_match_period_references": aligned_original_filing_sources,
+                "derived_quarter_matches_filing_reference": derived == Decimal(period["standalone_revenue_usd"])
+                    == Decimal(current_quarter["revenue_usd"]),
+            })
+        growth_matches = (
+            len(derived_values) == 2
+            and derived_values[0] > 0
+            and abs(
+                (derived_values[1] - derived_values[0]) / derived_values[0] * 100
+                - Decimal(reference["expected_growth_percent"])
+            ) < Decimal("0.0000000001")
+        )
+        checks = {
+            "same_quarter_consecutive_fiscal_years": (
+                quarter in (2, 3)
+                and len(periods) == 2
+                and periods[0]["fiscal_year"] + 1 == periods[1]["fiscal_year"]
+            ),
+            "period_checks": fiscal_period_checks,
+            "growth_matches_reference": growth_matches,
+        }
+        passed = all(
+            check for key, check in checks.items()
+            if key != "period_checks"
+        ) and all(all(period_check.values()) for period_check in fiscal_period_checks)
+        cases.append({
+            "company": company,
+            "quarter": quarter,
+            "periods": periods,
+            "expected_growth_percent": reference["expected_growth_percent"],
+            "checks": checks,
+            "status": "PASS" if passed else "FAIL",
+        })
+    issuers = sorted({case["company"]["ticker"] for case in cases})
+    quarter_coverage = {
+        quarter: sum(case["quarter"] == quarter for case in cases)
+        for quarter in (2, 3)
+    }
+    end_months = {
+        date.fromisoformat(period["quarter_end"]).month
+        for case in cases for period in case["periods"]
+    }
+    return {
+        "matrix_id": matrix["matrix_id"],
+        "question_id": "Q01-quarterly-ytd-derivation",
+        "case_count": len(cases),
+        "pass_count": sum(case["status"] == "PASS" for case in cases),
+        "fail_count": sum(case["status"] == "FAIL" for case in cases),
+        "issuers": issuers,
+        "quarter_coverage": quarter_coverage,
+        "quarter_end_months": sorted(end_months),
+        "minimum_gate_coverage_met": (
+            len(issuers) >= 3
+            and len(end_months) >= 3
+            and all(count >= 3 for count in quarter_coverage.values())
+        ),
+        "cases": cases,
+    }
 def evaluate_segment_revenue_matrix(path: Path) -> dict[str, Any]:
     """Check Q02 reconciliation, largest increase selection, and source coverage."""
     matrix = json.loads(path.read_text(encoding="utf-8"))
@@ -2596,6 +2723,9 @@ def evaluate_benchmark(
     quarterly_revenue_q3_matrix = evaluate_quarterly_revenue_matrix(
         DEFAULT_QUARTERLY_REVENUE_Q3_MATRIX
     )
+    quarterly_ytd_derivation_matrix = evaluate_quarterly_ytd_derivation_matrix(
+        DEFAULT_QUARTERLY_YTD_DERIVATION_MATRIX
+    )
     commitment_matrix = evaluate_commitment_matrix(DEFAULT_COMMITMENT_MATRIX)
     segment_revenue_matrix = evaluate_segment_revenue_matrix(DEFAULT_SEGMENT_REVENUE_MATRIX)
     operating_expense_matrix = evaluate_operating_expense_matrix(DEFAULT_OPERATING_EXPENSE_MATRIX)
@@ -3547,6 +3677,7 @@ def evaluate_benchmark(
             quarterly_revenue_matrix,
             quarterly_revenue_q2_matrix,
             quarterly_revenue_q3_matrix,
+            quarterly_ytd_derivation_matrix,
         ],
         "questions": report_questions,
     }
