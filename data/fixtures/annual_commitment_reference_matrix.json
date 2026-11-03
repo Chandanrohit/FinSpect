@@ -1,0 +1,69 @@
+{
+  "matrix_id": "annual-commitments-liquidity-multi-issuer-v1",
+  "question_id": "Q15",
+  "evaluation_scope": "Six annual SEC 10-K reference cases. Commitment schedule values are issuer-reported amounts scaled to USD; liquidity is exact-period cash plus current marketable securities. Offline reference checks do not establish live planner accuracy.",
+  "form": "10-K",
+  "unit": "USD",
+  "cases": [
+    {
+      "company": {"name": "NVIDIA Corporation", "ticker": "NVDA", "cik": "0001045810"},
+      "fiscal_year": 2024, "report_date": "2024-01-28", "filing_date": "2024-02-21",
+      "accession_number": "0001045810-24-000029",
+      "source_url": "https://www.sec.gov/Archives/edgar/data/1045810/000104581024000029/nvda-20240128.htm",
+      "schedule_unit": "USD millions", "next_fiscal_year": 2025,
+      "total_commitments": "20707000000", "near_term_commitments": "17316000000",
+      "cash": "7280000000", "short_term_investments": "18704000000",
+      "expected_near_term_share_percent": "83.622836", "expected_coverage_x": "1.5015"
+    },
+    {
+      "company": {"name": "NVIDIA Corporation", "ticker": "NVDA", "cik": "0001045810"},
+      "fiscal_year": 2025, "report_date": "2025-01-26", "filing_date": "2025-02-26",
+      "accession_number": "0001045810-25-000023",
+      "source_url": "https://www.sec.gov/Archives/edgar/data/1045810/000104581025000023/nvda-20250126.htm",
+      "schedule_unit": "USD millions", "next_fiscal_year": 2026,
+      "total_commitments": "45079000000", "near_term_commitments": "35727000000",
+      "cash": "8589000000", "short_term_investments": "34621000000",
+      "expected_near_term_share_percent": "79.2522", "expected_coverage_x": "1.2065"
+    },
+    {
+      "company": {"name": "Microsoft Corporation", "ticker": "MSFT", "cik": "0000789019"},
+      "fiscal_year": 2024, "report_date": "2024-06-30", "filing_date": "2024-07-30",
+      "accession_number": "0000950170-24-087843",
+      "source_url": "https://www.sec.gov/Archives/edgar/data/789019/000095017024087843/msft-20240630.htm",
+      "schedule_unit": "USD millions", "next_fiscal_year": 2025,
+      "total_commitments": "360018000000", "near_term_commitments": "114290000000",
+      "cash": "18315000000", "short_term_investments": "57228000000",
+      "expected_near_term_share_percent": "31.7456", "expected_coverage_x": "0.6616"
+    },
+    {
+      "company": {"name": "Microsoft Corporation", "ticker": "MSFT", "cik": "0000789019"},
+      "fiscal_year": 2025, "report_date": "2025-06-30", "filing_date": "2025-07-30",
+      "accession_number": "0000950170-25-100235",
+      "source_url": "https://www.sec.gov/Archives/edgar/data/789019/000095017025100235/msft-20250630.htm",
+      "schedule_unit": "USD millions", "next_fiscal_year": 2026,
+      "total_commitments": "397045000000", "near_term_commitments": "148106000000",
+      "cash": "30242000000", "short_term_investments": "64323000000",
+      "expected_near_term_share_percent": "37.3028", "expected_coverage_x": "0.6386"
+    },
+    {
+      "company": {"name": "Amazon.com, Inc.", "ticker": "AMZN", "cik": "0001018724"},
+      "fiscal_year": 2024, "report_date": "2024-12-31", "filing_date": "2025-02-07",
+      "accession_number": "0001018724-25-000004",
+      "source_url": "https://www.sec.gov/Archives/edgar/data/1018724/000101872425000004/amzn-20241231.htm",
+      "schedule_unit": "USD millions", "next_fiscal_year": 2025,
+      "total_commitments": "333001000000", "near_term_commitments": "34832000000",
+      "cash": "78779000000", "short_term_investments": "22423000000",
+      "expected_near_term_share_percent": "10.4594", "expected_coverage_x": "2.9068"
+    },
+    {
+      "company": {"name": "Amazon.com, Inc.", "ticker": "AMZN", "cik": "0001018724"},
+      "fiscal_year": 2025, "report_date": "2025-12-31", "filing_date": "2026-02-06",
+      "accession_number": "0001018724-26-000004",
+      "source_url": "https://www.sec.gov/Archives/edgar/data/1018724/000101872426000004/amzn-20251231.htm",
+      "schedule_unit": "USD millions", "next_fiscal_year": 2026,
+      "total_commitments": "439661000000", "near_term_commitments": "51666000000",
+      "cash": "86810000000", "short_term_investments": "36219000000",
+      "expected_near_term_share_percent": "11.7511", "expected_coverage_x": "2.3806"
+    }
+  ]
+}

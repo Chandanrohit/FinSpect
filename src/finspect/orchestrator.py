@@ -20,6 +20,7 @@ from finspect.calculator import (
     balance_change,
     cash_conversion_comparison,
     cash_allocation,
+    commitment_liquidity,
     dilution_ratio,
     earnings_change_relationship,
     growth_comparison,
@@ -37,6 +38,7 @@ from finspect.edgar.equity_statement import (
     EquityStatementError,
     EquityStatementExtractor,
 )
+from finspect.edgar.commitments import CommitmentScheduleError, CommitmentScheduleExtractor
 from finspect.narrative_retriever import NarrativeRetriever
 from finspect.query_planner import QueryPlan
 from finspect.edgar.xbrl import XBRLService
@@ -196,6 +198,17 @@ class FinSpectOrchestrator:
                 "dilutive effect",
                 "dilutive effect of outstanding equity awards",
             }
+        )
+        has_future_commitments = bool(
+            metric_names & {"future commitments", "contractual commitments", "contractual obligations", "purchase commitments"}
+        )
+        has_near_term_commitments = bool(
+            metric_names & {"near term commitments", "near term obligations", "commitments due within one year"}
+        )
+        has_liquid_resources = bool(
+            metric_names & {"cash and cash equivalents", "cash cash equivalents"}
+        ) and bool(
+            metric_names & {"short term investments", "marketable securities", "short term investments or marketable securities"}
         )
         is_supported_revenue_operation = (
             plan.operation in {"growth_rate", "absolute_change"}
@@ -360,6 +373,20 @@ class FinSpectOrchestrator:
             and plan.period.fiscal_year is not None
             and not plan.period.comparison_required
         )
+        is_supported_commitments = (
+            plan.operation == "commitment_liquidity"
+            and has_future_commitments and has_near_term_commitments
+            and has_liquid_resources
+            and metric_names <= {
+                "future commitments", "contractual commitments", "contractual obligations", "purchase commitments",
+                "near term commitments", "near term obligations", "commitments due within one year",
+                "cash and cash equivalents", "cash cash equivalents", "short term investments",
+                "marketable securities", "short term investments or marketable securities",
+            }
+            and plan.period.period_kind == "annual"
+            and plan.period.fiscal_year is not None
+            and not plan.period.comparison_required
+        )
 
         if not (
             is_supported_revenue_operation
@@ -375,6 +402,7 @@ class FinSpectOrchestrator:
             or is_supported_cash_allocation
             or is_supported_equity_rollforward
             or is_supported_regulatory_risk
+            or is_supported_commitments
         ):
             answer = build_unsupported_answer(
                 question=question,
@@ -402,6 +430,7 @@ class FinSpectOrchestrator:
             or is_supported_cash_allocation
             or is_supported_equity_rollforward
             or is_supported_regulatory_risk
+            or is_supported_commitments
         ):
             fiscal_years = (plan.period.fiscal_year,)
         if is_supported_equity_rollforward:
@@ -415,6 +444,8 @@ class FinSpectOrchestrator:
                 )
             fiscal_years = (plan.period.fiscal_year - 1, plan.period.fiscal_year)
         if is_supported_regulatory_risk:
+            fiscal_years = (plan.period.fiscal_year,)
+        if is_supported_commitments:
             fiscal_years = (plan.period.fiscal_year,)
         if fiscal_years is None:
             answer = build_unsupported_answer(
@@ -478,6 +509,110 @@ class FinSpectOrchestrator:
             periods[1].start_date
         ) <= date.fromisoformat(periods[0].end_date):
             raise ValueError("Comparable annual periods must not overlap.")
+
+        if is_supported_commitments:
+            current_period = periods[0]
+            if not self.filing_retriever or not self.fact_retriever:
+                return PipelineResult(plan=plan, answer=build_unsupported_answer(
+                    question, "Exact annual filing and liquidity-fact retrieval are required for commitment analysis."
+                ))
+            try:
+                filing = self.filing_retriever.get_filing(
+                    cik=cik, accession_number=current_period.accession_number, form="10-K"
+                )
+                schedule = CommitmentScheduleExtractor().extract(
+                    filing["html"], next_fiscal_year=current_period.fiscal_year + 1
+                )
+            except (FilingRetrievalError, CommitmentScheduleError, KeyError, ValueError) as exc:
+                return PipelineResult(plan=plan, answer=build_unsupported_answer(
+                    question, f"Could not identify one unambiguous commitment schedule in the exact 10-K: {exc}"
+                ))
+            if (
+                filing.get("form") != "10-K"
+                or str(filing.get("cik", "")).zfill(10) != cik
+                or filing.get("accession_number") != current_period.accession_number
+                or filing.get("filing_date") != current_period.filing_date
+                or filing.get("report_date") != current_period.end_date
+                or not filing.get("primary_document")
+            ):
+                return PipelineResult(plan=plan, answer=build_unsupported_answer(
+                    question, "Retrieved commitment schedule does not match the requested issuer and exact 10-K."
+                ))
+            scales = {"USD": Decimal(1), "USD thousands": Decimal(1_000), "USD millions": Decimal(1_000_000)}
+            if schedule.unit not in scales or current_period.currency != "USD":
+                return PipelineResult(plan=plan, answer=build_unsupported_answer(
+                    question, "The commitment schedule unit or filing currency could not be normalized safely to USD."
+                ))
+
+            retrieved: dict[str, FinancialFact] = {}
+            for name, concepts in (
+                ("cash", ("CashAndCashEquivalentsAtCarryingValue", "CashCashEquivalentsRestrictedCashAndRestrictedCashEquivalents")),
+                ("investments", ("MarketableSecuritiesCurrent", "ShortTermInvestments", "AvailableForSaleSecuritiesCurrent")),
+            ):
+                last_error: Exception | None = None
+                for concept in concepts:
+                    try:
+                        raw = self.fact_retriever.get_fact(
+                            cik=cik, taxonomy="us-gaap", concept=concept, start_date=None,
+                            end_date=current_period.end_date, form="10-K", unit=current_period.currency,
+                            filed_on_or_before=current_period.filing_date,
+                            accession_number=current_period.accession_number,
+                        )
+                        if (
+                            raw.get("cik", "").zfill(10) != cik
+                            or raw.get("accession_number") != current_period.accession_number
+                            or raw.get("end_date") != current_period.end_date
+                            or raw.get("start_date") is not None
+                        ):
+                            raise FactRetrievalError("Liquidity fact does not match the exact filing period.")
+                        retrieved[name] = sec_fact_to_financial_fact(
+                            raw, period_role=PeriodRole.CURRENT,
+                            reporting_scope=ReportingScope.CONSOLIDATED,
+                        )
+                        break
+                    except FactRetrievalError as exc:
+                        last_error = exc
+                if name not in retrieved:
+                    return PipelineResult(plan=plan, answer=build_unsupported_answer(
+                        question, f"Could not retrieve a period-matched {name} fact: {last_error}"
+                    ))
+            cash, investments = retrieved["cash"], retrieved["investments"]
+            try:
+                require_compatible_facts(cash, investments, require_same_period=True)
+                validate_currency_inputs(cash, investments)
+                scale = scales[schedule.unit]
+                total_commitments = schedule.total_commitments * scale
+                near_commitments = schedule.next_year_commitments * scale
+                liquid_resources = cash.normalized_value + investments.normalized_value
+                calculation = commitment_liquidity(near_commitments, total_commitments, liquid_resources)
+            except (ValueError, ArithmeticError) as exc:
+                return PipelineResult(plan=plan, answer=build_unsupported_answer(
+                    question, f"Commitment and liquidity inputs could not be reconciled: {exc}"
+                ))
+            filing_url = self.filing_retriever.submissions.get_filing_url(
+                cik=cik, accession_number=current_period.accession_number,
+                primary_document=filing["primary_document"],
+            )
+            evidence = [
+                AnswerEvidence("Total disclosed commitments", total_commitments, "USD", f"As of {current_period.end_date}", current_period.filing_date, current_period.accession_number, filing_url),
+                AnswerEvidence(f"Commitments due {current_period.fiscal_year + 1}", near_commitments, "USD", f"As of {current_period.end_date}", current_period.filing_date, current_period.accession_number, filing_url),
+                AnswerEvidence("Cash and cash equivalents", cash.normalized_value, "USD", f"As of {current_period.end_date}", current_period.filing_date, current_period.accession_number, filing_url),
+                AnswerEvidence("Short-term investments or marketable securities", investments.normalized_value, "USD", f"As of {current_period.end_date}", current_period.filing_date, current_period.accession_number, filing_url),
+            ]
+            answer = build_calculation_answer(
+                company_name=resolved["name"], question=question, result=calculation,
+                evidence=evidence,
+                limitations=(
+                    "Commitment categories and exclusions follow the issuer's selected schedule; supplemental schedules may contain additional detail.",
+                    "Liquidity coverage compares reported cash and short-term investments with next-fiscal-year commitments; it is not a solvency or cash-flow forecast.",
+                ),
+            )
+            return PipelineResult(plan=plan, answer=answer, facts=({
+                "company": resolved["name"], "fiscal_year": current_period.fiscal_year,
+                "total_commitments": str(total_commitments), "near_term_commitments": str(near_commitments),
+                "liquid_resources": str(liquid_resources), "coverage_x": str(calculation.value),
+                "accession_number": current_period.accession_number, "source_url": filing_url,
+            },))
 
         if is_supported_equity_allocation:
             current_period = periods[0]

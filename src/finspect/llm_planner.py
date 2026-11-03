@@ -64,6 +64,12 @@ Rules:
     risks, require one explicit annual fiscal year and use operation
     "regulatory_risk_analysis" with the single text metric "regulatory_risks"
     from "risk_factors". Do not request a numeric calculation or comparison.
+20. For Q15 commitment/liquidity questions, require one explicit annual fiscal
+    year and use operation "commitment_liquidity". Request future commitments,
+    near-term commitments, cash and cash equivalents, and short-term investments
+    or marketable securities for the same 10-K. Do not request a comparison.
+    The pipeline will use the issuer's next-fiscal-year commitment bucket and
+    must report unsupported when the schedule or units are ambiguous.
 """
 
 

@@ -106,6 +106,17 @@ def build_calculation_answer(
             f"${allocated:,.0f}, equal to {_format_result(result.value, 'percent')} "
             "of operating cash flow for share repurchases, dividends, and capital expenditure."
         )
+    elif result.formula_id == "Q15":
+        near = result.inputs["near_term_commitments"]
+        total = result.inputs["total_commitments"]
+        liquid = result.inputs["liquid_resources"]
+        near_share = near / total * Decimal(100)
+        result_line = (
+            f"{company_name} disclosed ${total:,.0f} in total commitments, of which "
+            f"${near:,.0f} ({near_share.quantize(Decimal('0.01')):,.2f}%) is due in the next fiscal year. "
+            f"Reported cash and short-term investments of ${liquid:,.0f} cover those near-term commitments "
+            f"{result.value.quantize(Decimal('0.01')):,.2f} times."
+        )
     elif result.formula_id == "Q06":
         change = result.value or Decimal(0)
         direction = "increased" if change > 0 else "decreased" if change < 0 else "was unchanged"

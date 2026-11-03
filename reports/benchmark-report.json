@@ -7,12 +7,12 @@
   "question_count": 20,
   "aggregate_counts": {
     "PASS": 0,
-    "PARTIAL": 13,
-    "UNSUPPORTED": 7,
+    "PARTIAL": 14,
+    "UNSUPPORTED": 6,
     "FAIL": 0
   },
   "accuracy_percentage": null,
-  "accuracy_note": "No overall accuracy percentage is reported: Q01, Q03, Q05, Q07, Q08, Q09, Q06, Q10, Q11, Q12, Q13, Q14, and Q16 have fixture-backed checks; issuer matrix case counts and individual checks are reported per operation, but neither live SEC retrieval nor the planner was evaluated.",
+  "accuracy_note": "No overall accuracy percentage is reported: Q01, Q03, Q05, Q07, Q08, Q09, Q06, Q10, Q11, Q12, Q13, Q14, Q15, and Q16 have fixture-backed checks; issuer matrix case counts and individual checks are reported per operation, but neither live SEC retrieval nor the planner was evaluated.",
   "operation_reference_matrices": [
     {
       "matrix_id": "annual-revenue-growth-multi-issuer-v2-healthcare",
@@ -3961,6 +3961,92 @@
           "status": "PASS"
         }
       ]
+    },
+    {
+      "question_id": "Q15",
+      "cases": [
+        {
+          "company": {
+            "name": "NVIDIA Corporation",
+            "ticker": "NVDA",
+            "cik": "0001045810"
+          },
+          "fiscal_year": 2024,
+          "accession_number": "0001045810-24-000029",
+          "source_url": "https://www.sec.gov/Archives/edgar/data/1045810/000104581024000029/nvda-20240128.htm",
+          "pass": true,
+          "near_term_commitment_share_percent": "83.62389530110590621528951562",
+          "liquid_resource_coverage_x": "1.500577500577500577500577501"
+        },
+        {
+          "company": {
+            "name": "NVIDIA Corporation",
+            "ticker": "NVDA",
+            "cik": "0001045810"
+          },
+          "fiscal_year": 2025,
+          "accession_number": "0001045810-25-000023",
+          "source_url": "https://www.sec.gov/Archives/edgar/data/1045810/000104581025000023/nvda-20250126.htm",
+          "pass": true,
+          "near_term_commitment_share_percent": "79.25419818540783957053173318",
+          "liquid_resource_coverage_x": "1.209449436000783720995325664"
+        },
+        {
+          "company": {
+            "name": "Microsoft Corporation",
+            "ticker": "MSFT",
+            "cik": "0000789019"
+          },
+          "fiscal_year": 2024,
+          "accession_number": "0000950170-24-087843",
+          "source_url": "https://www.sec.gov/Archives/edgar/data/789019/000095017024087843/msft-20240630.htm",
+          "pass": true,
+          "near_term_commitment_share_percent": "31.74563494047519846229910727",
+          "liquid_resource_coverage_x": "0.6609764633826231516318138070"
+        },
+        {
+          "company": {
+            "name": "Microsoft Corporation",
+            "ticker": "MSFT",
+            "cik": "0000789019"
+          },
+          "fiscal_year": 2025,
+          "accession_number": "0000950170-25-100235",
+          "source_url": "https://www.sec.gov/Archives/edgar/data/789019/000095017025100235/msft-20250630.htm",
+          "pass": true,
+          "near_term_commitment_share_percent": "37.30206903499603319522975985",
+          "liquid_resource_coverage_x": "0.6384954019418524570240233346"
+        },
+        {
+          "company": {
+            "name": "Amazon.com, Inc.",
+            "ticker": "AMZN",
+            "cik": "0001018724"
+          },
+          "fiscal_year": 2024,
+          "accession_number": "0001018724-25-000004",
+          "source_url": "https://www.sec.gov/Archives/edgar/data/1018724/000101872425000004/amzn-20241231.htm",
+          "pass": true,
+          "near_term_commitment_share_percent": "10.46002864856261692907829106",
+          "liquid_resource_coverage_x": "2.905431786862655029857602205"
+        },
+        {
+          "company": {
+            "name": "Amazon.com, Inc.",
+            "ticker": "AMZN",
+            "cik": "0001018724"
+          },
+          "fiscal_year": 2025,
+          "accession_number": "0001018724-26-000004",
+          "source_url": "https://www.sec.gov/Archives/edgar/data/1018724/000101872426000004/amzn-20251231.htm",
+          "pass": true,
+          "near_term_commitment_share_percent": "11.75132659025931342557106498",
+          "liquid_resource_coverage_x": "2.381237177253900050323229977"
+        }
+      ],
+      "case_count": 6,
+      "pass_count": 6,
+      "minimum_gate_coverage_met": true
     }
   ],
   "questions": [
@@ -5989,30 +6075,208 @@
       "question_id": "Q15",
       "question": "What are the company's disclosed future contractual or purchase commitments, what proportion is due within the next fiscal year, and how does that near-term obligation compare with available liquid resources?",
       "company": null,
-      "filings": [],
-      "reporting_periods": [],
+      "filings": [
+        {
+          "company": {
+            "name": "NVIDIA Corporation",
+            "ticker": "NVDA",
+            "cik": "0001045810"
+          },
+          "fiscal_year": 2024,
+          "accession_number": "0001045810-24-000029",
+          "source_url": "https://www.sec.gov/Archives/edgar/data/1045810/000104581024000029/nvda-20240128.htm"
+        },
+        {
+          "company": {
+            "name": "NVIDIA Corporation",
+            "ticker": "NVDA",
+            "cik": "0001045810"
+          },
+          "fiscal_year": 2025,
+          "accession_number": "0001045810-25-000023",
+          "source_url": "https://www.sec.gov/Archives/edgar/data/1045810/000104581025000023/nvda-20250126.htm"
+        },
+        {
+          "company": {
+            "name": "Microsoft Corporation",
+            "ticker": "MSFT",
+            "cik": "0000789019"
+          },
+          "fiscal_year": 2024,
+          "accession_number": "0000950170-24-087843",
+          "source_url": "https://www.sec.gov/Archives/edgar/data/789019/000095017024087843/msft-20240630.htm"
+        },
+        {
+          "company": {
+            "name": "Microsoft Corporation",
+            "ticker": "MSFT",
+            "cik": "0000789019"
+          },
+          "fiscal_year": 2025,
+          "accession_number": "0000950170-25-100235",
+          "source_url": "https://www.sec.gov/Archives/edgar/data/789019/000095017025100235/msft-20250630.htm"
+        },
+        {
+          "company": {
+            "name": "Amazon.com, Inc.",
+            "ticker": "AMZN",
+            "cik": "0001018724"
+          },
+          "fiscal_year": 2024,
+          "accession_number": "0001018724-25-000004",
+          "source_url": "https://www.sec.gov/Archives/edgar/data/1018724/000101872425000004/amzn-20241231.htm"
+        },
+        {
+          "company": {
+            "name": "Amazon.com, Inc.",
+            "ticker": "AMZN",
+            "cik": "0001018724"
+          },
+          "fiscal_year": 2025,
+          "accession_number": "0001018724-26-000004",
+          "source_url": "https://www.sec.gov/Archives/edgar/data/1018724/000101872426000004/amzn-20251231.htm"
+        }
+      ],
+      "reporting_periods": [
+        {
+          "company": {
+            "name": "NVIDIA Corporation",
+            "ticker": "NVDA",
+            "cik": "0001045810"
+          },
+          "fiscal_year": 2024
+        },
+        {
+          "company": {
+            "name": "NVIDIA Corporation",
+            "ticker": "NVDA",
+            "cik": "0001045810"
+          },
+          "fiscal_year": 2025
+        },
+        {
+          "company": {
+            "name": "Microsoft Corporation",
+            "ticker": "MSFT",
+            "cik": "0000789019"
+          },
+          "fiscal_year": 2024
+        },
+        {
+          "company": {
+            "name": "Microsoft Corporation",
+            "ticker": "MSFT",
+            "cik": "0000789019"
+          },
+          "fiscal_year": 2025
+        },
+        {
+          "company": {
+            "name": "Amazon.com, Inc.",
+            "ticker": "AMZN",
+            "cik": "0001018724"
+          },
+          "fiscal_year": 2024
+        },
+        {
+          "company": {
+            "name": "Amazon.com, Inc.",
+            "ticker": "AMZN",
+            "cik": "0001018724"
+          },
+          "fiscal_year": 2025
+        }
+      ],
       "expected_concepts": [
         "future_commitments",
         "near_term_commitments",
         "cash_and_cash_equivalents",
         "marketable_securities_or_short_term_investments"
       ],
-      "retrieval_mode": "not_run",
-      "retrieved_inputs": [],
-      "selected_evidence": [],
-      "calculation_formula": null,
-      "expected_answer": null,
-      "actual_answer": "I cannot answer this request reliably yet: No complete retrieval-to-answer path is implemented for Q15; calculator registration alone is not support.\n\nYour question: What are the company's disclosed future contractual or purchase commitments, what proportion is due within the next fiscal year, and how does that near-term obligation compare with available liquid resources?",
+      "retrieval_mode": "offline_SEC_commitment_reference_matrix_not_live_retrieval",
+      "expected_answer": [
+        {
+          "ticker": "NVDA",
+          "fiscal_year": 2024,
+          "near_term_commitment_share_percent": "83.62389530110590621528951562",
+          "liquid_resource_coverage_x": "1.500577500577500577500577501"
+        },
+        {
+          "ticker": "NVDA",
+          "fiscal_year": 2025,
+          "near_term_commitment_share_percent": "79.25419818540783957053173318",
+          "liquid_resource_coverage_x": "1.209449436000783720995325664"
+        },
+        {
+          "ticker": "MSFT",
+          "fiscal_year": 2024,
+          "near_term_commitment_share_percent": "31.74563494047519846229910727",
+          "liquid_resource_coverage_x": "0.6609764633826231516318138070"
+        },
+        {
+          "ticker": "MSFT",
+          "fiscal_year": 2025,
+          "near_term_commitment_share_percent": "37.30206903499603319522975985",
+          "liquid_resource_coverage_x": "0.6384954019418524570240233346"
+        },
+        {
+          "ticker": "AMZN",
+          "fiscal_year": 2024,
+          "near_term_commitment_share_percent": "10.46002864856261692907829106",
+          "liquid_resource_coverage_x": "2.905431786862655029857602205"
+        },
+        {
+          "ticker": "AMZN",
+          "fiscal_year": 2025,
+          "near_term_commitment_share_percent": "11.75132659025931342557106498",
+          "liquid_resource_coverage_x": "2.381237177253900050323229977"
+        }
+      ],
+      "actual_answer": [
+        {
+          "ticker": "NVDA",
+          "fiscal_year": 2024,
+          "near_term_commitment_share_percent": "83.62389530110590621528951562",
+          "liquid_resource_coverage_x": "1.500577500577500577500577501"
+        },
+        {
+          "ticker": "NVDA",
+          "fiscal_year": 2025,
+          "near_term_commitment_share_percent": "79.25419818540783957053173318",
+          "liquid_resource_coverage_x": "1.209449436000783720995325664"
+        },
+        {
+          "ticker": "MSFT",
+          "fiscal_year": 2024,
+          "near_term_commitment_share_percent": "31.74563494047519846229910727",
+          "liquid_resource_coverage_x": "0.6609764633826231516318138070"
+        },
+        {
+          "ticker": "MSFT",
+          "fiscal_year": 2025,
+          "near_term_commitment_share_percent": "37.30206903499603319522975985",
+          "liquid_resource_coverage_x": "0.6384954019418524570240233346"
+        },
+        {
+          "ticker": "AMZN",
+          "fiscal_year": 2024,
+          "near_term_commitment_share_percent": "10.46002864856261692907829106",
+          "liquid_resource_coverage_x": "2.905431786862655029857602205"
+        },
+        {
+          "ticker": "AMZN",
+          "fiscal_year": 2025,
+          "near_term_commitment_share_percent": "11.75132659025931342557106498",
+          "liquid_resource_coverage_x": "2.381237177253900050323229977"
+        }
+      ],
       "checks": {
-        "input_retrieval_correctness": null,
-        "period_correctness": null,
-        "unit_correctness": null,
-        "calculation_correctness": null,
-        "evidence_correctness": null,
-        "query_interpretation_correctness": null
+        "reference_matrix_cases_pass": true,
+        "live_retrieval": "not_evaluated",
+        "query_interpretation": "not_evaluated"
       },
-      "overall_status": "UNSUPPORTED",
-      "failure_reason": "No complete retrieval-to-answer path is implemented for Q15; calculator registration alone is not support."
+      "overall_status": "PARTIAL",
+      "failure_reason": "Offline issuer-reference checks pass; live SEC retrieval and planner interpretation remain unevaluated."
     },
     {
       "question_id": "Q16",

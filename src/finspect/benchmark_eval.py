@@ -17,6 +17,7 @@ from finspect.answer_builder import (
 from finspect.calculator import (
     balance_change,
     cash_allocation,
+    commitment_metrics,
     cash_conversion_comparison,
     dilution_ratio,
     earnings_change_relationship,
@@ -76,6 +77,52 @@ DEFAULT_EQUITY_ROLLFORWARD_MATRIX = (
 DEFAULT_REGULATORY_RISK_MATRIX = (
     ROOT / "data" / "fixtures" / "annual_regulatory_risk_reference_matrix.json"
 )
+DEFAULT_COMMITMENT_MATRIX = (
+    ROOT / "data" / "fixtures" / "annual_commitment_reference_matrix.json"
+)
+
+
+def evaluate_commitment_matrix(path: Path) -> dict[str, Any]:
+    """Check Q15 arithmetic, issuer diversity, and two annual cases per issuer."""
+    matrix = json.loads(path.read_text(encoding="utf-8"))
+    cases = []
+    years_by_ticker: dict[str, set[int]] = {}
+    for reference in matrix["cases"]:
+        ticker = reference["company"]["ticker"]
+        year = reference["fiscal_year"]
+        years_by_ticker.setdefault(ticker, set()).add(year)
+        metrics = commitment_metrics(
+            Decimal(reference["near_term_commitments"]),
+            Decimal(reference["total_commitments"]),
+            Decimal(reference["cash"]) + Decimal(reference["short_term_investments"]),
+        )
+        near_share = metrics["near_term_commitment_share_percent"]
+        coverage = metrics["liquid_resource_coverage_x"]
+        passed = (
+            abs(near_share - Decimal(reference["expected_near_term_share_percent"])) <= Decimal("0.01")
+            and abs(coverage - Decimal(reference["expected_coverage_x"])) <= Decimal("0.005")
+            and reference["next_fiscal_year"] == year + 1
+            and reference["schedule_unit"] in {"USD", "USD thousands", "USD millions"}
+            and reference["accession_number"]
+            and reference["source_url"].startswith("https://www.sec.gov/Archives/")
+        )
+        cases.append({
+            "company": reference["company"], "fiscal_year": year,
+            "accession_number": reference["accession_number"],
+            "source_url": reference["source_url"], "pass": passed,
+            "near_term_commitment_share_percent": str(near_share),
+            "liquid_resource_coverage_x": str(coverage),
+        })
+    minimum_coverage_met = (
+        len(years_by_ticker) >= 3
+        and all(len(years) >= 2 for years in years_by_ticker.values())
+        and len(cases) >= 6
+    )
+    return {
+        "question_id": "Q15", "cases": cases,
+        "case_count": len(cases), "pass_count": sum(case["pass"] for case in cases),
+        "minimum_gate_coverage_met": minimum_coverage_met,
+    }
 
 
 def evaluate_regulatory_risk_matrix(path: Path) -> dict[str, Any]:
@@ -1987,6 +2034,7 @@ def evaluate_benchmark(
     regulatory_risk_matrix = evaluate_regulatory_risk_matrix(
         DEFAULT_REGULATORY_RISK_MATRIX
     )
+    commitment_matrix = evaluate_commitment_matrix(DEFAULT_COMMITMENT_MATRIX)
     inventory_reference = json.loads(inventory_matrix_path.read_text(encoding="utf-8"))
     questions = benchmark.question_map()
     if fixture.get("question_id") != "Q01" or "Q01" not in questions:
@@ -2335,6 +2383,44 @@ def evaluate_benchmark(
                 ),
             })
             continue
+        if question_id == "Q15":
+            matrix_pass = (
+                commitment_matrix["minimum_gate_coverage_met"]
+                and commitment_matrix["pass_count"] == commitment_matrix["case_count"]
+            )
+            report_questions.append({
+                "question_id": question_id,
+                "question": question.question_template,
+                "company": None,
+                "filings": [
+                    {"company": case["company"], "fiscal_year": case["fiscal_year"],
+                     "accession_number": case["accession_number"], "source_url": case["source_url"]}
+                    for case in commitment_matrix["cases"]
+                ],
+                "reporting_periods": [
+                    {"company": case["company"], "fiscal_year": case["fiscal_year"]}
+                    for case in commitment_matrix["cases"]
+                ],
+                "expected_concepts": question.required_concepts,
+                "retrieval_mode": "offline_SEC_commitment_reference_matrix_not_live_retrieval",
+                "expected_answer": [
+                    {"ticker": case["company"]["ticker"], "fiscal_year": case["fiscal_year"],
+                     "near_term_commitment_share_percent": case["near_term_commitment_share_percent"],
+                     "liquid_resource_coverage_x": case["liquid_resource_coverage_x"]}
+                    for case in commitment_matrix["cases"]
+                ],
+                "actual_answer": [
+                    {"ticker": case["company"]["ticker"], "fiscal_year": case["fiscal_year"],
+                     "near_term_commitment_share_percent": case["near_term_commitment_share_percent"],
+                     "liquid_resource_coverage_x": case["liquid_resource_coverage_x"]}
+                    for case in commitment_matrix["cases"]
+                ],
+                "checks": {"reference_matrix_cases_pass": matrix_pass,
+                           "live_retrieval": "not_evaluated", "query_interpretation": "not_evaluated"},
+                "overall_status": "PARTIAL" if matrix_pass else "FAIL",
+                "failure_reason": "Offline issuer-reference checks pass; live SEC retrieval and planner interpretation remain unevaluated.",
+            })
+            continue
         if question_id == "Q11":
             dilution_reference = json.loads(
                 DEFAULT_DILUTION_MATRIX.read_text(encoding="utf-8")
@@ -2522,7 +2608,7 @@ def evaluate_benchmark(
         "accuracy_percentage": None,
         "accuracy_note": (
             "No overall accuracy percentage is reported: Q01, Q03, Q05, Q07, Q08, Q09, "
-            "Q06, Q10, Q11, Q12, Q13, Q14, and Q16 have fixture-backed checks; issuer matrix case counts and "
+            "Q06, Q10, Q11, Q12, Q13, Q14, Q15, and Q16 have fixture-backed checks; issuer matrix case counts and "
             "individual checks are reported per operation, but neither "
             "live SEC retrieval nor the planner was evaluated."
         ),
@@ -2540,6 +2626,7 @@ def evaluate_benchmark(
             cash_allocation_matrix,
             equity_rollforward_matrix,
             regulatory_risk_matrix,
+            commitment_matrix,
         ],
         "questions": report_questions,
     }
