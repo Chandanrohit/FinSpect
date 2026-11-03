@@ -4794,6 +4794,143 @@
       ]
     }
   ],
+  "supplemental_reference_matrices": [
+    {
+      "matrix_id": "quarterly-q1-year-over-year-revenue-v1",
+      "question_id": "Q01-quarterly",
+      "case_count": 3,
+      "pass_count": 3,
+      "fail_count": 0,
+      "issuers": [
+        "AAPL",
+        "MSFT",
+        "NVDA"
+      ],
+      "quarter_end_months": [
+        4,
+        9,
+        12
+      ],
+      "fiscal_calendars_differ": true,
+      "minimum_gate_coverage_met": true,
+      "cases": [
+        {
+          "company": {
+            "name": "NVIDIA Corporation",
+            "ticker": "NVDA",
+            "cik": "0001045810"
+          },
+          "quarter": 1,
+          "periods": [
+            {
+              "fiscal_year": 2024,
+              "start_date": "2023-01-30",
+              "end_date": "2023-04-30",
+              "form": "10-Q",
+              "filing_date": "2023-05-30",
+              "accession_number": "0001045810-23-000093",
+              "revenue_usd": "7192000000",
+              "source_url": "https://www.sec.gov/Archives/edgar/data/1045810/000104581023000093/nvda-20230430.htm"
+            },
+            {
+              "fiscal_year": 2025,
+              "start_date": "2024-01-29",
+              "end_date": "2024-04-28",
+              "form": "10-Q",
+              "filing_date": "2024-05-29",
+              "accession_number": "0001045810-24-000124",
+              "revenue_usd": "26044000000",
+              "source_url": "https://www.sec.gov/Archives/edgar/data/1045810/000104581024000124/nvda-20240428.htm"
+            }
+          ],
+          "expected_growth_percent": "262.1245828698553948832035595",
+          "checks": {
+            "same_fiscal_quarter_and_year_pair": true,
+            "standalone_quarter_periods": true,
+            "source_provenance": true,
+            "growth_matches_reference": true
+          },
+          "status": "PASS"
+        },
+        {
+          "company": {
+            "name": "Microsoft Corporation",
+            "ticker": "MSFT",
+            "cik": "0000789019"
+          },
+          "quarter": 1,
+          "periods": [
+            {
+              "fiscal_year": 2024,
+              "start_date": "2023-07-01",
+              "end_date": "2023-09-30",
+              "form": "10-Q",
+              "filing_date": "2023-10-24",
+              "accession_number": "0000950170-23-054855",
+              "revenue_usd": "56517000000",
+              "source_url": "https://www.sec.gov/Archives/edgar/data/789019/000095017023054855/msft-20230930.htm"
+            },
+            {
+              "fiscal_year": 2025,
+              "start_date": "2024-07-01",
+              "end_date": "2024-09-30",
+              "form": "10-Q",
+              "filing_date": "2024-10-30",
+              "accession_number": "0000950170-24-118967",
+              "revenue_usd": "65585000000",
+              "source_url": "https://www.sec.gov/Archives/edgar/data/789019/000095017024118967/msft-20240930.htm"
+            }
+          ],
+          "expected_growth_percent": "16.04472990427658934479891006",
+          "checks": {
+            "same_fiscal_quarter_and_year_pair": true,
+            "standalone_quarter_periods": true,
+            "source_provenance": true,
+            "growth_matches_reference": true
+          },
+          "status": "PASS"
+        },
+        {
+          "company": {
+            "name": "Apple Inc.",
+            "ticker": "AAPL",
+            "cik": "0000320193"
+          },
+          "quarter": 1,
+          "periods": [
+            {
+              "fiscal_year": 2024,
+              "start_date": "2023-10-01",
+              "end_date": "2023-12-30",
+              "form": "10-Q",
+              "filing_date": "2024-02-02",
+              "accession_number": "0000320193-24-000006",
+              "revenue_usd": "119575000000",
+              "source_url": "https://www.sec.gov/Archives/edgar/data/320193/000032019324000006/aapl-20231230.htm"
+            },
+            {
+              "fiscal_year": 2025,
+              "start_date": "2024-09-29",
+              "end_date": "2024-12-28",
+              "form": "10-Q",
+              "filing_date": "2025-01-30",
+              "accession_number": "0000320193-25-000008",
+              "revenue_usd": "124300000000",
+              "source_url": "https://www.sec.gov/Archives/edgar/data/320193/000032019325000008/aapl-20241228.htm"
+            }
+          ],
+          "expected_growth_percent": "3.951494877691825214300648129",
+          "checks": {
+            "same_fiscal_quarter_and_year_pair": true,
+            "standalone_quarter_periods": true,
+            "source_provenance": true,
+            "growth_matches_reference": true
+          },
+          "status": "PASS"
+        }
+      ]
+    }
+  ],
   "questions": [
     {
       "question_id": "Q01",

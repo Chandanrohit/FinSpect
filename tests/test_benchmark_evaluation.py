@@ -4,6 +4,7 @@ from finspect.benchmark_eval import (
     evaluate_geographic_revenue_matrix,
     evaluate_legal_proceedings_matrix,
     evaluate_material_disclosure_matrix,
+    evaluate_quarterly_revenue_matrix,
     evaluate_market_risk_sensitivity_matrix,
     evaluate_operating_expense_matrix,
     evaluate_segment_revenue_matrix,
@@ -68,6 +69,16 @@ def test_material_disclosure_matrix_covers_cross_section_evidence_for_three_issu
     assert result["minimum_gate_coverage_met"] is True
 
 
+def test_quarterly_revenue_reference_matrix_covers_three_fiscal_calendars():
+    path = Path(__file__).resolve().parents[1] / "data/fixtures/quarterly_revenue_q1_reference_matrix.json"
+    result = evaluate_quarterly_revenue_matrix(path)
+    assert result["case_count"] == result["pass_count"] == 3
+    assert result["fail_count"] == 0
+    assert result["issuers"] == ["AAPL", "MSFT", "NVDA"]
+    assert result["quarter_end_months"] == [4, 9, 12]
+    assert result["minimum_gate_coverage_met"] is True
+
+
 def test_benchmark_report_records_fixture_and_unsupported_questions():
     report = evaluate_benchmark()
 
@@ -87,6 +98,7 @@ def test_benchmark_report_records_fixture_and_unsupported_questions():
     assert q20["overall_status"] == "PARTIAL"
     assert q20["checks"]["reference_matrix_cases_pass"] is True
     assert report["operation_reference_matrices"][-1]["question_id"] == "Q20"
+    assert report["supplemental_reference_matrices"][0]["pass_count"] == 3
 
     revenue_matrix = report["operation_reference_matrices"][0]
     assert revenue_matrix["question_id"] == "Q01"

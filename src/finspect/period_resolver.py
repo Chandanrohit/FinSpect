@@ -161,3 +161,44 @@ def resolve_annual_period(
         currency=fact["unit"],
     )
 
+
+def find_quarterly_revenue_fact(company_facts: dict, fiscal_year: int, quarter: int) -> dict:
+    """Select an original Q1-Q3 10-Q revenue fact; reject YTD-only periods."""
+    if quarter not in (1, 2, 3):
+        raise ValueError("Quarter resolver currently supports fiscal quarters 1 through 3.")
+    us_gaap = company_facts.get("facts", {}).get("us-gaap", {})
+    for concept_name in REVENUE_CONCEPTS:
+        candidates = []
+        for unit, entries in us_gaap.get(concept_name, {}).get("units", {}).items():
+            if unit != "USD":
+                continue
+            for fact in entries:
+                if fact.get("form") != "10-Q" or fact.get("fp") != f"Q{quarter}":
+                    continue
+                try:
+                    if int(fact.get("fy")) != fiscal_year:
+                        continue
+                    days = (date.fromisoformat(fact["end"]) - date.fromisoformat(fact["start"])).days
+                except (KeyError, TypeError, ValueError):
+                    continue
+                if 70 <= days <= 110 and fact.get("filed") and fact.get("accn"):
+                    candidates.append({**fact, "concept": concept_name, "unit": unit})
+        if candidates:
+            first_filed = min(item["filed"] for item in candidates)
+            original_filing = [item for item in candidates if item["filed"] == first_filed]
+            identities = {(item["accn"], item["start"], item["end"]) for item in original_filing}
+            if len(identities) != 1 or len({str(item["val"]) for item in original_filing}) != 1:
+                raise ValueError(f"Conflicting Q{quarter} revenue facts for FY{fiscal_year}.")
+            return original_filing[0]
+    raise ValueError(f"No standalone Q{quarter} USD revenue fact found for FY{fiscal_year}.")
+
+
+def resolve_quarterly_period(cik: str, fiscal_year: int, quarter: int, *, xbrl_service: XBRLService) -> AnnualPeriod:
+    """Resolve a standalone Q1-Q3 period from the issuer's SEC fiscal metadata."""
+    fact = find_quarterly_revenue_fact(xbrl_service.get_company_facts(cik), fiscal_year, quarter)
+    return AnnualPeriod(
+        fiscal_year=fiscal_year, start_date=fact["start"], end_date=fact["end"],
+        form=fact["form"], concept=fact["concept"], filing_date=fact["filed"],
+        accession_number=fact["accn"], currency=fact["unit"],
+    )
+

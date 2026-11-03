@@ -59,9 +59,13 @@ from finspect.query_planner import QueryPlan
 from finspect.edgar.xbrl import XBRLService
 from finspect.llm_planner import planner_from_environment
 from finspect.plan_normalizer import normalize_query_plan
-from finspect.period_resolver import (resolve_annual_period as resolve_sec_annual_period)
+from finspect.period_resolver import (
+    resolve_annual_period as resolve_sec_annual_period,
+    resolve_quarterly_period as resolve_sec_quarterly_period,
+)
 from finspect.edgar.fact_adapter import sec_fact_to_financial_fact
 from finspect.schema import (
+    PeriodBasis,
     PeriodRole,
     ReportingScope,
     FinancialFact,
@@ -97,6 +101,7 @@ class AnnualPeriod:
     currency: str = "USD"
 
 PeriodResolver = Callable[[str, int], AnnualPeriod]
+QuarterPeriodResolver = Callable[[str, int, int], AnnualPeriod]
 
 
 @dataclass(frozen=True, slots=True)
@@ -124,6 +129,7 @@ class FinSpectOrchestrator:
         planner: Planner,
         normalizer: Callable[[QueryPlan], QueryPlan],
         period_resolver: PeriodResolver,
+        quarter_period_resolver: QuarterPeriodResolver | None = None,
         fact_retriever: FinancialFactRetriever,
         company_resolver: SECCompanyResolver | None = None,
         filing_retriever: FilingRetriever | None = None,
@@ -133,6 +139,7 @@ class FinSpectOrchestrator:
         self.planner = planner
         self.normalizer = normalizer
         self.period_resolver = period_resolver
+        self.quarter_period_resolver = quarter_period_resolver
         self.fact_retriever = fact_retriever
         self.company_resolver = company_resolver
         self.filing_retriever = filing_retriever
@@ -229,6 +236,14 @@ class FinSpectOrchestrator:
             plan.operation in {"growth_rate", "absolute_change"}
             and has_revenue
             and metric_names <= {"total revenue", "revenue"}
+            and (
+                plan.period.period_kind == "annual"
+                or (
+                    plan.period.period_kind == "quarterly"
+                    and plan.period.fiscal_quarter in (1, 2, 3)
+                    and plan.period.comparison_required
+                )
+            )
         )
         is_supported_margin_operation = (
             plan.operation == "margin_change"
@@ -610,12 +625,21 @@ class FinSpectOrchestrator:
 
 
         # 4. Resolve real reporting dates. Never guess fiscal-year dates.
-        periods = [
-            self.period_resolver(cik, year)
-            for year in fiscal_years
-        ]
-        for period, requested_year in zip(periods, fiscal_years, strict=True):
-            self._validate_annual_period(period, requested_year)
+        if plan.period.period_kind == "quarterly":
+            if self.quarter_period_resolver is None:
+                return PipelineResult(plan=plan, answer=build_unsupported_answer(
+                    question, "Quarterly SEC period resolution is not configured."
+                ))
+            periods = [
+                self.quarter_period_resolver(cik, year, plan.period.fiscal_quarter)
+                for year in fiscal_years
+            ]
+            for period, requested_year in zip(periods, fiscal_years, strict=True):
+                self._validate_quarter_period(period, requested_year, plan.period.fiscal_quarter)
+        else:
+            periods = [self.period_resolver(cik, year) for year in fiscal_years]
+            for period, requested_year in zip(periods, fiscal_years, strict=True):
+                self._validate_annual_period(period, requested_year)
         if len(periods) == 2 and date.fromisoformat(
             periods[1].start_date
         ) <= date.fromisoformat(periods[0].end_date):
@@ -2114,11 +2138,16 @@ class FinSpectOrchestrator:
                 )
             adapted_facts = tuple(
                 sec_fact_to_financial_fact(
-                    raw_fact,
+                    ({
+                        **raw_fact,
+                        "period_basis": PeriodBasis.QUARTER.value,
+                        "fiscal_year": period.fiscal_year,
+                        "fiscal_quarter": plan.period.fiscal_quarter,
+                    } if plan.period.period_kind == "quarterly" else raw_fact),
                     period_role=role,
                     reporting_scope=ReportingScope.CONSOLIDATED,
                 )
-                for raw_fact, role in zip(raw_facts, roles, strict=True)
+                for raw_fact, role, period in zip(raw_facts, roles, periods, strict=True)
             )
             canonical_facts = tuple(
                 fact.model_copy(update={"entity": resolved["name"]})
@@ -2429,8 +2458,11 @@ class FinSpectOrchestrator:
                 label=fact.get("label") or metric_name.replace("_", " ").title(),
                 value=Decimal(str(fact["value"])),
                 unit=fact["unit"],
-                period=f"FY{period.fiscal_year} "
-                       f"({period.start_date} to {period.end_date})",
+                period=(
+                    f"Q{plan.period.fiscal_quarter} FY{period.fiscal_year}"
+                    if plan.period.period_kind == "quarterly"
+                    else f"FY{period.fiscal_year}"
+                ) + f" ({period.start_date} to {period.end_date})",
                 filing_date=fact["filing_date"],
                 accession_number=fact.get("accession_number"),
                 source_url=self._filing_url(fact),
@@ -2586,7 +2618,7 @@ class FinSpectOrchestrator:
         import re
 
         match = re.fullmatch(
-            r"\s*(?:FY\s*)?(\d{4})\s*",
+            r"\s*(?:Q[1-4]\s*)?(?:FY\s*)?(\d{4})\s*",
             comparison_label,
             flags=re.IGNORECASE,
         )
@@ -2598,6 +2630,20 @@ class FinSpectOrchestrator:
             return None
 
         return prior_year, current_year
+
+    @staticmethod
+    def _validate_quarter_period(period: AnnualPeriod, requested_year: int, quarter: int | None) -> None:
+        if period.fiscal_year != requested_year or period.form != "10-Q":
+            raise ValueError("Quarter resolver returned an unexpected fiscal year or form.")
+        if quarter not in (1, 2, 3) or not period.start_date or not period.end_date:
+            raise ValueError("Resolved quarter must be a standalone Q1-Q3 period.")
+        start, end = date.fromisoformat(period.start_date), date.fromisoformat(period.end_date)
+        if start >= end or not 70 <= (end - start).days <= 110:
+            raise ValueError("Quarter resolver returned a year-to-date or non-quarter duration.")
+        if not period.filing_date or not period.accession_number:
+            raise ValueError("Quarter period must include filing date and accession number.")
+        if date.fromisoformat(period.filing_date) < end:
+            raise ValueError("Filing date cannot precede the quarter end.")
 
     @staticmethod
     def _validate_annual_period(
@@ -2691,10 +2737,16 @@ def get_orchestrator() -> FinSpectOrchestrator:
             currency=period.currency,
         )
 
+    def resolve_quarter(cik: str, fiscal_year: int, quarter: int) -> AnnualPeriod:
+        return resolve_sec_quarterly_period(
+            cik, fiscal_year, quarter, xbrl_service=xbrl_service
+        )
+
     return FinSpectOrchestrator(
         planner=planner_from_environment(),
         normalizer=normalize_query_plan,
         period_resolver=resolve_period,
+        quarter_period_resolver=resolve_quarter,
         fact_retriever=fact_retriever,
         company_resolver = SECCompanyResolver(client),
         filing_retriever=filing_retriever,

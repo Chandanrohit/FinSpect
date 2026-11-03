@@ -3005,3 +3005,77 @@ def test_q20_synthesizes_verbatim_evidence_across_sections_and_verifies_exact_fi
         assert all(item.accession_number == reference["accession_number"] for item in result.answer.evidence)
         assert all(item.source_url == url for item in result.answer.evidence)
         assert any("caused the reported financial result" in limitation for limitation in result.answer.limitations)
+
+
+def test_q1_year_over_year_revenue_pipeline_supports_different_fiscal_calendars():
+    cases = [
+        ({"name": "NVIDIA Corporation", "ticker": "NVDA", "cik": "0001045810"},
+         {2024: ("2023-01-30", "2023-04-30", "10-Q", "2023-05-30", "0001045810-23-000093", 7_192_000_000),
+          2025: ("2024-01-29", "2024-04-28", "10-Q", "2024-05-29", "0001045810-24-000124", 26_044_000_000)}),
+        ({"name": "Microsoft Corporation", "ticker": "MSFT", "cik": "0000789019"},
+         {2024: ("2023-07-01", "2023-09-30", "10-Q", "2023-10-24", "0000950170-23-054855", 56_517_000_000),
+          2025: ("2024-07-01", "2024-09-30", "10-Q", "2024-10-30", "0000950170-24-118967", 65_585_000_000)}),
+        ({"name": "Apple Inc.", "ticker": "AAPL", "cik": "0000320193"},
+         {2024: ("2023-10-01", "2023-12-30", "10-Q", "2024-02-02", "0000320193-24-000006", 119_575_000_000),
+          2025: ("2024-09-29", "2024-12-28", "10-Q", "2025-01-30", "0000320193-25-000008", 124_300_000_000)}),
+    ]
+
+    for company, rows in cases:
+        periods = {
+            year: AnnualPeriod(
+                fiscal_year=year, start_date=row[0], end_date=row[1], form=row[2],
+                filing_date=row[3], accession_number=row[4],
+            ) for year, row in rows.items()
+        }
+        question = f"Calculate {company['name']} revenue growth for Q1 FY2024 to Q1 FY2025."
+        plan = make_plan().model_copy(update={
+            "original_question": question,
+            "company": CompanyRequest(**company),
+            "period": PeriodRequest(
+                period_kind="quarterly", fiscal_year=2025, fiscal_quarter=1,
+                comparison_required=True, comparison_period="FY2024",
+            ),
+        })
+
+        class Planner:
+            def plan(self, _question):
+                return plan
+
+        class CompanyResolver:
+            def resolve(self, **_kwargs):
+                return company
+
+        class QuarterlyFactRetriever:
+            def get_fact(self, *, cik, taxonomy, concept, start_date, end_date, form, unit,
+                         filed_on_or_before, accession_number):
+                assert taxonomy == "us-gaap"
+                row = next(item for item in rows.values() if item[4] == accession_number)
+                assert (start_date, end_date, form, unit, filed_on_or_before) == (
+                    row[0], row[1], "10-Q", "USD", row[3],
+                )
+                return {
+                    "cik": cik, "company": company["name"], "taxonomy": taxonomy, "concept": concept,
+                    "value": row[5], "unit": "USD", "start_date": row[0],
+                    "end_date": row[1], "fiscal_year": 2025 if row[1] == rows[2025][1] else 2024,
+                    "form": "10-Q", "filing_date": row[3], "accession_number": row[4],
+                    "label": "Revenue",
+                }
+
+        result = FinSpectOrchestrator(
+            planner=Planner(), normalizer=normalize_query_plan,
+            period_resolver=lambda _cik, year: PERIODS[year],
+            quarter_period_resolver=lambda _cik, year, _quarter: periods[year],
+            fact_retriever=QuarterlyFactRetriever(),
+            company_resolver=CompanyResolver(),
+        ).run(question)
+
+        expected = (
+            (Decimal(rows[2025][5]) - Decimal(rows[2024][5]))
+            / Decimal(rows[2024][5]) * Decimal(100)
+        )
+        assert abs(Decimal(result.answer.result_value) - expected) < Decimal("1e-24")
+        assert len(result.answer.evidence) == 2
+        assert all("Q1 FY" in item.period for item in result.answer.evidence)
+        assert {item.accession_number for item in result.answer.evidence} == {
+            rows[2024][4], rows[2025][4],
+        }

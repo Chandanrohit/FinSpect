@@ -113,3 +113,9 @@ def test_system_prompt_routes_q20_to_evidence_limited_cross_section_synthesis():
     assert '"multi_part_analysis"' in SYSTEM_PROMPT
     assert "without claiming that a risk caused a" in SYSTEM_PROMPT
     assert "do not invent quantitative exposure" in SYSTEM_PROMPT
+
+
+def test_system_prompt_requires_matching_quarterly_periods_and_forbids_ytd_substitution():
+    assert '"quarterly"' in SYSTEM_PROMPT
+    assert "standalone quarterly 10-Q periods" in SYSTEM_PROMPT
+    assert "Do not use year-to-date facts as a" in SYSTEM_PROMPT

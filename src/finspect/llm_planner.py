@@ -104,6 +104,13 @@ Rules:
     sections of that exact 10-K. Preserve verbatim excerpts and visible amounts.
     Summarize co-disclosed evidence without claiming that a risk caused a
     reported result; do not invent quantitative exposure or imply completeness.
+27. For year-over-year Q1, Q2, or Q3 revenue questions, set period_kind to
+    "quarterly", provide the current fiscal_year and fiscal_quarter, set
+    comparison_required=true with the prior fiscal year in comparison_period,
+    and use growth_rate or absolute_change with revenue from both matching
+    standalone quarterly 10-Q periods. Do not use year-to-date facts as a
+    quarter. Q4 and quarter-to-quarter comparisons are unsupported unless the
+    pipeline explicitly confirms a matching standalone period.
 """
 
 

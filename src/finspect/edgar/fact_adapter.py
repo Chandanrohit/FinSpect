@@ -110,6 +110,11 @@ def sec_fact_to_financial_fact(
             if 300 <= duration_days <= 400
             else PeriodBasis.CUSTOM
         )
+        if raw.get("period_basis") is not None:
+            try:
+                basis = PeriodBasis(raw["period_basis"])
+            except ValueError as exc:
+                raise ValueError("period_basis is not a supported SEC period basis.") from exc
 
     raw_unit = str(raw["unit"]).strip()
     if re.fullmatch(r"[A-Z]{3}", raw_unit):
@@ -161,7 +166,9 @@ def sec_fact_to_financial_fact(
 
     period = ReportingPeriod(
         label=(
-            f"FY{fiscal_year}"
+            f"Q{raw.get('fiscal_quarter')} FY{fiscal_year}"
+            if raw.get("fiscal_quarter") is not None and fiscal_year is not None
+            else f"FY{fiscal_year}"
             if fiscal_year is not None
             else f"{start or 'instant'} to {end}"
         ),
@@ -171,6 +178,7 @@ def sec_fact_to_financial_fact(
         start_date=start,
         end_date=end,
         fiscal_year=fiscal_year,
+        fiscal_quarter=raw.get("fiscal_quarter"),
     )
 
     return FinancialFact(

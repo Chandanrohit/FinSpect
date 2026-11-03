@@ -99,6 +99,61 @@ DEFAULT_LEGAL_PROCEEDINGS_MATRIX = (
 DEFAULT_MATERIAL_DISCLOSURE_MATRIX = (
     ROOT / "data" / "fixtures" / "annual_material_disclosure_reference_matrix.json"
 )
+DEFAULT_QUARTERLY_REVENUE_MATRIX = (
+    ROOT / "data" / "fixtures" / "quarterly_revenue_q1_reference_matrix.json"
+)
+
+
+def evaluate_quarterly_revenue_matrix(path: Path) -> dict[str, Any]:
+    """Validate Q1 standalone periods, original filing evidence, and growth."""
+    matrix = json.loads(path.read_text(encoding="utf-8"))
+    cases = []
+    for reference in matrix["cases"]:
+        company = reference["company"]
+        periods = reference["periods"]
+        values = [Decimal(item["revenue_usd"]) for item in periods]
+        checks = {
+            "same_fiscal_quarter_and_year_pair": (
+                len(periods) == 2
+                and periods[0]["fiscal_year"] + 1 == periods[1]["fiscal_year"]
+                and matrix["quarter"] == 1
+            ),
+            "standalone_quarter_periods": all(
+                period["form"] == "10-Q"
+                and 70 <= (date.fromisoformat(period["end_date"])-date.fromisoformat(period["start_date"])).days <= 110
+                and date.fromisoformat(period["filing_date"]) >= date.fromisoformat(period["end_date"])
+                for period in periods
+            ),
+            "source_provenance": all(
+                period["accession_number"].replace("-", "") in period["source_url"]
+                and period["source_url"].startswith("https://www.sec.gov/Archives/edgar/data/")
+                and f"/{int(company['cik'])}/" in period["source_url"]
+                for period in periods
+            ),
+            "growth_matches_reference": (
+                values[0] > 0
+                and abs((values[1] - values[0]) / values[0] * 100 - Decimal(reference["expected_growth_percent"])) < Decimal("0.0000000001")
+            ),
+        }
+        cases.append({
+            "company": company, "quarter": matrix["quarter"],
+            "periods": periods, "expected_growth_percent": reference["expected_growth_percent"],
+            "checks": checks, "status": "PASS" if all(checks.values()) else "FAIL",
+        })
+    issuers = sorted({case["company"]["ticker"] for case in cases})
+    end_months = {
+        date.fromisoformat(period["end_date"]).month
+        for case in cases for period in case["periods"]
+    }
+    return {
+        "matrix_id": matrix["matrix_id"], "question_id": "Q01-quarterly",
+        "case_count": len(cases), "pass_count": sum(c["status"] == "PASS" for c in cases),
+        "fail_count": sum(c["status"] == "FAIL" for c in cases),
+        "issuers": issuers, "quarter_end_months": sorted(end_months),
+        "fiscal_calendars_differ": len(end_months) >= 3,
+        "minimum_gate_coverage_met": len(issuers) >= 3 and len(end_months) >= 3,
+        "cases": cases,
+    }
 
 
 def evaluate_segment_revenue_matrix(path: Path) -> dict[str, Any]:
@@ -2526,6 +2581,9 @@ def evaluate_benchmark(
     material_disclosure_matrix = evaluate_material_disclosure_matrix(
         DEFAULT_MATERIAL_DISCLOSURE_MATRIX
     )
+    quarterly_revenue_matrix = evaluate_quarterly_revenue_matrix(
+        DEFAULT_QUARTERLY_REVENUE_MATRIX
+    )
     commitment_matrix = evaluate_commitment_matrix(DEFAULT_COMMITMENT_MATRIX)
     segment_revenue_matrix = evaluate_segment_revenue_matrix(DEFAULT_SEGMENT_REVENUE_MATRIX)
     operating_expense_matrix = evaluate_operating_expense_matrix(DEFAULT_OPERATING_EXPENSE_MATRIX)
@@ -3473,6 +3531,7 @@ def evaluate_benchmark(
             legal_proceedings_matrix,
             material_disclosure_matrix,
         ],
+        "supplemental_reference_matrices": [quarterly_revenue_matrix],
         "questions": report_questions,
     }
 

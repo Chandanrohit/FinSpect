@@ -1,7 +1,10 @@
 
 import pytest
 
-from finspect.period_resolver import find_annual_revenue_fact, resolve_annual_period, AnnualPeriod
+from finspect.period_resolver import (
+    find_annual_revenue_fact, find_quarterly_revenue_fact,
+    resolve_annual_period, AnnualPeriod,
+)
 
 
 @pytest.fixture
@@ -93,6 +96,31 @@ def test_ignores_quarterly_revenue(nvidia_company_facts):
     fact = find_annual_revenue_fact(nvidia_company_facts, 2024)
 
     assert fact["val"] == 60_922_000_000
+
+
+def test_selects_original_standalone_quarter_and_ignores_ytd_and_later_comparatives():
+    facts = {"facts": {"us-gaap": {"Revenues": {"units": {"USD": [
+        {"start": "2024-01-29", "end": "2024-04-28", "form": "10-Q", "fy": 2025, "fp": "Q1", "filed": "2024-05-29", "accn": "original", "val": 26044},
+        {"start": "2024-01-29", "end": "2024-07-28", "form": "10-Q", "fy": 2025, "fp": "Q2", "filed": "2024-08-28", "accn": "q2-ytd", "val": 46743},
+        {"start": "2024-01-29", "end": "2024-04-28", "form": "10-Q", "fy": 2026, "fp": "Q1", "filed": "2025-05-28", "accn": "later-comparative", "val": 26044},
+    ]}}}}}
+
+    fact = find_quarterly_revenue_fact(facts, 2025, 1)
+
+    assert fact["start"] == "2024-01-29"
+    assert fact["end"] == "2024-04-28"
+    assert fact["accn"] == "original"
+    assert fact["val"] == 26044
+
+
+def test_quarter_resolver_fails_closed_for_ytd_only_or_q4_facts():
+    facts = {"facts": {"us-gaap": {"Revenues": {"units": {"USD": [
+        {"start": "2024-01-29", "end": "2024-07-28", "form": "10-Q", "fy": 2025, "fp": "Q2", "filed": "2024-08-28", "accn": "ytd", "val": 46743},
+    ]}}}}}
+    with pytest.raises(ValueError, match="No standalone Q1"):
+        find_quarterly_revenue_fact(facts, 2025, 1)
+    with pytest.raises(ValueError, match="supports fiscal quarters 1 through 3"):
+        find_quarterly_revenue_fact(facts, 2025, 4)
 
 
 def test_raises_for_missing_fiscal_year(nvidia_company_facts):

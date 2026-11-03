@@ -661,24 +661,29 @@ def validate_growth_inputs(current: FinancialFact, prior: FinancialFact) -> None
     if current.period.basis != prior.period.basis:
         raise ValueError("Period basis mismatch; e.g. quarter vs full year.")
 
-# Annual revenue growth must compare two duration periods.
     if (current.period.kind != PeriodKind.DURATION or prior.period.kind != PeriodKind.DURATION):
         raise ValueError("Revenue growth requires duration facts, not instant values.")
 
-    if (current.period.basis != PeriodBasis.FULL_YEAR or prior.period.basis != PeriodBasis.FULL_YEAR):
-        raise ValueError("Annual revenue growth requires two full-year periods.")
-
-    current_days = (current.period.end_date - current.period.start_date).days
-    prior_days = (prior.period.end_date - prior.period.start_date).days
-
-    if not (300 <= current_days <= 400):
-        raise ValueError("Current full-year period has an unexpected duration.")
-
-    if not (300 <= prior_days <= 400):
-        raise ValueError("Prior full-year period has an unexpected duration.")
-
-    if (current.period.start_date is None or prior.period.start_date is None):
-        raise ValueError("Both annual facts must have reporting start dates.")
+    if current.period.basis == PeriodBasis.FULL_YEAR:
+        current_days = (current.period.end_date - current.period.start_date).days
+        prior_days = (prior.period.end_date - prior.period.start_date).days
+        if not (300 <= current_days <= 400 and 300 <= prior_days <= 400):
+            raise ValueError("Annual revenue growth requires full-year duration facts.")
+        if current.period.start_date is None or prior.period.start_date is None:
+            raise ValueError("Both annual facts must have reporting start dates.")
+    elif current.period.basis == PeriodBasis.QUARTER:
+        current_days = (current.period.end_date - current.period.start_date).days
+        prior_days = (prior.period.end_date - prior.period.start_date).days
+        if not (70 <= current_days <= 110 and 70 <= prior_days <= 110):
+            raise ValueError("Quarterly revenue growth requires standalone quarter facts.")
+        if (
+            current.period.fiscal_quarter not in (1, 2, 3)
+            or current.period.fiscal_quarter != prior.period.fiscal_quarter
+            or current.period.fiscal_year != prior.period.fiscal_year + 1
+        ):
+            raise ValueError("Quarterly revenue growth requires the same fiscal quarter in consecutive years.")
+    else:
+        raise ValueError("Revenue growth requires matching annual or standalone-quarter periods.")
 
 
     if current.period.kind == PeriodKind.DURATION:
