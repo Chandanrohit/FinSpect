@@ -1,0 +1,53 @@
+{
+  "matrix_id": "annual-material-disclosure-cross-section-v1",
+  "question_id": "Q20",
+  "evaluation_scope": "Offline FY2025 references check co-disclosed Item 7 and risk-factor evidence, quantitative context where present, exact filing provenance, and non-causal limitations. They do not evaluate planner interpretation or exhaustive materiality judgment.",
+  "form": "10-K",
+  "cases": [
+    {
+      "company": {"name": "NVIDIA Corporation", "ticker": "NVDA", "cik": "0001045810"},
+      "fiscal_year": 2025,
+      "start_date": "2024-01-29",
+      "end_date": "2025-01-26",
+      "filing_date": "2025-02-26",
+      "accession_number": "0001045810-25-000023",
+      "source_url": "https://www.sec.gov/Archives/edgar/data/1045810/000104581025000023/nvda-20250126.htm",
+      "evidence": [
+        {"section": "MD&A", "excerpt": "Provisions for inventory and excess inventory purchase obligations totaled $3.7 billion and $2.2 billion for fiscal years 2025 and 2024, respectively. Sales of previously reserved inventory and settlements of excess inventory purchase obligations resulted in a provision release of $689 million and $540 million for fiscal years 2025 and 2024, respectively. The net effect on our gross margin was an unfavorable impact of 2.3% and 2.7% in fiscal years 2025 and 2024, respectively."},
+        {"section": "risk_factors", "excerpt": "If additional products are subject to worldwide licensing requirements, we may incur significant inventory provisions and excess purchase obligation charges."}
+      ],
+      "quantitative_context": "$3.7 billion provisions; 2.3% unfavorable gross-margin impact (FY2025).",
+      "limitation": "Risk disclosure describes a possible exposure; it does not attribute the realized FY2025 provision to export controls."
+    },
+    {
+      "company": {"name": "Microsoft Corporation", "ticker": "MSFT", "cik": "0000789019"},
+      "fiscal_year": 2025,
+      "start_date": "2024-07-01",
+      "end_date": "2025-06-30",
+      "filing_date": "2025-07-30",
+      "accession_number": "0000950170-25-100235",
+      "source_url": "https://www.sec.gov/Archives/edgar/data/789019/000095017025100235/msft-20250630.htm",
+      "evidence": [
+        {"section": "MD&A", "excerpt": "Microsoft Cloud gross margin percentage decreased to 69% driven by the impact of scaling our AI infrastructure, offset in part by efficiency gains in Azure."},
+        {"section": "risk_factors", "excerpt": "The investments we are making in cloud and AI infrastructure and devices will continue to increase our operating costs and may decrease our operating margins."}
+      ],
+      "quantitative_context": "Microsoft Cloud gross margin percentage was 69% in FY2025; the filing attributes its decrease partly to AI infrastructure scaling.",
+      "limitation": "This filing statement describes a management-identified factor and does not quantify the standalone AI-infrastructure effect."
+    },
+    {
+      "company": {"name": "Apple Inc.", "ticker": "AAPL", "cik": "0000320193"},
+      "fiscal_year": 2025,
+      "start_date": "2024-09-29",
+      "end_date": "2025-09-27",
+      "filing_date": "2025-10-31",
+      "accession_number": "0000320193-25-000079",
+      "source_url": "https://www.sec.gov/Archives/edgar/data/320193/000032019325000079/aapl-20250927.htm",
+      "evidence": [
+        {"section": "MD&A", "excerpt": "Products gross margin percentage decreased during 2025 compared to 2024 primarily due to a different mix of products and tariff costs, partially offset by other favorable costs."},
+        {"section": "risk_factors", "excerpt": "Tariffs and other measures that are applied to the Company’s products or their components can have a material adverse impact on the Company’s business, results of operations and financial condition, including impacting the Company’s supply chain, the availability of rare earths and other raw materials and components, pricing and gross margin."}
+      ],
+      "quantitative_context": "Products gross margin percentage was 36.8% in FY2025 versus 37.2% in FY2024; the excerpt attributes the decrease partly to tariff costs and product mix.",
+      "limitation": "The filing does not separately quantify the tariff contribution to the gross-margin change."
+    }
+  ]
+}

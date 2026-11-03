@@ -106,3 +106,10 @@ def test_system_prompt_routes_q19_to_uncertainty_preserving_legal_disclosures():
     assert '"litigation_analysis"' in SYSTEM_PROMPT
     assert "assessed fines" in SYSTEM_PROMPT and "possible additional losses" in SYSTEM_PROMPT
     assert "do not infer a settlement value or legal outcome" in SYSTEM_PROMPT
+
+
+def test_system_prompt_routes_q20_to_evidence_limited_cross_section_synthesis():
+    assert '"material_disclosure_synthesis"' in SYSTEM_PROMPT
+    assert '"multi_part_analysis"' in SYSTEM_PROMPT
+    assert "without claiming that a risk caused a" in SYSTEM_PROMPT
+    assert "do not invent quantitative exposure" in SYSTEM_PROMPT

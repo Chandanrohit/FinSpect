@@ -96,6 +96,9 @@ DEFAULT_MARKET_RISK_SENSITIVITY_MATRIX = (
 DEFAULT_LEGAL_PROCEEDINGS_MATRIX = (
     ROOT / "data" / "fixtures" / "annual_legal_proceedings_reference_matrix.json"
 )
+DEFAULT_MATERIAL_DISCLOSURE_MATRIX = (
+    ROOT / "data" / "fixtures" / "annual_material_disclosure_reference_matrix.json"
+)
 
 
 def evaluate_segment_revenue_matrix(path: Path) -> dict[str, Any]:
@@ -614,6 +617,67 @@ def evaluate_legal_proceedings_matrix(path: Path) -> dict[str, Any]:
         "issuers": tickers,
         "cases_per_issuer": counts,
         "minimum_gate_coverage_met": len(tickers) >= 3 and all(count >= 1 for count in counts.values()),
+        "cases": cases,
+    }
+
+
+def evaluate_material_disclosure_matrix(path: Path) -> dict[str, Any]:
+    """Check cross-section filing evidence and quantitative context references."""
+    matrix = json.loads(path.read_text(encoding="utf-8"))
+    cases = []
+    for reference in matrix["cases"]:
+        company = reference["company"]
+        start = date.fromisoformat(reference["start_date"])
+        end = date.fromisoformat(reference["end_date"])
+        filed = date.fromisoformat(reference["filing_date"])
+        evidence = reference["evidence"]
+        sections = {item["section"] for item in evidence}
+        all_text = " ".join(item["excerpt"] for item in evidence)
+        checks = {
+            "annual_period_and_filing": (
+                start < end and 300 <= (end - start).days <= 400 and filed >= end
+                and reference["fiscal_year"] == end.year
+            ),
+            "source_provenance": (
+                reference["accession_number"].replace("-", "") in reference["source_url"]
+                and reference["source_url"].startswith("https://www.sec.gov/Archives/edgar/data/")
+                and f"/{int(company['cik'])}/" in reference["source_url"]
+                and reference["source_url"].endswith(".htm")
+            ),
+            "cross_section_evidence": (
+                len(evidence) >= 2 and "MD&A" in sections and "risk_factors" in sections
+                and all(len(item["excerpt"]) >= 80 for item in evidence)
+            ),
+            "quantitative_context_supported": (
+                bool(re.search(r"\d", reference["quantitative_context"]))
+                and bool(re.search(r"\d", all_text))
+            ),
+            "limitations_avoid_causal_overclaim": bool(re.search(
+                r"not attribute|does not quantify|does not establish|does not separately quantify",
+                reference["limitation"], re.I,
+            )),
+        }
+        cases.append({
+            "company": company,
+            "fiscal_year": reference["fiscal_year"],
+            "accession_number": reference["accession_number"],
+            "source_url": reference["source_url"],
+            "evidence": evidence,
+            "quantitative_context": reference["quantitative_context"],
+            "limitation": reference["limitation"],
+            "checks": checks,
+            "status": "PASS" if all(checks.values()) else "FAIL",
+        })
+    tickers = sorted({item["company"]["ticker"] for item in cases})
+    return {
+        "matrix_id": matrix["matrix_id"],
+        "question_id": matrix["question_id"],
+        "evaluation_scope": matrix["evaluation_scope"],
+        "case_count": len(cases),
+        "pass_count": sum(item["status"] == "PASS" for item in cases),
+        "fail_count": sum(item["status"] == "FAIL" for item in cases),
+        "issuers": tickers,
+        "minimum_gate_coverage_met": len(tickers) >= 3,
         "cases": cases,
     }
 
@@ -2459,6 +2523,9 @@ def evaluate_benchmark(
     legal_proceedings_matrix = evaluate_legal_proceedings_matrix(
         DEFAULT_LEGAL_PROCEEDINGS_MATRIX
     )
+    material_disclosure_matrix = evaluate_material_disclosure_matrix(
+        DEFAULT_MATERIAL_DISCLOSURE_MATRIX
+    )
     commitment_matrix = evaluate_commitment_matrix(DEFAULT_COMMITMENT_MATRIX)
     segment_revenue_matrix = evaluate_segment_revenue_matrix(DEFAULT_SEGMENT_REVENUE_MATRIX)
     operating_expense_matrix = evaluate_operating_expense_matrix(DEFAULT_OPERATING_EXPENSE_MATRIX)
@@ -2910,6 +2977,54 @@ def evaluate_benchmark(
                 ),
             })
             continue
+        if question_id == "Q20":
+            matrix_pass = (
+                material_disclosure_matrix["minimum_gate_coverage_met"]
+                and material_disclosure_matrix["pass_count"]
+                == material_disclosure_matrix["case_count"]
+            )
+            report_questions.append({
+                "question_id": question_id,
+                "question": question.question_template,
+                "company": None,
+                "filings": [
+                    {"company": case["company"], "fiscal_year": case["fiscal_year"],
+                     "accession_number": case["accession_number"], "source_url": case["source_url"]}
+                    for case in material_disclosure_matrix["cases"]
+                ],
+                "expected_concepts": question.required_concepts,
+                "retrieval_mode": "offline_SEC_material_disclosure_cross_section_reference_matrix",
+                "selected_evidence": [
+                    {"ticker": case["company"]["ticker"], "evidence": case["evidence"],
+                     "quantitative_context": case["quantitative_context"],
+                     "limitation": case["limitation"], "source_url": case["source_url"]}
+                    for case in material_disclosure_matrix["cases"]
+                ],
+                "expected_answer": [
+                    {"ticker": case["company"]["ticker"],
+                     "quantitative_context": case["quantitative_context"],
+                     "limitation": case["limitation"]}
+                    for case in material_disclosure_matrix["cases"]
+                ],
+                "actual_answer": [
+                    {"ticker": case["company"]["ticker"],
+                     "quantitative_context": case["quantitative_context"],
+                     "limitation": case["limitation"]}
+                    for case in material_disclosure_matrix["cases"]
+                ],
+                "checks": {
+                    "reference_matrix_cases_pass": matrix_pass,
+                    "live_extraction": "not_evaluated_by_offline_benchmark",
+                    "query_interpretation": "not_evaluated",
+                },
+                "overall_status": "PARTIAL" if matrix_pass else "FAIL",
+                "failure_reason": (
+                    "Reference evidence is cross-checked for three issuers; live SEC extraction and planner interpretation remain unevaluated."
+                    if matrix_pass
+                    else "One or more material-disclosure references failed validation."
+                ),
+            })
+            continue
         if question_id == "Q07":
             issuer = next(
                 item for item in json.loads(DEFAULT_LIQUIDITY_MATRIX.read_text(encoding="utf-8"))["issuers"]
@@ -3332,8 +3447,7 @@ def evaluate_benchmark(
         "aggregate_counts": counts,
         "accuracy_percentage": None,
             "accuracy_note": (
-            "No overall accuracy percentage is reported: Q01, Q02, Q03, Q04, Q05, Q07, Q08, Q09, "
-            "Q06, Q10, Q11, Q12, Q13, Q14, Q15, Q16, Q17, Q18, and Q19 have fixture-backed checks; issuer matrix case counts and "
+                "No overall accuracy percentage is reported: Q01-Q20 have fixture-backed reference checks; issuer matrix case counts and "
             "individual checks are reported per operation, but neither "
             "live SEC retrieval nor the planner was evaluated."
         ),
@@ -3357,6 +3471,7 @@ def evaluate_benchmark(
             geographic_revenue_matrix,
             market_risk_sensitivity_matrix,
             legal_proceedings_matrix,
+            material_disclosure_matrix,
         ],
         "questions": report_questions,
     }

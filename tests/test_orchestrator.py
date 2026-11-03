@@ -2744,9 +2744,9 @@ def make_unsupported_benchmark_plan(question):
         period=PeriodRequest(
             period_kind="annual",
             fiscal_year=2025,
-            comparison_required=question.id not in {"Q16", "Q17", "Q19"},
+            comparison_required=question.id not in {"Q16", "Q17", "Q19", "Q20"},
             comparison_period=(
-                "FY2024" if question.id not in {"Q16", "Q17", "Q19"} else None
+                "FY2024" if question.id not in {"Q16", "Q17", "Q19", "Q20"} else None
             ),
         ),
         benchmark_id=question.id,
@@ -2765,7 +2765,7 @@ def make_unsupported_benchmark_plan(question):
     [
         f"Q{number:02d}"
         for number in range(2, 21)
-        if number not in {2, 3, 4, 5, 7, 8, 9, 10, 11, 13, 14, 15, 16, 17, 18, 19}
+        if number not in {2, 3, 4, 5, 7, 8, 9, 10, 11, 13, 14, 15, 16, 17, 18, 19, 20}
     ],
 )
 def test_other_benchmark_operations_are_explicitly_unsupported(question_id):
@@ -2918,3 +2918,90 @@ def test_q04_retrieves_exact_10k_and_reports_largest_expense_contribution():
     assert "Research and development" in result.answer.text
     assert result.facts[0]["total_method"] == "gross margin minus operating income"
     assert all(item.source_url == url for item in result.answer.evidence)
+
+
+def test_q20_synthesizes_verbatim_evidence_across_sections_and_verifies_exact_filing():
+    from types import SimpleNamespace
+    root = Path(__file__).resolve().parents[1]
+    references = json.loads(
+        (root / "data/fixtures/annual_material_disclosure_reference_matrix.json")
+        .read_text(encoding="utf-8")
+    )["cases"]
+
+    for reference in references:
+        company = reference["company"]
+        evidence = reference["evidence"]
+        period = AnnualPeriod(
+            fiscal_year=reference["fiscal_year"],
+            start_date=reference["start_date"], end_date=reference["end_date"],
+            filing_date=reference["filing_date"],
+            accession_number=reference["accession_number"],
+        )
+        question = f"What material FY2025 disclosures did {company['name']} report?"
+        plan = make_plan().model_copy(update={
+            "original_question": question,
+            "company": CompanyRequest(**company),
+            "period": PeriodRequest(
+                period_kind="annual", fiscal_year=2025, comparison_required=False,
+            ),
+            "benchmark_id": "Q20", "task_type": "multi_part_analysis",
+            "operation": "material_disclosure_synthesis",
+            "metrics": [MetricRequest(
+                name="material_disclosures", role="primary", sources=["narrative"],
+            )],
+            "retrieval": RetrievalRequirements(sources=["narrative"]),
+        })
+        item7 = "".join(
+            f"<p>{item['excerpt']}</p>" for item in evidence if item["section"] == "MD&A"
+        )
+        item1a = "".join(
+            f"<p>{item['excerpt']}</p>" for item in evidence if item["section"] == "risk_factors"
+        )
+        html = (
+            f"<p>ITEM 7. MANAGEMENT'S DISCUSSION AND ANALYSIS</p>{item7}"
+            + (
+                "<table><tr><td>Gross margin percentage</td><td>Products</td>"
+                "<td>2025</td><td>36.8%</td><td>2024</td><td>37.2%</td></tr></table>"
+                if company["ticker"] == "AAPL" else ""
+            )
+            + f"<p>ITEM 1A. RISK FACTORS</p>{item1a}"
+        )
+        url = reference["source_url"]
+
+        class Planner:
+            def plan(self, _question):
+                return plan
+
+        class CompanyResolver:
+            def resolve(self, **_kwargs):
+                return company
+
+        class ExactFilingRetriever:
+            submissions = SimpleNamespace(get_filing_url=lambda **_kwargs: url)
+
+            def get_filing(self, *, cik, accession_number, form):
+                assert cik == company["cik"] and accession_number == reference["accession_number"]
+                assert form == "10-K"
+                return {
+                    "form": form, "cik": cik, "accession_number": accession_number,
+                    "filing_date": reference["filing_date"],
+                    "report_date": reference["end_date"],
+                    "primary_document": url.rsplit("/", 1)[-1], "html": html,
+                }
+
+        result = FinSpectOrchestrator(
+            planner=Planner(), normalizer=normalize_query_plan,
+            period_resolver=lambda _cik, _year: period,
+            fact_retriever=FixtureFactRetriever(), company_resolver=CompanyResolver(),
+            filing_retriever=ExactFilingRetriever(), filing_parser=FilingParser(),
+            narrative_retriever=NarrativeRetriever(),
+        ).run(question)
+
+        assert result.answer.evidence
+        assert len(result.answer.evidence) >= 2
+        assert any(item.label.endswith("MD&A") for item in result.answer.evidence)
+        assert any(item.label.endswith("Risk Factors") for item in result.answer.evidence)
+        assert any("%" in str(item.value) or "$" in str(item.value) for item in result.answer.evidence), result.answer.evidence
+        assert all(item.accession_number == reference["accession_number"] for item in result.answer.evidence)
+        assert all(item.source_url == url for item in result.answer.evidence)
+        assert any("caused the reported financial result" in limitation for limitation in result.answer.limitations)

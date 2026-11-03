@@ -98,6 +98,12 @@ Rules:
     excerpts and the company's own uncertainty language. Keep assessed fines,
     accrued liabilities, possible additional losses, and unquantified claims
     separate; do not infer a settlement value or legal outcome.
+26. For Q20 material-disclosure synthesis, require one explicit annual fiscal
+    year, use operation "material_disclosure_synthesis" with task_type
+    "multi_part_analysis", and request "material_disclosures" from narrative
+    sections of that exact 10-K. Preserve verbatim excerpts and visible amounts.
+    Summarize co-disclosed evidence without claiming that a risk caused a
+    reported result; do not invent quantitative exposure or imply completeness.
 """
 
 

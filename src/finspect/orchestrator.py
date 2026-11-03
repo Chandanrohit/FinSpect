@@ -54,6 +54,7 @@ from finspect.edgar.geographic_revenue import (
 from finspect.edgar.market_risk import MarketRiskError, MarketRiskSensitivityExtractor
 from finspect.edgar.legal import LegalDisclosureError, LegalProceedingsExtractor
 from finspect.narrative_retriever import NarrativeRetriever
+from finspect.material_disclosures import link_material_disclosures
 from finspect.query_planner import QueryPlan
 from finspect.edgar.xbrl import XBRLService
 from finspect.llm_planner import planner_from_environment
@@ -422,6 +423,21 @@ class FinSpectOrchestrator:
             and plan.period.fiscal_year is not None
             and not plan.period.comparison_required
         )
+        is_supported_material_disclosure_synthesis = (
+            plan.operation == "material_disclosure_synthesis"
+            and bool(metric_names & {
+                "material disclosures", "material disclosure synthesis",
+                "material changes", "filing disclosures",
+            })
+            and metric_names <= {
+                "material disclosures", "material disclosure synthesis",
+                "material changes", "filing disclosures", "financial results",
+            }
+            and plan.task_type == "multi_part_analysis"
+            and plan.period.period_kind == "annual"
+            and plan.period.fiscal_year is not None
+            and not plan.period.comparison_required
+        )
         is_supported_commitments = (
             plan.operation == "commitment_liquidity"
             and has_future_commitments and has_near_term_commitments
@@ -475,6 +491,7 @@ class FinSpectOrchestrator:
             or is_supported_geographic_exposure
             or is_supported_market_risk_sensitivity
             or is_supported_litigation_analysis
+            or is_supported_material_disclosure_synthesis
             or is_supported_commitments
             or is_supported_segment_growth
             or is_supported_expense_growth
@@ -513,6 +530,7 @@ class FinSpectOrchestrator:
             or is_supported_geographic_exposure
             or is_supported_market_risk_sensitivity
             or is_supported_litigation_analysis
+            or is_supported_material_disclosure_synthesis
             or is_supported_commitments
         ):
             fiscal_years = (plan.period.fiscal_year,)
@@ -1064,6 +1082,111 @@ class FinSpectOrchestrator:
                     },
                     "ending_equity": str(statement.ending_equity),
                     "unit": "USD",
+                    "source_url": filing_url,
+                },),
+            )
+
+        if is_supported_material_disclosure_synthesis:
+            current_period = periods[0]
+            required = (self.filing_retriever, self.filing_parser)
+            if not all(required):
+                return PipelineResult(plan=plan, answer=build_unsupported_answer(
+                    question, "Exact 10-K narrative retrieval is required for this disclosure synthesis."
+                ))
+            if not current_period.accession_number or not current_period.filing_date:
+                return PipelineResult(plan=plan, answer=build_unsupported_answer(
+                    question, "The requested fiscal year could not be tied to an exact 10-K accession and filing date."
+                ))
+            try:
+                filing = self.filing_retriever.get_filing(
+                    cik=cik, accession_number=current_period.accession_number, form="10-K"
+                )
+                if (
+                    filing.get("form") != "10-K"
+                    or str(filing.get("cik", "")).zfill(10) != cik
+                    or filing.get("accession_number") != current_period.accession_number
+                    or filing.get("filing_date") != current_period.filing_date
+                    or filing.get("report_date") != current_period.end_date
+                    or not filing.get("html")
+                    or not filing.get("primary_document")
+                ):
+                    raise ValueError("Retrieved filing metadata does not match the requested issuer and fiscal year.")
+                parsed = self.filing_parser.parse(filing["html"], filing_metadata=filing)
+            except (FilingRetrievalError, KeyError, ValueError) as exc:
+                return PipelineResult(plan=plan, answer=build_unsupported_answer(
+                    question, f"Could not verify the exact 10-K for material-disclosure synthesis: {exc}"
+                ))
+
+            section_names = {
+                "ITEM 7 ": "management_discussion",
+                "ITEM 1A ": "risk_factors",
+                "ITEM 3 ": "legal_proceedings",
+                "ITEM 7A ": "market_risk",
+                "ITEM 8 ": "notes",
+            }
+            narrative_sections: dict[str, str] = {}
+            for section in parsed["sections"]:
+                heading = section["heading"].upper()
+                for prefix, name in section_names.items():
+                    if heading.startswith(prefix):
+                        narrative_sections[name] = section["text"]
+                        break
+            filing_url = self.filing_retriever.submissions.get_filing_url(
+                cik=cik, accession_number=current_period.accession_number,
+                primary_document=filing["primary_document"],
+            )
+            linked = link_material_disclosures(narrative_sections, max_themes=3)
+            if not linked:
+                return PipelineResult(plan=plan, answer=build_unsupported_answer(
+                    question,
+                    "The exact 10-K did not yield a financial-results passage linked by a shared topic to another disclosure section; no cross-section synthesis was produced.",
+                ))
+            evidence_items = []
+            for item in linked:
+                for label, excerpt in (
+                    (f"{item.theme} — MD&A", item.management_excerpt),
+                    (f"{item.theme} — {item.related_section.replace('_', ' ').title()}", item.related_excerpt),
+                ):
+                    evidence_items.append(AnswerEvidence(
+                        label, excerpt, "filing excerpt", f"FY{current_period.fiscal_year}",
+                        current_period.filing_date, current_period.accession_number, filing_url,
+                    ))
+                if "gross margin" in item.management_excerpt.casefold():
+                    for table in parsed.get("tables", []):
+                        rows = table.get("rows", [])
+                        flattened = " ".join(cell for row in rows for cell in row)
+                        if (
+                            "gross margin percentage" in flattened.casefold()
+                            and "products" in flattened.casefold()
+                        ):
+                            table_excerpt = "; ".join(
+                                " | ".join(row) for row in rows
+                            )[:1200]
+                            evidence_items.append(AnswerEvidence(
+                                f"{item.theme} — MD&A table", table_excerpt,
+                                "filing table excerpt", f"FY{current_period.fiscal_year}",
+                                current_period.filing_date, current_period.accession_number,
+                                filing_url,
+                            ))
+                            break
+            evidence = tuple(evidence_items)
+            limitations = (
+                "Each pair links passages by shared filing language only; the related risk is not asserted to have caused the reported financial result.",
+                "Quantitative amounts appear only where disclosed in the selected passages. This bounded topic search is not an exhaustive review or a definitive materiality ranking.",
+            )
+            answer = build_narrative_answer(
+                company_name=resolved["name"], question=question,
+                topic=f"candidate material financial-result and risk disclosures for FY{current_period.fiscal_year}",
+                evidence=evidence, limitations=limitations,
+            )
+            return PipelineResult(
+                plan=plan, answer=answer,
+                facts=({
+                    "company": resolved["name"], "ticker": resolved.get("ticker"),
+                    "fiscal_year": current_period.fiscal_year,
+                    "themes": [item.theme for item in linked],
+                    "evidence_count": len(evidence),
+                    "accession_number": current_period.accession_number,
                     "source_url": filing_url,
                 },),
             )
