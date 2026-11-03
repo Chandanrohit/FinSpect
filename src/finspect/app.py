@@ -7,11 +7,19 @@ It does not perform financial calculations or invent evidence.
 from __future__ import annotations
 
 import os
+import sys
 from dataclasses import asdict, is_dataclass
 from decimal import Decimal
 from enum import Enum
+from pathlib import Path
 from typing import Any
 import streamlit as st
+
+# Streamlit may execute this file without putting the src-layout package root
+# on sys.path (for example, when launched with a global Python interpreter).
+_SRC_ROOT = str(Path(__file__).resolve().parents[1])
+if _SRC_ROOT not in sys.path:
+    sys.path.insert(0, _SRC_ROOT)
 
 from finspect.orchestrator import run_query
 from finspect.gnani_voice import (

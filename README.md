@@ -27,9 +27,11 @@ Use Python 3.11 or newer. From the repository root:
 ```powershell
 python -m venv .venv
 .\.venv\Scripts\Activate.ps1
-python -m pip install --upgrade pip
-python -m pip install -e ".[dev]"
+.\.venv\Scripts\python.exe -m pip install --upgrade pip
+.\.venv\Scripts\python.exe -m pip install -e ".[dev]"
 ```
+
+Use `\.venv\Scripts\python.exe` for the commands below so Streamlit, FinSpect, and the tests run under the same Python installation.
 
 ### 2. Configure SEC access and Ollama
 
@@ -66,7 +68,7 @@ Replace `[Paste API Key]` with your Gnani API key ID locally. This file is ignor
 In the PowerShell window with the SEC settings, run:
 
 ```powershell
-python -m streamlit run src/finspect/app.py
+.\.venv\Scripts\python.exe -m streamlit run src/finspect/app.py
 ```
 
 Open the local URL Streamlit prints, usually `http://localhost:8501`. Try a bounded supported question such as:
@@ -84,13 +86,21 @@ FinSpect sends a compact planning prompt and schema, not the full chat history. 
 Run the automated suite and regenerate the deterministic benchmark report from the repository root:
 
 ```powershell
-python -m pytest -q
-python -m finspect.benchmark_eval --output reports/benchmark-report.json
+.\.venv\Scripts\python.exe -m pytest -q
+.\.venv\Scripts\python.exe -m finspect.benchmark_eval --output reports/benchmark-report.json
 ```
 
 The expected current baseline is **309 passing tests** and a report with **20 PARTIAL, 0 FAIL**. The report includes per-operation reference matrices; check their case counts and failed checks, not just the aggregate. For each Q1, Q2, and Q3 revenue slice, expect 3 cases and 3 passes for NVDA, MSFT, and AAPL. The YTD-derived Q2/Q3 matrix has 6/6 passes across the same issuers. These checks use fixed references and mocks, so they do not prove that today's SEC response or an LLM plan will be correct.
 
 For a local live smoke check, verify that (1) Ollama is reachable and has the selected model, (2) the app starts without a configuration error, (3) a question returns a plan and answer, and (4) each cited filing, period, unit, and calculation agrees with the SEC filing. A live SEC request needs internet access and a valid `SEC_USER_AGENT`. Stop if the planner picks the wrong issuer, fiscal period, metric, or evidence; record the question and result as a benchmark case before treating the issue as fixed.
+
+If Streamlit reports `ModuleNotFoundError: No module named 'finspect'`, run this from the repository root:
+
+```powershell
+.\.venv\Scripts\python.exe -m streamlit run src/finspect/app.py
+```
+
+The app entry point also adds its local `src` directory to Python's import path when Streamlit executes the script directly.
 
 ## Current coverage and limits
 
