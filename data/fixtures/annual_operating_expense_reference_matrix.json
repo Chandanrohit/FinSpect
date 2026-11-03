@@ -1,0 +1,73 @@
+{
+  "matrix_id": "annual-operating-expense-contribution-v1",
+  "question_id": "Q04",
+  "evaluation_scope": "Six exact annual SEC 10-K cases across Apple, Microsoft, and Amazon. Expense categories and totals were extracted live from the issuer statements and reconciled; live planner accuracy remains unevaluated.",
+  "cases": [
+    {
+      "company": {"name": "Microsoft Corporation", "ticker": "MSFT", "cik": "0000789019"},
+      "fiscal_year": 2024, "prior_fiscal_year": 2023, "filing_date": "2024-07-30",
+      "accession_number": "0000950170-24-087843",
+      "source_url": "https://www.sec.gov/Archives/edgar/data/789019/000095017024087843/msft-20240630.htm",
+      "unit": "USD millions", "total_method": "gross margin minus operating income",
+      "current_total": "61575", "prior_total": "57529",
+      "current_categories": {"Research and development": "29510", "Sales and marketing": "24456", "General and administrative": "7609"},
+      "prior_categories": {"Research and development": "27195", "Sales and marketing": "22759", "General and administrative": "7575"},
+      "expected_selected_category": "Research and development", "expected_contribution_percent": "57.22"
+    },
+    {
+      "company": {"name": "Microsoft Corporation", "ticker": "MSFT", "cik": "0000789019"},
+      "fiscal_year": 2025, "prior_fiscal_year": 2024, "filing_date": "2025-07-30",
+      "accession_number": "0000950170-25-100235",
+      "source_url": "https://www.sec.gov/Archives/edgar/data/789019/000095017025100235/msft-20250630.htm",
+      "unit": "USD millions", "total_method": "gross margin minus operating income",
+      "current_total": "65365", "prior_total": "61575",
+      "current_categories": {"Research and development": "32488", "Sales and marketing": "25654", "General and administrative": "7223"},
+      "prior_categories": {"Research and development": "29510", "Sales and marketing": "24456", "General and administrative": "7609"},
+      "expected_selected_category": "Research and development", "expected_contribution_percent": "78.58"
+    },
+    {
+      "company": {"name": "Apple Inc.", "ticker": "AAPL", "cik": "0000320193"},
+      "fiscal_year": 2024, "prior_fiscal_year": 2023, "filing_date": "2024-11-01",
+      "accession_number": "0000320193-24-000123",
+      "source_url": "https://www.sec.gov/Archives/edgar/data/320193/000032019324000123/aapl-20240928.htm",
+      "unit": "USD millions", "total_method": "reported total operating expenses",
+      "current_total": "57467", "prior_total": "54847",
+      "current_categories": {"Research and development": "31370", "Selling, general and administrative": "26097"},
+      "prior_categories": {"Research and development": "29915", "Selling, general and administrative": "24932"},
+      "expected_selected_category": "Research and development", "expected_contribution_percent": "55.53"
+    },
+    {
+      "company": {"name": "Apple Inc.", "ticker": "AAPL", "cik": "0000320193"},
+      "fiscal_year": 2025, "prior_fiscal_year": 2024, "filing_date": "2025-10-31",
+      "accession_number": "0000320193-25-000079",
+      "source_url": "https://www.sec.gov/Archives/edgar/data/320193/000032019325000079/aapl-20250927.htm",
+      "unit": "USD millions", "total_method": "reported total operating expenses",
+      "current_total": "62151", "prior_total": "57467",
+      "current_categories": {"Research and development": "34550", "Selling, general and administrative": "27601"},
+      "prior_categories": {"Research and development": "31370", "Selling, general and administrative": "26097"},
+      "expected_selected_category": "Research and development", "expected_contribution_percent": "67.89"
+    },
+    {
+      "company": {"name": "Amazon.com, Inc.", "ticker": "AMZN", "cik": "0001018724"},
+      "fiscal_year": 2024, "prior_fiscal_year": 2023, "filing_date": "2025-02-07",
+      "accession_number": "0001018724-25-000004",
+      "source_url": "https://www.sec.gov/Archives/edgar/data/1018724/000101872425000004/amzn-20241231.htm",
+      "unit": "USD millions", "total_method": "reported total operating expenses",
+      "current_total": "569366", "prior_total": "537933",
+      "current_categories": {"Cost of sales": "326288", "Fulfillment": "98505", "Technology and infrastructure": "88544", "Sales and marketing": "43907", "General and administrative": "11359", "Other operating expense (income), net": "763"},
+      "prior_categories": {"Cost of sales": "304739", "Fulfillment": "90619", "Technology and infrastructure": "85622", "Sales and marketing": "44370", "General and administrative": "11816", "Other operating expense (income), net": "767"},
+      "expected_selected_category": "Cost of sales", "expected_contribution_percent": "68.56"
+    },
+    {
+      "company": {"name": "Amazon.com, Inc.", "ticker": "AMZN", "cik": "0001018724"},
+      "fiscal_year": 2025, "prior_fiscal_year": 2024, "filing_date": "2026-02-06",
+      "accession_number": "0001018724-26-000004",
+      "source_url": "https://www.sec.gov/Archives/edgar/data/1018724/000101872426000004/amzn-20251231.htm",
+      "unit": "USD millions", "total_method": "reported total operating expenses",
+      "current_total": "636949", "prior_total": "569366",
+      "current_categories": {"Cost of sales": "356414", "Fulfillment": "109074", "Technology and infrastructure": "108521", "Sales and marketing": "47129", "General and administrative": "11172", "Other operating expense (income), net": "4639"},
+      "prior_categories": {"Cost of sales": "326288", "Fulfillment": "98505", "Technology and infrastructure": "88544", "Sales and marketing": "43907", "General and administrative": "11359", "Other operating expense (income), net": "763"},
+      "expected_selected_category": "Cost of sales", "expected_contribution_percent": "44.58"
+    }
+  ]
+}

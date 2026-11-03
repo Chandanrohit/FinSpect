@@ -2360,7 +2360,7 @@ def make_unsupported_benchmark_plan(question):
     [
         f"Q{number:02d}"
         for number in range(2, 21)
-        if number not in {2, 3, 5, 7, 8, 9, 10, 11, 13}
+        if number not in {2, 3, 4, 5, 7, 8, 9, 10, 11, 13}
     ],
 )
 def test_other_benchmark_operations_are_explicitly_unsupported(question_id):
@@ -2447,4 +2447,69 @@ def test_q02_retrieves_exact_10k_and_reports_largest_segment_contribution():
     assert result.answer.result_value == "100"
     assert "Segment A" in result.answer.text
     assert result.facts[0]["accession_number"] == PERIODS[2025].accession_number
+    assert all(item.source_url == url for item in result.answer.evidence)
+
+
+def test_q04_retrieves_exact_10k_and_reports_largest_expense_contribution():
+    from types import SimpleNamespace
+
+    plan = QueryPlan(
+        original_question="Which expense category drove operating expense growth?",
+        company=CompanyRequest(name="NVIDIA", ticker="NVDA", cik=CIK),
+        period=PeriodRequest(
+            period_kind="annual", fiscal_year=2025,
+            comparison_required=True, comparison_period="FY2024",
+        ),
+        benchmark_id="Q04", task_type="calculation",
+        metrics=[
+            MetricRequest(name="operating_expenses", role="primary", sources=["financial_table"]),
+            MetricRequest(name="expense_category", role="primary", sources=["financial_table"]),
+        ],
+        operation="expense_growth_contribution",
+        retrieval={"sources": ["financial_table"]},
+    )
+    html = """
+    <table>
+      <tr><th></th><th>2025</th><th>2024</th></tr>
+      <tr><td>Gross margin</td><td>194</td><td>171</td></tr>
+      <tr><td>Research and development</td><td>32</td><td>29</td></tr>
+      <tr><td>Sales and marketing</td><td>25</td><td>24</td></tr>
+      <tr><td>General and administrative</td><td>7</td><td>8</td></tr>
+      <tr><td>Operating income</td><td>130</td><td>110</td></tr>
+    </table>
+    """
+    url = "https://www.sec.gov/Archives/edgar/data/example.htm"
+
+    class ExactFilingRetriever:
+        submissions = SimpleNamespace(get_filing_url=lambda **_kwargs: url)
+
+        def get_filing(self, *, cik, accession_number, form):
+            assert cik == CIK
+            assert accession_number == PERIODS[2025].accession_number
+            assert form == "10-K"
+            return {
+                "form": "10-K", "cik": CIK,
+                "accession_number": PERIODS[2025].accession_number,
+                "filing_date": PERIODS[2025].filing_date,
+                "report_date": PERIODS[2025].end_date,
+                "primary_document": "nvda-20250126.htm", "html": html,
+            }
+
+    class Q04Planner:
+        def plan(self, _question):
+            return plan
+
+    orchestrator = FinSpectOrchestrator(
+        planner=Q04Planner(), normalizer=normalize_query_plan,
+        period_resolver=lambda _cik, year: PERIODS[year],
+        fact_retriever=FixtureFactRetriever(),
+        company_resolver=FixtureCompanyResolver(),
+        filing_retriever=ExactFilingRetriever(),
+    )
+    result = orchestrator.run(plan.original_question)
+
+    assert result.answer.formula_id == "Q04"
+    assert result.answer.result_value == "100"
+    assert "Research and development" in result.answer.text
+    assert result.facts[0]["total_method"] == "gross margin minus operating income"
     assert all(item.source_url == url for item in result.answer.evidence)

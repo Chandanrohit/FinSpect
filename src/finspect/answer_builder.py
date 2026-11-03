@@ -106,6 +106,16 @@ def build_calculation_answer(
             f"{selected_segment} had the largest disclosed business-segment revenue increase, "
             f"contributing {_format_result(result.value, 'percent')} of the total revenue increase."
         )
+    elif result.formula_id == "Q04":
+        selected_category = next(
+            note.removeprefix("selected_category=")
+            for note in result.notes
+            if note.startswith("selected_category=")
+        )
+        result_line = (
+            f"{selected_category} had the largest disclosed operating-expense increase, "
+            f"accounting for {_format_result(result.value, 'percent')} of the total increase."
+        )
     elif result.formula_id == "Q14":
         allocated = sum(
             result.inputs[name]

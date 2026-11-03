@@ -21,6 +21,7 @@ from finspect.calculator import (
     cash_conversion_comparison,
     cash_allocation,
     commitment_liquidity,
+    expense_growth_contribution,
     largest_increase_contributor,
     dilution_ratio,
     earnings_change_relationship,
@@ -41,6 +42,10 @@ from finspect.edgar.equity_statement import (
 )
 from finspect.edgar.commitments import CommitmentScheduleError, CommitmentScheduleExtractor
 from finspect.edgar.segment_revenue import SegmentRevenueError, SegmentRevenueExtractor
+from finspect.edgar.operating_expenses import (
+    OperatingExpenseError,
+    OperatingExpenseExtractor,
+)
 from finspect.narrative_retriever import NarrativeRetriever
 from finspect.query_planner import QueryPlan
 from finspect.edgar.xbrl import XBRLService
@@ -398,6 +403,18 @@ class FinSpectOrchestrator:
             and plan.period.fiscal_year is not None
             and plan.period.comparison_required
         )
+        is_supported_expense_growth = (
+            plan.operation == "expense_growth_contribution"
+            and bool(metric_names & {"operating expenses", "operating expense"})
+            and bool(metric_names & {"expense category", "operating expense category"})
+            and metric_names <= {
+                "operating expenses", "operating expense",
+                "expense category", "operating expense category",
+            }
+            and plan.period.period_kind == "annual"
+            and plan.period.fiscal_year is not None
+            and plan.period.comparison_required
+        )
 
         if not (
             is_supported_revenue_operation
@@ -415,6 +432,7 @@ class FinSpectOrchestrator:
             or is_supported_regulatory_risk
             or is_supported_commitments
             or is_supported_segment_growth
+            or is_supported_expense_growth
         ):
             answer = build_unsupported_answer(
                 question=question,
@@ -462,6 +480,8 @@ class FinSpectOrchestrator:
         if is_supported_commitments:
             fiscal_years = (plan.period.fiscal_year,)
         if is_supported_segment_growth:
+            fiscal_years = self._get_two_annual_years(plan)
+        if is_supported_expense_growth:
             fiscal_years = self._get_two_annual_years(plan)
         if fiscal_years is None:
             answer = build_unsupported_answer(
@@ -721,6 +741,142 @@ class FinSpectOrchestrator:
                 "contribution_percent": str(calculation.value),
                 "accession_number": current_period.accession_number,
                 "source_url": filing_url,
+            },))
+
+        if is_supported_expense_growth:
+            current_period = periods[-1]
+            if not self.filing_retriever:
+                return PipelineResult(plan=plan, answer=build_unsupported_answer(
+                    question, "Exact 10-K retrieval is required for operating-expense analysis."
+                ))
+            try:
+                filing = self.filing_retriever.get_filing(
+                    cik=cik, accession_number=current_period.accession_number, form="10-K"
+                )
+                if (
+                    filing.get("form") != "10-K"
+                    or str(filing.get("cik", "")).zfill(10) != cik
+                    or filing.get("accession_number") != current_period.accession_number
+                    or filing.get("filing_date") != current_period.filing_date
+                    or filing.get("report_date") != current_period.end_date
+                    or not filing.get("primary_document")
+                    or not filing.get("html")
+                ):
+                    raise FilingRetrievalError(
+                        "Retrieved filing does not match the requested issuer and exact annual period."
+                    )
+                schedule = OperatingExpenseExtractor().extract(
+                    filing["html"],
+                    current_year=current_period.fiscal_year,
+                    prior_year=periods[0].fiscal_year,
+                )
+                total_change = schedule.current_total - schedule.prior_total
+                category_changes = {
+                    name: schedule.current_categories[name] - schedule.prior_categories[name]
+                    for name in schedule.current_categories
+                    if name in schedule.prior_categories
+                }
+                if sum(category_changes.values()) != total_change:
+                    raise OperatingExpenseError(
+                        "Disclosed category changes do not reconcile to operating-expense change."
+                    )
+                positive_changes = {
+                    name: value for name, value in category_changes.items() if value > 0
+                }
+                if not positive_changes:
+                    raise OperatingExpenseError(
+                        "No disclosed operating-expense category increased."
+                    )
+                selected_category = max(positive_changes, key=positive_changes.__getitem__)
+                calculation = expense_growth_contribution(
+                    schedule.current_categories[selected_category],
+                    schedule.prior_categories[selected_category],
+                    schedule.current_total,
+                    schedule.prior_total,
+                )
+                calculation = replace(
+                    calculation,
+                    notes=(f"selected_category={selected_category}",),
+                )
+            except (FilingRetrievalError, OperatingExpenseError, KeyError, ValueError, ArithmeticError) as exc:
+                return PipelineResult(plan=plan, answer=build_unsupported_answer(
+                    question, f"Could not calculate operating-expense contribution reliably: {exc}"
+                ))
+
+            filing_url = self.filing_retriever.submissions.get_filing_url(
+                cik=cik,
+                accession_number=current_period.accession_number,
+                primary_document=filing["primary_document"],
+            )
+            evidence = [
+                AnswerEvidence(
+                    f"{name} operating-expense category",
+                    amount,
+                    schedule.unit,
+                    f"FY{year}",
+                    current_period.filing_date,
+                    current_period.accession_number,
+                    filing_url,
+                )
+                for values, year in (
+                    (schedule.current_categories, current_period.fiscal_year),
+                    (schedule.prior_categories, periods[0].fiscal_year),
+                )
+                for name, amount in values.items()
+            ]
+            evidence.extend((
+                AnswerEvidence(
+                    "Total operating expenses", schedule.current_total, schedule.unit,
+                    f"FY{current_period.fiscal_year}", current_period.filing_date,
+                    current_period.accession_number, filing_url,
+                ),
+                AnswerEvidence(
+                    "Total operating expenses", schedule.prior_total, schedule.unit,
+                    f"FY{periods[0].fiscal_year}", current_period.filing_date,
+                    current_period.accession_number, filing_url,
+                ),
+            ))
+            if schedule.total_method == "gross margin minus operating income":
+                evidence.extend((
+                    AnswerEvidence(
+                        "Gross margin", schedule.current_gross_margin, schedule.unit,
+                        f"FY{current_period.fiscal_year}", current_period.filing_date,
+                        current_period.accession_number, filing_url,
+                    ),
+                    AnswerEvidence(
+                        "Operating income", schedule.current_operating_income, schedule.unit,
+                        f"FY{current_period.fiscal_year}", current_period.filing_date,
+                        current_period.accession_number, filing_url,
+                    ),
+                    AnswerEvidence(
+                        "Gross margin", schedule.prior_gross_margin, schedule.unit,
+                        f"FY{periods[0].fiscal_year}", current_period.filing_date,
+                        current_period.accession_number, filing_url,
+                    ),
+                    AnswerEvidence(
+                        "Operating income", schedule.prior_operating_income, schedule.unit,
+                        f"FY{periods[0].fiscal_year}", current_period.filing_date,
+                        current_period.accession_number, filing_url,
+                    ),
+                ))
+            answer = build_calculation_answer(
+                company_name=resolved["name"], question=question, result=calculation,
+                evidence=evidence,
+                limitations=(
+                    "Expense categories follow the issuer's presentation and may not be comparable across companies.",
+                    f"The expense total was determined using {schedule.total_method}.",
+                ),
+            )
+            return PipelineResult(plan=plan, answer=answer, facts=({
+                "company": resolved["name"], "fiscal_year": current_period.fiscal_year,
+                "prior_fiscal_year": periods[0].fiscal_year,
+                "selected_category": selected_category,
+                "category_changes": {name: str(value) for name, value in category_changes.items()},
+                "total_expense_change": str(total_change),
+                "contribution_percent": str(calculation.value),
+                "accession_number": current_period.accession_number,
+                "source_url": filing_url,
+                "total_method": schedule.total_method,
             },))
 
         if is_supported_equity_allocation:

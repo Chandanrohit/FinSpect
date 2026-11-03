@@ -75,6 +75,11 @@ Rules:
     request total revenue plus reportable-segment revenue from one comparable
     segment disclosure. Do not mix product, geographic, or operating-segment
     classifications unless the filing identifies them as reportable segments.
+22. For Q04 operating-expense contribution questions, require an explicit
+    current and prior annual fiscal year and use operation
+    "expense_growth_contribution". Request operating-expense categories and
+    their reconciled total from the same 10-K; preserve issuer category labels
+    and do not treat unlike categories as comparable across companies.
 """
 
 
