@@ -100,6 +100,8 @@ class AnnualPeriod:
     filing_date: str | None = None
     accession_number: str | None = None
     currency: str = "USD"
+    resolved_revenue_value: Decimal | None = None
+    revenue_derivation_inputs: tuple[dict[str, Any], ...] = ()
 
 PeriodResolver = Callable[[str, int], AnnualPeriod]
 QuarterPeriodResolver = Callable[[str, int, int], AnnualPeriod]
@@ -2110,27 +2112,70 @@ class FinSpectOrchestrator:
             )
             raw_facts = None
             last_retrieval_error = None
-            for concept in concepts:
-                try:
-                    candidate_facts = tuple(
-                        self.fact_retriever.get_fact(
-                            cik=cik,
-                            taxonomy="us-gaap",
-                            concept=concept,
-                            start_date=None if is_instant else period.start_date,
-                            end_date=period.end_date,
-                            form=period.form,
-                            unit=("shares" if is_supported_dilution else period.currency),
-                            filed_on_or_before=period.filing_date,
-                            accession_number=period.accession_number,
+            if (
+                metric_name == "revenue"
+                and plan.period.period_kind == "quarterly"
+                and all(period.resolved_revenue_value is not None for period in periods)
+            ):
+                resolved_concepts = {period.concept for period in periods}
+                if len(resolved_concepts) != 1:
+                    raise ValueError("Quarterly revenue periods resolved to different SEC concepts.")
+                concept = next(iter(resolved_concepts))
+                raw_facts = tuple(
+                    {
+                        "cik": cik,
+                        "company": resolved["name"],
+                        "taxonomy": "us-gaap",
+                        "concept": concept,
+                        "label": "Revenue",
+                        "value": str(period.resolved_revenue_value),
+                        "unit": period.currency,
+                        "start_date": period.start_date,
+                        "end_date": period.end_date,
+                        "fiscal_year": period.fiscal_year,
+                        "fiscal_period": f"Q{plan.period.fiscal_quarter}",
+                        "form": period.form,
+                        "filing_date": period.filing_date,
+                        "accession_number": period.accession_number,
+                        "derived_from_ytd": bool(period.revenue_derivation_inputs),
+                        "derivation_inputs": tuple(
+                            {
+                                **item,
+                                "cik": cik,
+                                "company": resolved["name"],
+                                "taxonomy": "us-gaap",
+                                "concept": concept,
+                                "label": "Revenue YTD",
+                                "accession_number": item["accn"],
+                                "filing_date": item["filed"],
+                            }
+                            for item in period.revenue_derivation_inputs
+                        ),
+                    }
+                    for period in periods
+                )
+            else:
+                for concept in concepts:
+                    try:
+                        candidate_facts = tuple(
+                            self.fact_retriever.get_fact(
+                                cik=cik,
+                                taxonomy="us-gaap",
+                                concept=concept,
+                                start_date=None if is_instant else period.start_date,
+                                end_date=period.end_date,
+                                form=period.form,
+                                unit=("shares" if is_supported_dilution else period.currency),
+                                filed_on_or_before=period.filing_date,
+                                accession_number=period.accession_number,
+                            )
+                            for period in periods
                         )
-                        for period in periods
-                    )
-                except FactRetrievalError as exc:
-                    last_retrieval_error = exc
-                    continue
-                raw_facts = candidate_facts
-                break
+                    except FactRetrievalError as exc:
+                        last_retrieval_error = exc
+                        continue
+                    raw_facts = candidate_facts
+                    break
             if raw_facts is None:
                 if last_retrieval_error is not None:
                     raise last_retrieval_error
@@ -2454,23 +2499,48 @@ class FinSpectOrchestrator:
         )
 
         # 7. Attach source evidence for every input actually used.
-        evidence = tuple(
-            AnswerEvidence(
-                label=fact.get("label") or metric_name.replace("_", " ").title(),
-                value=Decimal(str(fact["value"])),
-                unit=fact["unit"],
-                period=(
+        evidence_items = []
+        for metric_name, raw_facts in raw_by_metric.items():
+            for fact, period in zip(raw_facts, periods, strict=True):
+                quarter_label = (
                     f"Q{plan.period.fiscal_quarter} FY{period.fiscal_year}"
                     if plan.period.period_kind == "quarterly"
                     else f"FY{period.fiscal_year}"
-                ) + f" ({period.start_date} to {period.end_date})",
-                filing_date=fact["filing_date"],
-                accession_number=fact.get("accession_number"),
-                source_url=self._filing_url(fact),
-            )
-            for metric_name, raw_facts in raw_by_metric.items()
-            for fact, period in zip(raw_facts, periods, strict=True)
-        )
+                )
+                if fact.get("derivation_inputs"):
+                    for ytd_fact in fact["derivation_inputs"]:
+                        evidence_items.append(AnswerEvidence(
+                            label="Revenue YTD input",
+                            value=Decimal(str(ytd_fact["val"])),
+                            unit=ytd_fact["unit"],
+                            period=(
+                                f"FY{period.fiscal_year} YTD at Q{ytd_fact['fp']} filing "
+                                f"({ytd_fact['start']} to {ytd_fact['end']})"
+                            ),
+                            filing_date=ytd_fact["filed"],
+                            accession_number=ytd_fact.get("accn"),
+                            source_url=self._filing_url(ytd_fact),
+                        ))
+                    evidence_items.append(AnswerEvidence(
+                        label="Standalone quarterly revenue derived from YTD inputs",
+                        value=Decimal(str(fact["value"])),
+                        unit=fact["unit"],
+                        period=f"{quarter_label} ({period.start_date} to {period.end_date})",
+                        filing_date=fact["filing_date"],
+                        accession_number=fact.get("accession_number"),
+                        source_url=self._filing_url(fact),
+                    ))
+                else:
+                    evidence_items.append(AnswerEvidence(
+                        label=fact.get("label") or metric_name.replace("_", " ").title(),
+                        value=Decimal(str(fact["value"])),
+                        unit=fact["unit"],
+                        period=f"{quarter_label} ({period.start_date} to {period.end_date})",
+                        filing_date=fact["filing_date"],
+                        accession_number=fact.get("accession_number"),
+                        source_url=self._filing_url(fact),
+                    ))
+        evidence = tuple(evidence_items)
 
         answer = build_calculation_answer(
             company_name=plan.company.name,
@@ -2478,6 +2548,9 @@ class FinSpectOrchestrator:
             result=calculation,
             evidence=evidence,
             limitations=(
+                ("Q2/Q3 standalone revenue is calculated as current-quarter YTD revenue less prior-quarter YTD revenue; component filings are shown in the evidence.",)
+                if any(fact.get("derivation_inputs") for fact in raw_by_metric.get("revenue", ()))
+                else
                 ("Uses reported cash and current short-term investments; this is not an unrestricted-cash measure.",)
                 if is_supported_liquidity
                 else (

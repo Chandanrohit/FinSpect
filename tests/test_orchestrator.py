@@ -3170,3 +3170,74 @@ def test_q2_q3_year_over_year_revenue_pipeline_uses_standalone_reference_periods
             assert {item.accession_number for item in result.answer.evidence} == {
                 row["accession_number"] for row in rows.values()
             }
+
+
+def test_ytd_derived_quarterly_revenue_pipeline_shows_all_source_facts():
+    company = {"name": "NVIDIA Corporation", "ticker": "NVDA", "cik": "0001045810"}
+    periods = {
+        2024: AnnualPeriod(
+            fiscal_year=2024, start_date="2023-05-01", end_date="2023-07-30",
+            form="10-Q", concept="Revenues", filing_date="2023-08-23",
+            accession_number="0001045810-23-000175", currency="USD",
+            resolved_revenue_value=Decimal("13507000000"),
+            revenue_derivation_inputs=(
+                {"start": "2023-01-30", "end": "2023-04-30", "val": 7192000000,
+                 "unit": "USD", "form": "10-Q", "filed": "2023-05-30",
+                 "accn": "0001045810-23-000093", "fp": "Q1"},
+                {"start": "2023-01-30", "end": "2023-07-30", "val": 20699000000,
+                 "unit": "USD", "form": "10-Q", "filed": "2023-08-23",
+                 "accn": "0001045810-23-000175", "fp": "Q2"},
+            ),
+        ),
+        2025: AnnualPeriod(
+            fiscal_year=2025, start_date="2024-04-29", end_date="2024-07-28",
+            form="10-Q", concept="Revenues", filing_date="2024-08-28",
+            accession_number="0001045810-24-000264", currency="USD",
+            resolved_revenue_value=Decimal("30040000000"),
+            revenue_derivation_inputs=(
+                {"start": "2024-01-29", "end": "2024-04-28", "val": 26044000000,
+                 "unit": "USD", "form": "10-Q", "filed": "2024-05-29",
+                 "accn": "0001045810-24-000124", "fp": "Q1"},
+                {"start": "2024-01-29", "end": "2024-07-28", "val": 56084000000,
+                 "unit": "USD", "form": "10-Q", "filed": "2024-08-28",
+                 "accn": "0001045810-24-000264", "fp": "Q2"},
+            ),
+        ),
+    }
+    question = "Calculate NVIDIA revenue growth for Q2 FY2024 to Q2 FY2025."
+    plan = make_plan().model_copy(update={
+        "original_question": question,
+        "company": CompanyRequest(**company),
+        "period": PeriodRequest(
+            period_kind="quarterly", fiscal_year=2025, fiscal_quarter=2,
+            comparison_required=True, comparison_period="FY2024",
+        ),
+    })
+
+    class Planner:
+        def plan(self, _question):
+            return plan
+
+    class CompanyResolver:
+        def resolve(self, **_kwargs):
+            return company
+
+    class NoFactLookup:
+        def get_fact(self, **_kwargs):
+            raise AssertionError("The YTD-derived revenue should use its resolved source facts.")
+
+    result = FinSpectOrchestrator(
+        planner=Planner(), normalizer=normalize_query_plan,
+        period_resolver=lambda _cik, _year: PERIODS[2024],
+        quarter_period_resolver=lambda _cik, year, _quarter: periods[year],
+        fact_retriever=NoFactLookup(), company_resolver=CompanyResolver(),
+    ).run(question)
+
+    assert Decimal(result.answer.result_value) == Decimal("122.4031983416006515140297623")
+    assert len(result.answer.evidence) == 6
+    assert sum(item.label == "Revenue YTD input" for item in result.answer.evidence) == 4
+    assert sum("derived" in item.label for item in result.answer.evidence) == 2
+    assert all(item.source_url and item.accession_number for item in result.answer.evidence)
+    assert any("current-quarter YTD revenue less prior-quarter YTD revenue" in item
+               for item in result.answer.limitations)
+    assert result.canonical_facts[0].evidence[0].evidence_type == "derived"

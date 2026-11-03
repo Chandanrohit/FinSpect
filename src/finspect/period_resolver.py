@@ -3,6 +3,7 @@ from __future__ import annotations
 
 import re
 from dataclasses import dataclass
+from decimal import Decimal, InvalidOperation
 from datetime import date
 
 from finspect.edgar.xbrl import XBRLService
@@ -128,6 +129,8 @@ class AnnualPeriod:
     filing_date: str | None = None
     accession_number: str | None = None
     currency: str = "USD"
+    resolved_revenue_value: Decimal | None = None
+    revenue_derivation_inputs: tuple[dict, ...] = ()
 
 
 REVENUE_CONCEPT = (
@@ -162,35 +165,91 @@ def resolve_annual_period(
     )
 
 
+def _select_original_quarter_fact(
+    entries: list[dict], *, fiscal_year: int, quarter: int, concept_name: str,
+    duration_days: tuple[int, int],
+) -> dict | None:
+    """Select one unambiguous fact from the original 10-Q for an SEC fiscal quarter."""
+    candidates = []
+    for fact in entries:
+        if fact.get("form") != "10-Q" or fact.get("fp") != f"Q{quarter}":
+            continue
+        try:
+            if int(fact.get("fy")) != fiscal_year:
+                continue
+            days = (date.fromisoformat(fact["end"]) - date.fromisoformat(fact["start"])).days
+        except (KeyError, TypeError, ValueError):
+            continue
+        if duration_days[0] <= days <= duration_days[1] and fact.get("filed") and fact.get("accn"):
+            candidates.append({**fact, "concept": concept_name, "unit": "USD"})
+    if not candidates:
+        return None
+    first_filed = min(item["filed"] for item in candidates)
+    original_filing = [item for item in candidates if item["filed"] == first_filed]
+    # A 10-Q can include the prior-year comparative context in the same filing.
+    # Keep the latest period end from that original filing as the requested FY.
+    latest_end = max(item["end"] for item in original_filing)
+    original_filing = [item for item in original_filing if item["end"] == latest_end]
+    identities = {(item["accn"], item["start"], item["end"]) for item in original_filing}
+    if len(identities) != 1 or len({str(item["val"]) for item in original_filing}) != 1:
+        raise ValueError(f"Conflicting Q{quarter} revenue facts for FY{fiscal_year}.")
+    return original_filing[0]
+
+
 def find_quarterly_revenue_fact(company_facts: dict, fiscal_year: int, quarter: int) -> dict:
-    """Select an original Q1-Q3 10-Q revenue fact; reject YTD-only periods."""
+    """Resolve original standalone Q1-Q3 revenue, deriving Q2/Q3 from consecutive YTD facts if needed."""
     if quarter not in (1, 2, 3):
         raise ValueError("Quarter resolver currently supports fiscal quarters 1 through 3.")
     us_gaap = company_facts.get("facts", {}).get("us-gaap", {})
     for concept_name in REVENUE_CONCEPTS:
-        candidates = []
-        for unit, entries in us_gaap.get(concept_name, {}).get("units", {}).items():
-            if unit != "USD":
-                continue
-            for fact in entries:
-                if fact.get("form") != "10-Q" or fact.get("fp") != f"Q{quarter}":
-                    continue
-                try:
-                    if int(fact.get("fy")) != fiscal_year:
-                        continue
-                    days = (date.fromisoformat(fact["end"]) - date.fromisoformat(fact["start"])).days
-                except (KeyError, TypeError, ValueError):
-                    continue
-                if 70 <= days <= 110 and fact.get("filed") and fact.get("accn"):
-                    candidates.append({**fact, "concept": concept_name, "unit": unit})
-        if candidates:
-            first_filed = min(item["filed"] for item in candidates)
-            original_filing = [item for item in candidates if item["filed"] == first_filed]
-            identities = {(item["accn"], item["start"], item["end"]) for item in original_filing}
-            if len(identities) != 1 or len({str(item["val"]) for item in original_filing}) != 1:
-                raise ValueError(f"Conflicting Q{quarter} revenue facts for FY{fiscal_year}.")
-            return original_filing[0]
-    raise ValueError(f"No standalone Q{quarter} USD revenue fact found for FY{fiscal_year}.")
+        entries = us_gaap.get(concept_name, {}).get("units", {}).get("USD", [])
+        direct = _select_original_quarter_fact(
+            entries, fiscal_year=fiscal_year, quarter=quarter,
+            concept_name=concept_name, duration_days=(70, 110),
+        )
+        if direct:
+            return direct
+
+        if quarter == 1:
+            continue
+        ytd_ranges = {2: (150, 210), 3: (220, 320)}
+        current_ytd = _select_original_quarter_fact(
+            entries, fiscal_year=fiscal_year, quarter=quarter,
+            concept_name=concept_name, duration_days=ytd_ranges[quarter],
+        )
+        prior_quarter_ytd_days = (70, 110) if quarter == 2 else (150, 210)
+        prior_ytd = _select_original_quarter_fact(
+            entries, fiscal_year=fiscal_year, quarter=quarter - 1,
+            concept_name=concept_name, duration_days=prior_quarter_ytd_days,
+        )
+        if not current_ytd or not prior_ytd:
+            continue
+        if (
+            prior_ytd["start"] != current_ytd["start"]
+            or prior_ytd["end"] >= current_ytd["end"]
+            or prior_ytd["filed"] >= current_ytd["filed"]
+        ):
+            continue
+        standalone_start = date.fromisoformat(prior_ytd["end"]).toordinal() + 1
+        standalone_days = (
+            date.fromisoformat(current_ytd["end"]).toordinal() - standalone_start
+        )
+        if not 70 <= standalone_days <= 110:
+            continue
+        try:
+            standalone_value = Decimal(str(current_ytd["val"])) - Decimal(str(prior_ytd["val"]))
+        except (InvalidOperation, TypeError, ValueError) as exc:
+            raise ValueError("YTD revenue facts are not numeric and cannot be differenced.") from exc
+        if not standalone_value.is_finite() or standalone_value < 0:
+            raise ValueError("Derived standalone quarterly revenue is invalid.")
+        return {
+            **current_ytd,
+            "start": date.fromordinal(standalone_start).isoformat(),
+            "val": standalone_value,
+            "derived_from_ytd": True,
+            "derivation_inputs": (prior_ytd, current_ytd),
+        }
+    raise ValueError(f"No standalone or safely derivable Q{quarter} USD revenue fact found for FY{fiscal_year}.")
 
 
 def resolve_quarterly_period(cik: str, fiscal_year: int, quarter: int, *, xbrl_service: XBRLService) -> AnnualPeriod:
@@ -200,5 +259,7 @@ def resolve_quarterly_period(cik: str, fiscal_year: int, quarter: int, *, xbrl_s
         fiscal_year=fiscal_year, start_date=fact["start"], end_date=fact["end"],
         form=fact["form"], concept=fact["concept"], filing_date=fact["filed"],
         accession_number=fact["accn"], currency=fact["unit"],
+        resolved_revenue_value=Decimal(str(fact["val"])),
+        revenue_derivation_inputs=tuple(fact.get("derivation_inputs", ())),
     )
 

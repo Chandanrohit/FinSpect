@@ -147,7 +147,7 @@ def sec_fact_to_financial_fact(
     evidence = EvidenceRef(
         evidence_id=f"sec-xbrl:{accession}:{taxonomy}:{concept}:{end}",
         document_id=f"sec-filing:{accession}",
-        evidence_type="xbrl_fact",
+        evidence_type=("derived" if raw.get("derived_from_ytd") else "xbrl_fact"),
         source_url=sec_filing_url(cik, accession),
         accession_number=accession,
         taxonomy=taxonomy,

@@ -88,14 +88,14 @@ python -m pytest -q
 python -m finspect.benchmark_eval --output reports/benchmark-report.json
 ```
 
-The expected current baseline is **304 passing tests** and a report with **20 PARTIAL, 0 FAIL**. The report includes per-operation reference matrices; check their case counts and failed checks, not just the aggregate. For each Q1, Q2, and Q3 revenue slice, expect 3 cases and 3 passes for NVDA, MSFT, and AAPL. These checks use fixed references and mocks, so they do not prove that today's SEC response or an LLM plan will be correct.
+The expected current baseline is **307 passing tests** and a report with **20 PARTIAL, 0 FAIL**. The report includes per-operation reference matrices; check their case counts and failed checks, not just the aggregate. For each Q1, Q2, and Q3 revenue slice, expect 3 cases and 3 passes for NVDA, MSFT, and AAPL. These checks use fixed references and mocks, so they do not prove that today's SEC response or an LLM plan will be correct.
 
 For a local live smoke check, verify that (1) Ollama is reachable and has the selected model, (2) the app starts without a configuration error, (3) a question returns a plan and answer, and (4) each cited filing, period, unit, and calculation agrees with the SEC filing. A live SEC request needs internet access and a valid `SEC_USER_AGENT`. Stop if the planner picks the wrong issuer, fiscal period, metric, or evidence; record the question and result as a benchmark case before treating the issue as fixed.
 
 ## Current coverage and limits
 
 - The annual pipeline supports the implemented Q01–Q20 archetypes across financial statements, segments, cash allocation, equity, commitments, risks, legal proceedings, market-risk disclosures, and selected narrative questions. Support and reference depth vary by operation; the benchmark report and [`data/benchmark`](data/benchmark) are the source of truth for individual cases.
-- Q1–Q3 year-over-year revenue growth has source-linked NVIDIA, Microsoft, and Apple references across different fiscal calendars and deterministic pipeline checks. Q2/Q3 YTD-only fallback derivation, Q4 support, and quarter-to-quarter comparisons are not implemented; YTD-only facts fail closed.
+- Q1–Q3 year-over-year revenue growth has source-linked NVIDIA, Microsoft, and Apple references across different fiscal calendars and deterministic pipeline checks. For Q2/Q3, the period resolver uses a direct standalone fact when available or derives it by subtracting consecutive original 10-Q year-to-date facts; it fails closed when periods, concepts, or filings do not align. YTD derivation has focused NVIDIA resolver and mocked-pipeline coverage, but broader issuer and amended-filing coverage plus live SEC integration remain open. Q4 and quarter-to-quarter comparisons are not implemented.
 - Annual reference matrices include NVIDIA, Microsoft, Apple, CVS Health, PepsiCo, and Amazon across operations. Coverage is uneven and remains limited; it does not establish support for every US-listed company or every question.
 - Live SEC retrieval and Ollama planning have not been comprehensively tested together against the reference benchmark. The checked-in report is deterministic and does not make an overall accuracy claim.
 - A local planner-only sweep of all 20 templates with `qwen2.5-coder:3b` returned schema-valid plans for 15/20; five were rejected by validation, and some valid plans selected the wrong operation or benchmark ID. This was not an answer-accuracy test. The SEC User-Agent was not configured for that run, so no live SEC answer sweep was performed.
@@ -104,7 +104,7 @@ For a local live smoke check, verify that (1) Ollama is reachable and has the se
 
 ## Next implementation priorities
 
-1. Add period-safe Q2/Q3 standalone-quarter derivation from SEC year-to-date facts, with tests for missing quarters, amended filings, and unmatched fiscal periods.
+1. Expand Q2/Q3 YTD-derivation references across fiscal calendars and sectors; add missing-quarter, amended-filing, and unmatched-period cases, then verify against live SEC company facts.
 2. Add source-backed cases for more sectors and less-covered operations, and test both live SEC retrieval and planner interpretation against expected references.
 3. Complete a Streamlit research-flow smoke check and Gnani STT/TTS account check with secrets configured locally; document any deployment-specific setup.
 4. Expand only after a question type has clear reference cases. Keep unsupported behavior explicit instead of guessing.

@@ -143,11 +143,59 @@ def test_resolves_standalone_q2_and_q3_without_substituting_ytd(
     assert fact["val"] == value
 
 
+@pytest.mark.parametrize(
+    ("quarter", "current_end", "current_ytd", "prior_ytd", "expected_start", "expected_value"),
+    [
+        (2, "2024-07-28", 56_084, 26_044, "2024-04-29", 30_040),
+        (3, "2024-10-27", 91_166, 56_084, "2024-07-29", 35_082),
+    ],
+)
+def test_derives_q2_q3_from_original_ytd_facts_and_ignores_same_filing_comparative(
+    quarter, current_end, current_ytd, prior_ytd, expected_start, expected_value
+):
+    entries = [
+        {"start": "2024-01-29", "end": "2024-04-28", "form": "10-Q",
+         "fy": 2025, "fp": "Q1", "filed": "2024-05-29", "accn": "q1",
+         "val": 26_044},
+        {"start": "2023-01-30", "end": "2023-04-30", "form": "10-Q",
+         "fy": 2025, "fp": "Q1", "filed": "2024-05-29", "accn": "q1",
+         "val": 7_192},
+        {"start": "2024-01-29", "end": "2024-07-28", "form": "10-Q",
+         "fy": 2025, "fp": "Q2", "filed": "2024-08-28", "accn": "q2",
+         "val": 56_084},
+        {"start": "2023-01-30", "end": "2023-07-30", "form": "10-Q",
+         "fy": 2025, "fp": "Q2", "filed": "2024-08-28", "accn": "q2",
+         "val": 20_699},
+    ]
+    if quarter == 3:
+        entries.append({
+            "start": "2024-01-29", "end": current_end, "form": "10-Q",
+            "fy": 2025, "fp": "Q3", "filed": "2024-11-20", "accn": "q3",
+            "val": current_ytd,
+        })
+        entries.append({
+            "start": "2023-01-30", "end": "2023-10-29", "form": "10-Q",
+            "fy": 2025, "fp": "Q3", "filed": "2024-11-20", "accn": "q3",
+            "val": 38_819,
+        })
+
+    facts = {"facts": {"us-gaap": {"Revenues": {"units": {"USD": entries}}}}}
+    fact = find_quarterly_revenue_fact(facts, 2025, quarter)
+
+    assert fact["start"] == expected_start
+    assert fact["end"] == current_end
+    assert fact["val"] == expected_value
+    assert fact["derived_from_ytd"] is True
+    assert [item["accn"] for item in fact["derivation_inputs"]] == (
+        ["q1", "q2"] if quarter == 2 else ["q2", "q3"]
+    )
+
+
 def test_quarter_resolver_fails_closed_for_ytd_only_or_q4_facts():
     facts = {"facts": {"us-gaap": {"Revenues": {"units": {"USD": [
         {"start": "2024-01-29", "end": "2024-07-28", "form": "10-Q", "fy": 2025, "fp": "Q2", "filed": "2024-08-28", "accn": "ytd", "val": 46743},
     ]}}}}}
-    with pytest.raises(ValueError, match="No standalone Q1"):
+    with pytest.raises(ValueError, match="No standalone or safely derivable Q1"):
         find_quarterly_revenue_fact(facts, 2025, 1)
     with pytest.raises(ValueError, match="supports fiscal quarters 1 through 3"):
         find_quarterly_revenue_fact(facts, 2025, 4)
