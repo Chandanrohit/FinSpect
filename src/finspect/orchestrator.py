@@ -37,6 +37,7 @@ from finspect.calculator import (
 from finspect.edgar.client import EdgarClient
 from finspect.edgar.facts import FactRetrievalError, FinancialFactRetriever
 from finspect.edgar.filings import FilingRetriever, FilingRetrievalError
+from finspect.edgar.parser import FilingParser
 from finspect.edgar.equity_statement import (
     EquityStatementError,
     EquityStatementExtractor,

@@ -4,7 +4,7 @@ from pathlib import Path
 
 import pytest
 
-from finspect.orchestrator import AnnualPeriod, FinSpectOrchestrator
+from finspect.orchestrator import AnnualPeriod, FinSpectOrchestrator, get_orchestrator
 from finspect.edgar.facts import FactRetrievalError
 from finspect.edgar.parser import FilingParser
 from finspect.plan_normalizer import normalize_query_plan
@@ -22,6 +22,16 @@ from finspect.schema import load_benchmark
 
 QUESTION = "Calculate NVIDIA's revenue growth from FY2024 to FY2025."
 CIK = "0001045810"
+
+
+def test_application_orchestrator_initializes_filing_parser(monkeypatch):
+    monkeypatch.setenv("SEC_USER_AGENT", "FinSpect test contact@example.com")
+    get_orchestrator.cache_clear()
+    try:
+        orchestrator = get_orchestrator()
+        assert orchestrator.filing_parser is not None
+    finally:
+        get_orchestrator.cache_clear()
 
 
 def make_plan() -> QueryPlan:

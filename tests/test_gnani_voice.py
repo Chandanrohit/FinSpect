@@ -73,6 +73,17 @@ def test_tts_requests_wav_and_returns_binary_audio():
     assert request["json"]["audio_config"]["container"] == "wav"
 
 
+def test_one_shared_key_authenticates_both_voice_services():
+    session = FakeSession(FakeResponse(payload={"success": True, "transcript": "question"}))
+    client = GnaniVoiceClient("shared-key", session=session)
+
+    client.transcribe(b"wav bytes", filename="question.wav")
+    client.synthesize("A concise result.")
+
+    assert session.calls[0][1]["headers"]["X-API-Key-ID"] == "shared-key"
+    assert session.calls[1][1]["headers"]["X-API-Key-ID"] == "shared-key"
+
+
 def test_missing_key_fails_without_making_a_request():
     with pytest.raises(ValueError, match="not configured"):
         GnaniVoiceClient("  ")

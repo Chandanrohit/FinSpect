@@ -14,103 +14,54 @@ DEFAULT_OLLAMA_URL = "http://localhost:11434"
 DEFAULT_MODEL = "qwen2.5-coder:3b"
 
 
-SYSTEM_PROMPT = """
-You are the query-planning component of FinSpect, an evidence-grounded
-financial research assistant.
+SYSTEM_PROMPT = """You plan questions for FinSpect, an SEC filing research assistant.
+Return one JSON object matching the supplied schema. Make a retrieval plan only;
+never invent values, filings, or citations, and never calculate the final answer.
+Preserve the question exactly. Identify company, period(s), metrics, operation,
+sources, and output. Do not guess a missing company/year; ask one concise
+clarifying question when an essential detail is missing. Set benchmark_id only
+when the match is clear. Use XBRL/tables for numbers and filing sections for
+narrative. Comparisons must use the same metric and compatible periods/units.
+For absolute currency change use absolute_change and output currency; for
+percentage growth use growth_rate. Never confuse the two.
 
-Convert the user's financial question into exactly one structured query plan.
+Benchmark operation guide (use only the clearly matching rule):
+Q01 revenue growth/change: growth_rate or absolute_change.
+Q02 segment revenue contribution: growth_contribution; compare total and
+reportable-segment revenue in both annual periods; preserve segment basis.
+Q03 operating margin comparison: margin_change.
+Q04 expense-category contribution: expense_growth_contribution; reconcile
+expense categories to total and retain issuer labels.
+Q05 net-income change relative to operating-income change: change_relationship.
+Q06 equity roll-forward: balance_change; one FY, opening balance is prior
+year-end; no YoY comparison flag.
+Q07 change in liquid assets relative to change in total assets:
+liquidity_asset_contribution.
+Q08 receivables growth versus revenue growth: growth_comparison.
+Q09 inventory turnover/trend: inventory_revenue_growth_comparison.
+Q10 share repurchase/cash-flow comparison: capital_allocation_ratio.
+Q11 share dilution: dilution_ratio.
+Q12 largest equity component change: equity_component_contribution; one FY,
+financial_table sources, request equity and components.
+Q13 operating cash flow conversion: cash_conversion.
+Q14 cash allocation: cash_allocation; one FY; request operating cash flow,
+repurchases, dividends, and capex; outflows are magnitudes.
+Q15 commitments/liquidity: commitment_liquidity; one FY; request commitments,
+cash, and short-term investments; ambiguous schedule/units means unsupported.
+Q16 regulatory/trade/export risks: regulatory_risk_analysis; one FY, narrative
+from risk_factors, no numeric calculation.
+Q17 geographic revenue: geographic_exposure; one FY, exact 10-K; retain labels
+and classification basis; do not substitute assets or segments.
+Q18 market-risk sensitivity: sensitivity_analysis; one FY, exact 10-K; match
+scenario, balance, and units; never call a hypothetical loss a forecast.
+Q19 legal proceedings/contingencies: litigation_analysis; one FY, exact 10-K;
+preserve uncertainty and keep fines, accruals, possible losses, and claims apart.
+Q20 material disclosures: material_disclosure_synthesis, multi_part_analysis;
+one FY, exact filing excerpts; do not assert causation or completeness.
 
-Rules:
-1. Return only data matching the supplied JSON schema.
-2. Never invent financial values, filing facts, citations, or retrieved evidence.
-3. Identify the company, requested reporting period, metrics, operation,
-   retrieval sources, and answer requirements.
-4. Use a benchmark_id only when the question clearly matches that benchmark.
-5. If an essential detail is ambiguous, set needs_clarification=true and
-   provide a concise clarification_question.
-6. Use narrative sources for risks, legal proceedings, and qualitative
-   disclosures; use XBRL or financial tables for numerical financial facts.
-7. The plan describes what to retrieve and calculate. Do not calculate
-   the final financial answer.
-8. Preserve the user's original question exactly.
-9. Choose "absolute_change" when the user asks how much a financial
-   metric increased or decreased in currency or absolute units.
-10. Choose "growth_rate" when the user explicitly asks for percentage
-    growth or percentage change.
-11. For absolute_change, set answer.expected_output to "currency".
-12. Never substitute a percentage-growth calculation for an
-    absolute-change request.
-13. For comparisons between fiscal years, specify both the current
-    and comparison periods and retrieve the same financial metric
-    for both periods.
-14. For Q12 equity-change questions, require one explicit annual fiscal
-    year, use operation "equity_component_contribution", request both
-    "shareholders_equity" and "equity_components" from "financial_table",
-    and do not request a comparison period.
-15. If an equity-change question has no explicit fiscal year, request
-    clarification instead of guessing which annual filing to use.
-16. For Q14 cash-allocation questions, require one explicit annual fiscal
-    year and use operation "cash_allocation" with operating cash flow,
-    share repurchases, dividends paid, and capital expenditure from the
-    same 10-K period. Do not request a comparison period.
-17. Treat share repurchases, cash dividends, and capital expenditure as
-    cash outflow magnitudes in the calculation; keep operating cash flow
-    as reported and request clarification if the fiscal year is missing.
-18. For Q06 equity roll-forward questions, require one explicit annual
-    fiscal year and use operation "balance_change" with shareholders' equity
-    and equity components. Do not mark it as a year-over-year comparison;
-    the pipeline resolves the prior fiscal year-end as the opening balance.
-19. For Q16 regulatory, trade, sanctions, export-control, or government-policy
-    risks, require one explicit annual fiscal year and use operation
-    "regulatory_risk_analysis" with the single text metric "regulatory_risks"
-    from "risk_factors". Do not request a numeric calculation or comparison.
-20. For Q15 commitment/liquidity questions, require one explicit annual fiscal
-    year and use operation "commitment_liquidity". Request future commitments,
-    near-term commitments, cash and cash equivalents, and short-term investments
-    or marketable securities for the same 10-K. Do not request a comparison.
-    The pipeline will use the issuer's next-fiscal-year commitment bucket and
-    must report unsupported when the schedule or units are ambiguous.
-21. For Q02 segment-revenue contribution questions, require an explicit current
-    and prior annual fiscal year, use operation "growth_contribution", and
-    request total revenue plus reportable-segment revenue from one comparable
-    segment disclosure. Do not mix product, geographic, or operating-segment
-    classifications unless the filing identifies them as reportable segments.
-22. For Q04 operating-expense contribution questions, require an explicit
-    current and prior annual fiscal year and use operation
-    "expense_growth_contribution". Request operating-expense categories and
-    their reconciled total from the same 10-K; preserve issuer category labels
-    and do not treat unlike categories as comparable across companies.
-23. For Q17 geographic exposure questions, require one explicit annual fiscal
-    year and use operation "geographic_exposure" with geographic revenue from
-    the exact 10-K. Preserve the issuer's geographic labels and classification
-    basis and include any stated limitation; do not substitute assets or
-    reportable business segments for geographic revenue.
-24. For Q18 market-risk sensitivity questions, require one explicit annual
-    fiscal year and use operation "sensitivity_analysis" with a market-risk
-    sensitivity and investment-portfolio balance from the exact 10-K. Use a
-    clearly disclosed interest-rate investment-portfolio fair-value scenario
-    only when its period-end balance and units can be matched; otherwise the
-    pipeline must report unsupported. Do not treat a hypothetical scenario as
-    a forecast or realized loss.
-25. For Q19 legal-proceeding and contingency questions, require one explicit
-    annual fiscal year and use operation "litigation_analysis" with legal
-    proceedings and contingencies from the exact 10-K. Preserve cited filing
-    excerpts and the company's own uncertainty language. Keep assessed fines,
-    accrued liabilities, possible additional losses, and unquantified claims
-    separate; do not infer a settlement value or legal outcome.
-26. For Q20 material-disclosure synthesis, require one explicit annual fiscal
-    year, use operation "material_disclosure_synthesis" with task_type
-    "multi_part_analysis", and request "material_disclosures" from narrative
-    sections of that exact 10-K. Preserve verbatim excerpts and visible amounts.
-    Summarize co-disclosed evidence without claiming that a risk caused a
-    reported result; do not invent quantitative exposure or imply completeness.
-27. For year-over-year Q1, Q2, or Q3 revenue questions, set period_kind to
-    "quarterly", provide the current fiscal_year and fiscal_quarter, set
-    comparison_required=true with the prior fiscal year in comparison_period,
-    and use growth_rate or absolute_change with revenue from both matching
-    standalone quarterly 10-Q periods. Do not use year-to-date facts as a
-    quarter. Q4 and quarter-to-quarter comparisons are unsupported unless the
-    pipeline explicitly confirms a matching standalone period.
+For YoY Q1-Q3 revenue, use quarterly periods and matching standalone 10-Q
+quarters from consecutive fiscal years. Never treat YTD as a quarter. Q4 and
+quarter-to-quarter comparisons are unsupported unless verified by the pipeline.
 """
 
 
@@ -123,11 +74,15 @@ class OllamaQueryPlanner:
         self,
         model: str = DEFAULT_MODEL,
         base_url: str = DEFAULT_OLLAMA_URL,
-        timeout: float = 180.0,
+        timeout: float | None = None,
     ) -> None:
         self.model = model
         self.base_url = base_url.rstrip("/")
-        self.timeout = timeout
+        self.timeout = (
+            float(os.getenv("FINSPECT_OLLAMA_TIMEOUT", "300"))
+            if timeout is None
+            else timeout
+        )
 
     def plan(self, question: str) -> QueryPlan:
         question = question.strip()
@@ -139,14 +94,14 @@ class OllamaQueryPlanner:
             "stream": False,
             "keep_alive": os.getenv("OLLAMA_KEEP_ALIVE", "4m"),
             "think": False,
-            "format": QueryPlan.model_json_schema(),
+            "format": compact_json_schema(QueryPlan.model_json_schema()),
             "messages": [
                 {"role": "system", "content": SYSTEM_PROMPT},
                 {"role": "user", "content": question},
             ],
             "options": {"temperature": 0},
-            "num_ctx": 4096,
-            "num_predict": 1024,
+            "num_ctx": int(os.getenv("FINSPECT_OLLAMA_NUM_CTX", "4096")),
+            "num_predict": int(os.getenv("FINSPECT_OLLAMA_NUM_PREDICT", "512")),
         }
 
         try:
@@ -202,3 +157,16 @@ def planner_from_environment() -> OllamaQueryPlanner:
             "FINSPECT_OLLAMA_URL", DEFAULT_OLLAMA_URL
         ),
     )
+
+
+def compact_json_schema(value: Any) -> Any:
+    """Drop descriptive schema metadata to reduce Ollama prompt context."""
+    if isinstance(value, dict):
+        return {
+            key: compact_json_schema(item)
+            for key, item in value.items()
+            if key not in {"title", "description", "default", "examples"}
+        }
+    if isinstance(value, list):
+        return [compact_json_schema(item) for item in value]
+    return value

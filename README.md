@@ -38,6 +38,9 @@ SEC's public endpoints do not use an API key. SEC asks clients to identify thems
 ```powershell
 $env:SEC_USER_AGENT = "FinSpect/0.1 contact your-email@example.com"
 $env:FINSPECT_OLLAMA_MODEL = "qwen2.5-coder:3b"
+$env:FINSPECT_OLLAMA_TIMEOUT = "300"
+$env:FINSPECT_OLLAMA_NUM_CTX = "4096"
+$env:FINSPECT_OLLAMA_NUM_PREDICT = "512"
 ```
 
 Install the default model once if needed:
@@ -50,13 +53,13 @@ Make sure Ollama is running. If it is not already running as a service, open ano
 
 ### 3. (Optional) Configure Gnani voice
 
-Text questions need no Gnani key. For optional voice input and spoken summaries, create `.streamlit/secrets.toml` in the repository root:
+Text questions need no Gnani credentials. For voice, paste your single shared key into the local, Git-ignored file `D:\Finspect\v0.1\.streamlit\secrets.toml` (create the `.streamlit` folder if needed):
 
 ```toml
-GNANI_API_KEY_ID = "your Gnani key ID"
+GNANI_API_KEY_ID = "your Gnani API key ID"
 ```
 
-This file is ignored by Git. Keep the key in this local file or a deployment secrets manager; do not put it in source code, browser UI, chat, screenshots, or commits. The app sends it server-side in Gnani's `X-API-Key-ID` header. Real STT/TTS account calls have not yet been verified.
+This file is ignored by Git. The app reads the key server-side and sends it in Gnani's `X-API-Key-ID` header for both services; it never displays or accepts keys on the dashboard. Restart Streamlit after adding the key. Do not put credentials in source code, screenshots, chat, or commits. Real STT/TTS account calls have not yet been verified.
 
 ### 4. Start Streamlit
 
@@ -72,6 +75,10 @@ Open the local URL Streamlit prints, usually `http://localhost:8501`. Try a boun
 
 The quarterly reference gate covers Q1 revenue only. For annual examples, try Microsoft's FY2024-to-FY2025 revenue growth or an NVIDIA annual operation. Check the result's periods, values, units, and SEC filing links before relying on it.
 
+### If the local model is slow or runs out of context
+
+FinSpect sends a compact planning prompt and schema, not the full chat history. Ollama requests use a 4,096-token context by default and allow 300 seconds for the planner response. A larger context uses more memory; raise `FINSPECT_OLLAMA_NUM_CTX` only if Ollama reports a context-length error and your machine has enough memory. If the client times out while the model is still responding, raise `FINSPECT_OLLAMA_TIMEOUT` (for example, to `600`); this waits longer but does not make inference faster. Keep `FINSPECT_OLLAMA_NUM_PREDICT` near `512` for the structured plan output.
+
 ## Check whether it is working
 
 Run the automated suite and regenerate the deterministic benchmark report from the repository root:
@@ -81,7 +88,7 @@ python -m pytest -q
 python -m finspect.benchmark_eval --output reports/benchmark-report.json
 ```
 
-The expected current baseline is **298 passing tests** and a report with **20 PARTIAL, 0 FAIL**. The report includes per-operation reference matrices; check their case counts and failed checks, not just the aggregate. For the Q1 revenue slice, expect 3 cases and 3 passes for NVDA, MSFT, and AAPL. These checks use fixed references and mocks, so they do not prove that today's SEC response or an LLM plan will be correct.
+The expected current baseline is **301 passing tests** and a report with **20 PARTIAL, 0 FAIL**. The report includes per-operation reference matrices; check their case counts and failed checks, not just the aggregate. For the Q1 revenue slice, expect 3 cases and 3 passes for NVDA, MSFT, and AAPL. These checks use fixed references and mocks, so they do not prove that today's SEC response or an LLM plan will be correct.
 
 For a local live smoke check, verify that (1) Ollama is reachable and has the selected model, (2) the app starts without a configuration error, (3) a question returns a plan and answer, and (4) each cited filing, period, unit, and calculation agrees with the SEC filing. A live SEC request needs internet access and a valid `SEC_USER_AGENT`. Stop if the planner picks the wrong issuer, fiscal period, metric, or evidence; record the question and result as a benchmark case before treating the issue as fixed.
 
@@ -91,6 +98,7 @@ For a local live smoke check, verify that (1) Ollama is reachable and has the se
 - Q1 year-over-year revenue growth supports standalone Q1 10-Q periods and has NVIDIA, Microsoft, and Apple references across different fiscal calendars. Q2/Q3 standalone derivation and Q4 or quarter-to-quarter comparisons are not implemented.
 - Annual reference matrices include NVIDIA, Microsoft, Apple, CVS Health, PepsiCo, and Amazon across operations. Coverage is uneven and remains limited; it does not establish support for every US-listed company or every question.
 - Live SEC retrieval and Ollama planning have not been comprehensively tested together against the reference benchmark. The checked-in report is deterministic and does not make an overall accuracy claim.
+- A local planner-only sweep of all 20 templates with `qwen2.5-coder:3b` returned schema-valid plans for 15/20; five were rejected by validation, and some valid plans selected the wrong operation or benchmark ID. This was not an answer-accuracy test. The SEC User-Agent was not configured for that run, so no live SEC answer sweep was performed.
 - Q20 topic matching is bounded and is not an exhaustive risk analysis or validated materiality ranking. Narrative extraction has heuristic limits.
 - Custom issuer tags, IFRS data, FX conversion, and disclosures that are missing, ambiguous, or incompatible with the requested periods may be unsupported. FinSpect is a prototype, not financial advice; verify important results against the cited filing.
 
