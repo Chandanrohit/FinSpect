@@ -168,7 +168,7 @@ def display_result(result: Any) -> None:
 
 def _voice_backend_request(path: str, **kwargs: Any) -> requests.Response:
     """Call the local FastAPI process without moving Gnani credentials into Streamlit."""
-    base_url = os.getenv("FINSPECT_VOICE_API_URL", "http://127.0.0.1:8000").rstrip("/")
+    base_url = os.getenv("FINSPECT_VOICE_API_URL", "http://127.0.0.1:8001").rstrip("/")
     try:
         response = requests.post(
             f"{base_url}{path}",
