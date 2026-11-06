@@ -16,7 +16,7 @@ flowchart LR
     C --> A[Answer with periods and SEC sources]
 ```
 
-The Streamlit interface presents the plan, answer, and evidence from the same research pipeline. It does not calculate financial values in the browser.
+The Streamlit interface presents the plan, answer, and evidence from the same research pipeline. It does not calculate financial values in the browser. Voice requests go from Streamlit to a local FastAPI service bound to `127.0.0.1`; that service keeps the Gnani key server-side for both STT and TTS.
 
 ## Run locally (Windows PowerShell)
 
@@ -61,19 +61,42 @@ Text questions need no Gnani credentials. For voice, paste your single shared ke
 GNANI_API_KEY_ID = "[Paste API Key]"
 ```
 
-Replace `[Paste API Key]` with your Gnani API key ID locally. This file is ignored by Git. The app reads the key server-side and sends it in Gnani's `X-API-Key-ID` header for both services; it never displays or accepts keys on the dashboard. Restart Streamlit after adding the key. Do not put credentials in source code, screenshots, chat, or commits. Real STT/TTS account calls have not yet been verified.
+Replace `[Paste API Key]` with your Gnani API key ID locally. This file is ignored by Git. The FastAPI voice service reads the key server-side and sends it in Gnani's `X-API-Key-ID` header for both STT and TTS; the dashboard never displays or accepts keys. Restart the voice service after adding or changing the key. Do not put credentials in source code, screenshots, chat, or commits. Real STT/TTS account calls have not yet been verified.
 
-### 4. Start Streamlit
+### 4. Start the local voice backend
+
+Open a second PowerShell window at the repository root and run:
+
+```powershell
+.\.venv\Scripts\python.exe -m uvicorn finspect.voice_api:app --app-dir src --host 127.0.0.1 --port 8001
+```
+
+The service binds only to the local computer. Confirm it is ready at `http://127.0.0.1:8001/health`; `gnani_configured` should be `true`. The health response never includes the key. If you prefer a different local port, set `FINSPECT_VOICE_API_URL` in the Streamlit terminal to the matching local URL.
+
+### 5. Start Streamlit
 
 In the PowerShell window with the SEC settings, run:
 
 ```powershell
+$env:FINSPECT_VOICE_API_URL = "http://127.0.0.1:8001"
 .\.venv\Scripts\python.exe -m streamlit run src/finspect/app.py
 ```
 
 Open the local URL Streamlit prints, usually `http://localhost:8501`. Try a bounded supported question such as:
 
 > For NVIDIA, what was the year-over-year revenue growth in fiscal Q1 2025 compared with fiscal Q1 2024?
+
+### Open it from another device or over the internet
+
+The checked-in `.streamlit/config.toml` binds Streamlit to `0.0.0.0`, so another device on the same LAN can open the Streamlit Network URL (typically `http://<computer-LAN-IP>:8501`). Windows Firewall must allow the Python/Streamlit process on that private network. The FastAPI voice service remains bound to loopback; Streamlit calls it server-side.
+
+Browsers allow microphone capture on `localhost` or HTTPS, but block it on plain HTTP LAN/IP addresses. For a temporary HTTPS preview, keep Streamlit and FastAPI running, then open a fourth PowerShell window and run a Cloudflare Quick Tunnel:
+
+```powershell
+cloudflared tunnel --url http://127.0.0.1:8501 --allowed-mail "your-email@example.com"
+```
+
+Open the `https://…trycloudflare.com` address printed by the command and enter the allowed email/PIN. Replace the example email with your own. Keep the tunnel terminal open. This is a temporary preview; anyone who can pass the email check can access the app, and the URL stops working when the process stops. Do not expose the app without access protection.
 
 The quarterly reference gates cover Q1–Q3 revenue growth. Q2/Q3 pipeline checks use deterministic period-matched SEC fact fixtures; live SEC and planner interpretation remain unevaluated. For annual examples, try Microsoft's FY2024-to-FY2025 revenue growth or an NVIDIA annual operation. Check the result's periods, values, units, and SEC filing links before relying on it.
 
@@ -90,7 +113,7 @@ Run the automated suite and regenerate the deterministic benchmark report from t
 .\.venv\Scripts\python.exe -m finspect.benchmark_eval --output reports/benchmark-report.json
 ```
 
-The expected current baseline is **309 passing tests** and a report with **20 PARTIAL, 0 FAIL**. The report includes per-operation reference matrices; check their case counts and failed checks, not just the aggregate. For each Q1, Q2, and Q3 revenue slice, expect 3 cases and 3 passes for NVDA, MSFT, and AAPL. The YTD-derived Q2/Q3 matrix has 6/6 passes across the same issuers. These checks use fixed references and mocks, so they do not prove that today's SEC response or an LLM plan will be correct.
+The expected current baseline is **326 passing tests** and a report with **20 PARTIAL, 0 FAIL**. The report includes per-operation reference matrices; check their case counts and failed checks, not just the aggregate. For each Q1, Q2, and Q3 revenue slice, expect 3 cases and 3 passes for NVDA, MSFT, and AAPL. The YTD-derived Q2/Q3 matrix has 6/6 passes across the same issuers. These checks use fixed references and mocks, so they do not prove that today's SEC response or an LLM plan will be correct.
 
 For a local live smoke check, verify that (1) Ollama is reachable and has the selected model, (2) the app starts without a configuration error, (3) a question returns a plan and answer, and (4) each cited filing, period, unit, and calculation agrees with the SEC filing. A live SEC request needs internet access and a valid `SEC_USER_AGENT`. Stop if the planner picks the wrong issuer, fiscal period, metric, or evidence; record the question and result as a benchmark case before treating the issue as fixed.
 

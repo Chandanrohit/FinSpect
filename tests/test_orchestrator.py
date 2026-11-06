@@ -1829,18 +1829,13 @@ def test_q16_regulatory_risk_uses_item_1a_excerpt_from_exact_10k():
     )
     plan = make_plan().model_copy(update={
         "original_question": question,
-        "period": PeriodRequest(
-            period_label="FY2025",
-            period_kind="annual",
-            fiscal_year=2025,
-            comparison_required=False,
-        ),
+        "period": PeriodRequest(),
         "benchmark_id": "Q16",
-        "task_type": "disclosure_analysis",
+        "task_type": "comparison",
         "operation": "regulatory_risk_analysis",
         "metrics": [
             MetricRequest(
-                name="regulatory_risks", role="primary", sources=["risk_factors"]
+                name="regulatory_risk_analysis", role="comparison", sources=["risk_factors"]
             )
         ],
         "retrieval": RetrievalRequirements(sources=["risk_factors"]),
@@ -2405,11 +2400,12 @@ def test_q03_nvidia_operating_margin_change_end_to_end_fixture():
     )
     plan = make_plan().model_copy(update={
         "original_question": question,
+        "period": PeriodRequest(),
         "benchmark_id": "Q03",
-        "operation": "margin_change",
+        "task_type": "comparison",
+        "operation": "change_relationship",
         "metrics": [
-            MetricRequest(name="revenue", role="supporting", sources=["xbrl"]),
-            MetricRequest(name="operating_income", role="primary", sources=["xbrl"]),
+            MetricRequest(name="margin_change", role="primary", sources=["financial_table"]),
         ],
         "answer": AnswerRequirements(
             include_formula=True,

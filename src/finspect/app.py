@@ -13,6 +13,7 @@ from decimal import Decimal
 from enum import Enum
 from pathlib import Path
 from typing import Any
+import requests
 import streamlit as st
 
 # Streamlit may execute this file without putting the src-layout package root
@@ -24,7 +25,6 @@ if _SRC_ROOT not in sys.path:
 from finspect.orchestrator import run_query
 from finspect.gnani_voice import (
     GnaniAPIError,
-    GnaniVoiceClient,
     prepare_spoken_summary,
 )
 
@@ -166,20 +166,49 @@ def display_result(result: Any) -> None:
         st.json(to_json_safe(details))
 
 
-def _configured_value(name: str) -> str | None:
-    value = os.getenv(name, "").strip()
-    if value:
-        return value
+def _voice_backend_request(path: str, **kwargs: Any) -> requests.Response:
+    """Call the local FastAPI process without moving Gnani credentials into Streamlit."""
+    base_url = os.getenv("FINSPECT_VOICE_API_URL", "http://127.0.0.1:8000").rstrip("/")
     try:
-        value = str(st.secrets.get(name, "")).strip()
-    except Exception:
-        value = ""
-    return value or None
+        response = requests.post(
+            f"{base_url}{path}",
+            timeout=(5, 75),
+            **kwargs,
+        )
+    except requests.Timeout:
+        raise GnaniAPIError(
+            "The local voice backend timed out. Confirm FastAPI is running, then retry.",
+            category="backend_timeout",
+        ) from None
+    except requests.ConnectionError:
+        raise GnaniAPIError(
+            "The local voice backend is unavailable. Start FastAPI in a second terminal, then retry.",
+            category="backend_unavailable",
+        ) from None
+    except requests.RequestException:
+        raise GnaniAPIError(
+            "The local voice backend request failed.", category="backend_request_error"
+        ) from None
 
-
-def configured_gnani_key() -> str | None:
-    """Resolve one shared server-side key for both Gnani voice services."""
-    return _configured_value("GNANI_API_KEY_ID")
+    if not response.ok:
+        detail: Any = None
+        try:
+            detail = response.json().get("detail")
+        except (ValueError, TypeError, AttributeError):
+            pass
+        if isinstance(detail, dict):
+            raise GnaniAPIError(
+                str(detail.get("message") or "Gnani voice request failed."),
+                status_code=detail.get("upstream_status") or response.status_code,
+                category=detail.get("category"),
+                request_id=detail.get("request_id"),
+            )
+        if isinstance(detail, str):
+            message = detail
+        else:
+            message = f"Local voice backend returned HTTP {response.status_code}."
+        raise GnaniAPIError(message, status_code=response.status_code)
+    return response
 
 
 def research_and_display(question: str, *, speak: bool = False) -> None:
@@ -211,18 +240,17 @@ def research_and_display(question: str, *, speak: bool = False) -> None:
                 answer_unit,
             )
             try:
-                api_key = configured_gnani_key()
-                if not api_key:
-                    st.info(
-                        "Add GNANI_API_KEY_ID to .streamlit/secrets.toml to enable spoken summaries."
-                    )
-                    return
                 with st.spinner("Generating a concise spoken summary with Gnani AI..."):
-                    audio = GnaniVoiceClient(api_key).synthesize(summary)
+                    audio = _voice_backend_request(
+                        "/api/voice/synthesize",
+                        json={"text": summary},
+                    ).content
                 st.caption("Spoken summary")
                 st.audio(audio, format="audio/wav")
             except GnaniAPIError as exc:
                 st.warning(f"Speech playback is unavailable: {exc}")
+                if exc.request_id:
+                    st.caption(f"Gnani request ID: {exc.request_id}")
     except Exception as exc:
         st.error("FinSpect could not complete this query.")
         st.info(
@@ -355,30 +383,63 @@ with st.expander("Ask by voice with Gnani AI"):
         list(voice_languages),
         key="voice_language",
     )
-    recorded_audio = st.audio_input("Record a question (maximum 30 seconds)")
+    recorded_audio = st.audio_input(
+        "Record a question (maximum 30 seconds)",
+        sample_rate=16000,
+        key="voice_recording",
+    )
+    st.caption(
+        "Microphone access requires localhost or HTTPS. A plain HTTP Network URL may open the app but the browser will block recording."
+    )
     if st.button(
         "Transcribe with Gnani AI",
         disabled=recorded_audio is None,
         key="transcribe_voice_question",
     ):
-        api_key = configured_gnani_key()
-        if not api_key:
-            st.warning(
-                "Gnani voice is not configured. Add GNANI_API_KEY_ID to "
-                ".streamlit/secrets.toml, then restart Streamlit."
-            )
-        else:
-            try:
-                with st.spinner("Transcribing with Gnani Prisma..."):
-                    client = GnaniVoiceClient(api_key)
-                    transcript = client.transcribe(
-                        recorded_audio.getvalue(),
-                        filename="question.wav",
-                        language_code=voice_languages[voice_language],
+        st.session_state["voice_transcript"] = ""
+        try:
+            with st.spinner("Transcribing with Gnani Prisma v3..."):
+                transcript_response = _voice_backend_request(
+                    "/api/voice/transcribe",
+                    data={"language_code": voice_languages[voice_language]},
+                    files={
+                        "audio_file": (
+                            getattr(recorded_audio, "name", "question.wav"),
+                            recorded_audio.getvalue(),
+                            getattr(recorded_audio, "type", "audio/wav"),
+                        )
+                    },
+                )
+                try:
+                    payload = transcript_response.json()
+                except (ValueError, TypeError):
+                    raise GnaniAPIError(
+                        "The local voice backend returned invalid JSON.",
+                        category="invalid_backend_response",
+                    ) from None
+                transcript = payload.get("transcript") if isinstance(payload, dict) else None
+                if not isinstance(transcript, str) or not transcript.strip():
+                    raise GnaniAPIError(
+                        "The local voice backend returned an empty or invalid transcript.",
+                        category="invalid_backend_response",
                     )
-                st.session_state["voice_transcript"] = transcript
-            except (GnaniAPIError, ValueError) as exc:
-                st.warning(f"Voice transcription is unavailable: {exc}")
+            st.session_state["voice_transcript"] = transcript.strip()
+            st.session_state["voice_transcription_empty"] = False
+        except (GnaniAPIError, ValueError) as exc:
+            st.warning(f"Voice transcription is unavailable: {exc}")
+            if isinstance(exc, GnaniAPIError):
+                diagnostics = []
+                if exc.status_code is not None:
+                    diagnostics.append(f"HTTP {exc.status_code}")
+                if exc.category:
+                    diagnostics.append(f"code {exc.category}")
+                if exc.request_id:
+                    diagnostics.append(f"request ID {exc.request_id}")
+                if diagnostics:
+                    st.caption("Gnani diagnostic: " + " · ".join(diagnostics))
+            st.session_state["voice_transcription_empty"] = (
+                isinstance(exc, GnaniAPIError) and exc.category == "empty_transcript"
+            )
 
     if "voice_transcript" not in st.session_state:
         st.session_state["voice_transcript"] = ""
@@ -393,6 +454,8 @@ with st.expander("Ask by voice with Gnani AI"):
                 research_and_display(transcript.strip(), speak=True)
             else:
                 st.warning("The recognized question is empty.")
+    elif st.session_state.get("voice_transcription_empty"):
+        st.info("Gnani returned no speech. Record a clear question and try again.")
 
 with st.form("research_form"):
     question = st.text_area(

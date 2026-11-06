@@ -139,3 +139,80 @@ def test_does_not_change_unknown_company_identity():
     assert normalized.company.name == "Example Robotics"
     assert normalized.company.ticker == "EXRB"
     assert normalized.company.cik is None
+
+
+def test_repairs_qwen_operating_margin_intent_for_preloaded_question():
+    plan = make_plan(
+        original_question="How did NVIDIA's operating margin change from FY2024 to FY2025?",
+        period={
+            "period_label": None,
+            "period_kind": "unspecified",
+            "fiscal_year": None,
+            "fiscal_quarter": None,
+            "comparison_required": False,
+            "comparison_period": None,
+        },
+        benchmark_id="Q03",
+        task_type="comparison",
+        metrics=[
+            {
+                "name": "margin_change",
+                "role": "primary",
+                "sources": ["financial_table"],
+                "required": True,
+                "concept_hint": None,
+            }
+        ],
+        operation="change_relationship",
+    )
+
+    normalized = normalize_query_plan(plan)
+
+    assert normalized.operation == "margin_change"
+    assert normalized.benchmark_id == "Q03"
+    assert normalized.period.period_kind == "annual"
+    assert normalized.period.fiscal_year == 2025
+    assert normalized.period.comparison_required is True
+    assert normalized.period.comparison_period == "FY2024"
+    assert {metric.name for metric in normalized.metrics} == {
+        "total revenue",
+        "operating income",
+    }
+    assert normalized.answer.expected_output == "percentage_points"
+
+
+def test_repairs_geographic_risk_plan_for_a_10k_year():
+    plan = make_plan(
+        original_question="What are geographic risk for NVIDIA in 10K form in 2025",
+        period={
+            "period_label": None,
+            "period_kind": "unspecified",
+            "fiscal_year": None,
+            "fiscal_quarter": None,
+            "comparison_required": False,
+            "comparison_period": None,
+        },
+        benchmark_id="Q16",
+        task_type="comparison",
+        metrics=[
+            {
+                "name": "regulatory_risk_analysis",
+                "role": "comparison",
+                "sources": ["risk_factors"],
+                "required": True,
+                "concept_hint": None,
+            }
+        ],
+        operation="regulatory_risk_analysis",
+    )
+
+    normalized = normalize_query_plan(plan)
+
+    assert normalized.operation == "regulatory_risk_analysis"
+    assert normalized.task_type == "disclosure_analysis"
+    assert normalized.period.period_kind == "annual"
+    assert normalized.period.fiscal_year == 2025
+    assert normalized.period.comparison_required is False
+    assert [metric.name for metric in normalized.metrics] == ["risk factors"]
+    assert normalized.retrieval.sources == ["risk_factors"]
+    assert normalized.answer.expected_output == "text"
