@@ -12,33 +12,11 @@ A locally hosted Qwen model (through Ollama) interprets the question into a stru
 
 FinSpect separates question interpretation (LLM) from financial calculation (deterministic Python). The LLM never produces financial figures; it only turns a natural-language question into a structured query plan that the calculation pipeline consumes.
 
-### Text input flow
+### Architecture
+flowchart TB    subgraph IN["Input"]        direction LR        T["Text question (English)"]        V["Voice audio (English, max 30s)"]    end    STT["Gnani Prisma v3 — Speech to Text"]    subgraph INTERP["Interpretation"]        LLM["Local Qwen model (qwen2.5-coder:3b via Ollama) — interpretation only, NO calculations"]    end    subgraph PIPE["FinSpect Pipeline"]        PLAN["Structured query plan — company, period, metric, operation"]        SEC["SEC EDGAR retrieval — XBRL facts, 10-K filings"]        CALC["Deterministic calculator — Python, all arithmetic"]    end    subgraph OUT["Output"]        direction LR        ANSWER["Answer + formula + evidence + SEC source links"]        TTS["Gnani Timbre v2.5 — Text to Speech"]    end    T --> LLM    V --> STT --> LLM    LLM --> PLAN    PLAN --> SEC    SEC --> CALC    CALC --> ANSWER    ANSWER --> TTS
 
-```
-User question (English)
-  → Local Ollama planner (qwen2.5-coder:3b)
-  → Structured query plan (company, period, metrics, operation)
-  → Plan normalization + validation
-  → SEC EDGAR retrieval (company facts, filings, XBRL)
-  → Period, unit, and identity checks
-  → Deterministic Python calculation
-  → Answer with formula, inputs, periods, and SEC evidence
-  → Streamlit display
-```
+![](architecture.png)
 
-### Voice input flow
-
-```
-User audio (English, max 30 seconds)
-  → Streamlit audio capture (microphone or WAV upload)
-  → Local FastAPI voice service (127.0.0.1:8000)
-  → Gnani Prisma v3 speech-to-text
-  → Transcribed question (English)
-  → User reviews / edits transcript
-  → Same orchestration pipeline as text input
-  → SEC EDGAR retrieval + deterministic calculation
-  → Answer with evidence
-```
 
 ### Optional spoken response
 
