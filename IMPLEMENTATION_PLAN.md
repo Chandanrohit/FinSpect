@@ -6,6 +6,13 @@ Build a dependable research assistant for questions answerable from SEC filings 
 
 The current product benchmark contains 20 reusable question archetypes in five layers. The target is to support each archetype through reusable operations that handle natural-language paraphrases and issuer data; it is not to hard-code every wording or every company. Where issuers use different valid tags, calendars, or disclosure structures, add evidence-based mappings and test them. Questions outside the benchmark or beyond available filing evidence must be identified as unsupported rather than guessed.
 
+## Design principles
+
+- **LLM for interpretation only.** The local Qwen model (qwen2.5-coder:3b via Ollama) interprets the question into a structured query plan. It does not perform calculations, produce financial figures, or retrieve data. All arithmetic is handled by the deterministic Python calculator.
+- **English only.** The application supports English input and output only. Multilingual input and output are not supported. Gnani Prisma STT and Timbre TTS are configured for English (en-IN).
+- **One question at a time.** The application processes one question per submission. Multi-part questions may confuse the planner or return an unsupported-answer response.
+- **Calculation is separate from interpretation.** The LLM produces a plan; the calculator consumes it. This separation ensures financial results are deterministic and verifiable, not LLM-generated.
+
 ## Benchmark rules
 
 - Use fixed, versioned cases with a named issuer, filing accession, question, expected inputs, expected result or required evidence, and source links. Generic question templates without gold inputs do not count as evaluated coverage.
@@ -58,12 +65,63 @@ Keep the first screen focused on asking a company question. Use familiar investi
 
 **Exit:** first-use workflow is understandable without developer terminology; unsupported benchmark templates are not offered as ready-to-run prompts; verified examples, evidence, errors, and voice flow render correctly in a local smoke check. Include this work in a benchmark-qualified commit.
 
-## Current state and next slice
+## Current state
 
-Overall benchmark report: 20 `PARTIAL`, 0 `UNSUPPORTED`, 0 `PASS`, 0 `FAIL`. Partial status means a reference-backed offline gate passed while live question interpretation remains unevaluated; it is not live accuracy. Q02 extracts reportable-segment revenue from the exact current 10-K, reconciles both fiscal years to total revenue, selects the largest positive segment increase, and links the answer to filing evidence. Its six cases pass across Apple, Microsoft, and Amazon for FY2024/FY2025, and live SEC extraction was exercised for every exact filing. The parser handles direct segment rows and grouped Revenue/Net sales rows, rejects unreconciled tables, and fails closed on conflicting candidate schedules. Q04 now extracts issuer-labeled operating-expense categories from the exact 10-K and reconciles them to reported total expenses; where a subtotal is not separately shown, Microsoft expense totals are derived from gross margin minus operating income and the answer shows both inputs. Its six cases pass across Apple, Microsoft, and Amazon for FY2024/FY2025, and live SEC extraction was exercised for every exact filing. Category labels remain issuer-specific and are not compared across companies. Q12 has a planner contract and an exact 10-K retrieval-to-answer path with filing metadata checks, statement-of-equity extraction, and deterministic calculation; mocked end-to-end pipeline checks cover all six NVIDIA, Microsoft, and Apple reference periods. Q14 has exact annual fact retrieval for operating cash flow, repurchases, dividends, and cash capital expenditure; its six NVIDIA, Microsoft, and Apple FY2024/FY2025 reference calculations and mocked pipeline cases pass. Q06 retrieves period-matched beginning and ending equity, reconciles the ending balance to the exact 10-K statement of equity, and reports the three largest disclosed rows; six mocked pipeline/reference cases pass across those same issuers and years. Q16 retrieves exact Item 1/1A risk passages from the selected 10-K, attaches passage-level filing URLs and accession evidence, and states keyword-coverage limits; its six NVIDIA, Microsoft, and Apple FY2024/FY2025 offline reference and mocked pipeline cases pass. Q15 extracts aggregate and next-fiscal-year commitment amounts from year-row and multi-column SEC schedules, normalizes disclosed units, and compares them with exact-period cash and short-term investments. Its six NVIDIA, Microsoft, and Amazon FY2024/FY2025 reference calculations pass; SEC retrieval was exercised against all six filings, and the exact-filing mocked pipeline test passes for Microsoft. Q17 now extracts reconciled annual geographic revenue, preserves issuer-specific classification basis and caveats, and selects the most detailed reconciled geographic view when multiple views exist. Six NVIDIA, Microsoft, and Apple FY2024/FY2025 references pass; exact SEC extraction was exercised for all six. Unknown geographic labels and asset-only schedules fail closed. Q18 supports annual Item 7A interest-rate fair-value sensitivity across NVIDIA, Microsoft, and Apple FY2025, with three reference cases and mocked exact-filing end-to-end checks; its ratio is contextual and the offline benchmark does not re-fetch SEC or evaluate planner interpretation. Q19 extracts Item 3 proceedings and numbered contingency-note passages, preserves loss uncertainty, and keeps assessed fines, accrued liabilities, possible additional losses, and unquantified claims separate. Three FY2025 references and mocked end-to-end filing retrieval checks cover NVIDIA, Microsoft, and Apple; live SEC extraction and planner interpretation remain unevaluated. Q20 now verifies cross-section MD&A and risk-factor evidence for NVIDIA, Microsoft, and Apple FY2025, returns excerpts only from the requested exact filing, and states quantitative context and non-causal limitations. The current selection uses a bounded topic vocabulary and is not exhaustive or a validated materiality ranking; the three-issuer reference matrix and mocked pipeline checks pass, while live SEC and planner interpretation remain open. Live planner evaluation remains unevaluated for Q02, Q04, Q06, Q12, Q14, Q15, Q16, Q17, Q18, and Q19. Q01, Q03, Q05, and Q13 each have 8/8 passing offline cases across NVIDIA, Microsoft, Apple, and CVS Health (two annual pairs each). Q07 has 8/8 passing cases across NVIDIA, Microsoft, Apple, and PepsiCo (two annual pairs each), adding a food and beverage issuer with distinct 52/53-week fiscal periods. Q08 and Q09 each have 6/6 passing cases across NVIDIA, Microsoft, and Apple. Q10 has 8/8 passing annual comparisons across NVIDIA, Microsoft, Apple, and CVS Health, validating repurchase cash magnitude, the current operating-cash-flow ratio, and the change from the prior-year amount; the CVS Health cases extend the matrix into health care and include a filed zero-repurchase year. Q11 has 9/9 passing annual periods across NVIDIA, Microsoft, and Apple, validating weighted-average share dilution using SEC `shares` facts. Q12 has 6/6 passing statement-of-equity calculation references across NVIDIA, Microsoft, and Apple for FY2024 and FY2025; the matrix preserves each reported row label and sign and selects the largest row by absolute amount. Q09 requires aligned point-in-time inventory balances, annual revenue, exact 10-K accession retrieval, and a linked Item 7/Item 1A inventory passage. Most matrices remain concentrated in large technology issuers; broader sector coverage remains necessary before claiming general reliability. No overall accuracy percentage is defensible yet.
+### Test coverage
 
-Completed slices: benchmark baseline and investor-facing Streamlit home; Q01–Q20 annual operations, including Q02 segment-revenue contribution, Q04 operating-expense contribution, and Q17 geographic revenue; Q15 commitments/liquidity; and Q1, Q2, and Q3 year-over-year revenue growth reference matrices for NVIDIA, Microsoft, and Apple across differing fiscal calendars. Each quarter matrix passes 3/3 references; a separate YTD-derived Q2/Q3 matrix passes 6/6 references across all three issuers, with mocked resolver-to-answer checks. The resolver prefers original standalone quarter facts and derives Q2/Q3 from consecutive original 10-Q YTD facts when standalone values are absent, while ignoring amended 10-Q/A facts and failing closed on missing or misaligned inputs. Gate 2 remains incomplete: Q4, direct YTD answers, quarter-to-quarter comparisons, additional sector coverage, and live SEC company-facts verification remain open. Next: extend quarterly references and operations, verify against live SEC, then complete live planner/SEC integration, Streamlit smoke-check, and Gnani local validation. Offline reference coverage is not live planner accuracy; live SEC, planner, and Gnani evaluation remains in Gate 5.
+- **328 backend tests pass** (mocked planner + mocked SEC retrieval).
+- **126/126 fixture-backed reference cases pass** across Q01–Q20 (calculator and pipeline logic verified against known SEC values).
+- **Benchmark: 20 PARTIAL, 0 PASS, 0 UNSUPPORTED, 0 FAIL.** PARTIAL means offline reference coverage exists but live accuracy has not been measured.
+
+### Planner reliability (qwen2.5-coder:3b)
+
+A local planner-only sweep of all 20 templates returned:
+- **15/20 schema-valid plans** (5 rejected by Pydantic validation).
+- Some valid plans selected the **wrong operation or benchmark ID**.
+- This was not an answer-accuracy test; the SEC User-Agent was not configured for that run.
+
+**Reliably working question types (live planner + live SEC):**
+- **Q01 — Annual revenue growth**: "Calculate NVIDIA's revenue growth from FY2024 to FY2025." ✓
+- **Q03 — Operating margin change**: "How did NVIDIA's operating margin change from FY2024 to FY2025?" ✓
+
+**Question types with calculator coverage but unreliable live planner:**
+- Q05 (earnings bridge), Q06 (equity rollforward), Q07 (liquid assets), Q08 (receivables vs revenue), Q09 (inventory vs revenue), Q10 (share repurchase), Q11 (dilution), Q12 (equity component), Q13 (cash conversion), Q14 (cash allocation), Q15 (commitment liquidity), Q16 (regulatory risk), Q17 (market risk), Q18 (geographic revenue), Q19 (legal proceedings), Q20 (material disclosure).
+
+These have passing fixture-backed reference cases (calculator works) but the live qwen2.5-coder:3b planner frequently fails to produce the correct plan for them. This is a **model capacity limitation**, not a calculator limitation.
+
+### Voice integration
+
+- Gnani Prisma v3 STT: configured for English (en-IN). Voice service runs on FastAPI at `127.0.0.1:8000`.
+- Gnani Timbre v2.5 TTS: configured for English (en-IN). Synthesizes a concise spoken summary of the answer.
+- Voice backend health check: `GET /health` returns `{"status":"ok","gnani_configured":bool}`.
+- Real Gnani STT/TTS account calls have not yet been verified end-to-end.
+
+### Quarterly coverage
+
+Q1, Q2, and Q3 year-over-year revenue growth has source-linked NVIDIA, Microsoft, and Apple references (3/3 per quarter). A separate YTD-derived Q2/Q3 matrix passes 6/6 references across all three issuers. Q4, direct YTD answers, and quarter-to-quarter comparisons are not implemented.
+
+## Known limitations
+
+1. **English only.** No multilingual input or output. Gnani STT/TTS configured for en-IN.
+2. **One question at a time.** Multi-part questions are not supported.
+3. **LLM for interpretation only.** The Qwen model does not perform calculations.
+4. **Planner accuracy not verified live.** 15/20 schema-valid plans; some valid plans select wrong operation. Only Q01 and Q03 are confirmed reliable with the live planner.
+5. **Live SEC + planner not tested together** across the full benchmark.
+6. **Limited issuer coverage.** NVDA, MSFT, AAPL, CVS, PEP in some matrices.
+7. **Q4 and quarter-to-quarter comparisons** not implemented.
+8. **Latency.** 10–60 seconds per question (Ollama inference + SEC retrieval).
+9. **Voice requires localhost or HTTPS** for microphone capture.
+10. **No accuracy guarantee.** Verify important results against cited SEC filings.
+
+## Next priorities
+
+1. **Improve planner reliability.** Test with larger or instruction-tuned models (e.g., `qwen2.5:7b`, `llama3.2:3b`) by setting `FINSPECT_OLLAMA_MODEL`. Evaluate which question types become reliable.
+2. **Live end-to-end testing.** Run the full benchmark with live SEC + live planner to measure actual accuracy. Currently 0/20 questions have live accuracy verified.
+3. **Extend quarterly references** to additional sectors and Q4/direct-YTD questions.
+4. **Complete Gnani STT/TTS account verification** with real API calls.
+5. **Expand issuer coverage** beyond large technology companies.
+6. **Do not expand multilingual support** until the English pipeline has measured live accuracy. English-only is the current scope.
 
 ## Scope limits
 
-Initial coverage targets standard US-GAAP data available in SEC filings. Custom issuer tags, IFRS reporting, foreign-currency conversion, nonstandard fiscal calendars, and narrative questions may require separate mappings or may be explicitly unsupported. FinSpect must not invent a result to meet a coverage target.
+Initial coverage targets standard US-GAAP data available in SEC filings. Custom issuer tags, IFRS reporting, foreign-currency conversion, nonstandard fiscal calendars, multilingual input/output, and narrative questions may require separate mappings or may be explicitly unsupported. FinSpect must not invent a result to meet a coverage target.
