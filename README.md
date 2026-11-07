@@ -13,9 +13,56 @@ A locally hosted Qwen model (through Ollama) interprets the question into a stru
 FinSpect separates question interpretation (LLM) from financial calculation (deterministic Python). The LLM never produces financial figures; it only turns a natural-language question into a structured query plan that the calculation pipeline consumes.
 
 ### Architecture
-flowchart TB    subgraph IN["Input"]        direction LR        T["Text question (English)"]        V["Voice audio (English, max 30s)"]    end    STT["Gnani Prisma v3 — Speech to Text"]    subgraph INTERP["Interpretation"]        LLM["Local Qwen model (qwen2.5-coder:3b via Ollama) — interpretation only, NO calculations"]    end    subgraph PIPE["FinSpect Pipeline"]        PLAN["Structured query plan — company, period, metric, operation"]        SEC["SEC EDGAR retrieval — XBRL facts, 10-K filings"]        CALC["Deterministic calculator — Python, all arithmetic"]    end    subgraph OUT["Output"]        direction LR        ANSWER["Answer + formula + evidence + SEC source links"]        TTS["Gnani Timbre v2.5 — Text to Speech"]    end    T --> LLM    V --> STT --> LLM    LLM --> PLAN    PLAN --> SEC    SEC --> CALC    CALC --> ANSWER    ANSWER --> TTS
 
-![](architecture.png)
+## FinSpect Architecture
+
+```mermaid
+flowchart TD
+    subgraph Input
+        A[Text Question]
+        B[Voice Audio<br/>English · Max 30s]
+    end
+
+    C[Gnani Prisma v3<br/>Speech to Text]
+
+    subgraph Interpretation
+        D[Local Qwen 2.5 Coder 3B<br/>Ollama<br/>Query Interpretation Only]
+    end
+
+    subgraph FinSpect Pipeline
+        E[Structured Query Plan<br/>Company · Period · Metric · Operation]
+        F[SEC EDGAR Retrieval<br/>XBRL Facts · 10-K Filings]
+        G[Deterministic Python Calculator<br/>All Arithmetic]
+
+        E --> F --> G
+    end
+
+    subgraph Output
+        H[Financial Answer<br/>Formula · Evidence · SEC Sources]
+        I[Gnani Timbre v2.5<br/>Text to Speech]
+
+        H --> I
+    end
+
+    A --> D
+    B --> C --> D
+    D --> E
+    G --> H
+
+    classDef default fill:#f8fafc,stroke:#64748b,color:#1e293b
+    classDef input fill:#ffffff,stroke:#475569,color:#0f172a
+    classDef pipeline fill:#f1f5f9,stroke:#334155,color:#0f172a
+    classDef output fill:#ffffff,stroke:#475569,color:#0f172a
+
+    class A,B,C input
+    class D,E,F,G pipeline
+    class H,I output
+
+    style Input fill:#f8fafc,stroke:#94a3b8,color:#334155
+    style Interpretation fill:#f8fafc,stroke:#94a3b8,color:#334155
+    style FinSpect Pipeline fill:#f8fafc,stroke:#94a3b8,color:#334155
+    style Output fill:#f8fafc,stroke:#94a3b8,color:#334155
+```
 
 
 ### Optional spoken response
