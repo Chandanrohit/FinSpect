@@ -4,9 +4,8 @@
     "version": "0.2",
     "scope": [
       "US_SEC_10Q",
-      "US_SEC_10K",
-      "INDIA_SEBI_QUARTERLY_RESULTS",
-      "INDIA_SEBI_ANNUAL_RESULTS"
+      "US_SEC_10K"
+
     ],
     "purpose": "Evaluate whether an LLM can identify, interpret, validate and calculate financial information from quarterly and annual company filings.",
     "design_principle": "Questions are company-agnostic. Company-specific concepts, periods, values and evidence are resolved from the filing.",
